@@ -1,5 +1,5 @@
 {
-  "name": "com.reacho.flexibleuitool",
+  "name": "com.raccooncoder7.flexibleuitool",
   "version": "1.0.0",
   "displayName": "Flexible UI Tool",
   "description": "One UI prefab for portrait, square and landscape screens. Profile layouts are stored as data on the prefab and switched at runtime by aspect ratio. Includes Layout / Preview / Review editor windows (English, Korean, Japanese) and a command line for coding agents.",
@@ -14,7 +14,8 @@
     "safe area"
   ],
   "author": {
-    "name": "reacho"
+    "name": "RaccoonCoder7",
+    "url": "https://github.com/RaccoonCoder7"
   },
   "dependencies": {
     "com.unity.ugui": "2.0.0"
@@ -25,5 +26,9 @@
       "description": "FlexibleSample prefab, SampleScene with a Flexible Canvas Scaler, and default profile settings. Used by the tutorials in MANUAL.md and AGENTS.md.",
       "path": "Samples~/Tutorial"
     }
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RaccoonCoder7/FlexibleUITool.git"
+  }
 }

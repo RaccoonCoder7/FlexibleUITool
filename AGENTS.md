@@ -4,7 +4,7 @@ FlexibleUITool lets one UI prefab serve portrait, square and landscape screens.
 Use the CLI below to read and change layouts. Do not edit prefab YAML by hand.
 This file is the only document the user needs to give you. Everything else is below.
 
-> **Where this file lives.** The Unity editor copies it to `Library/FlexibleUITool/AGENTS.md` when the project opens and fills in the tool folder in every path below (`Assets/FlexibleUITool` when the tool sits in Assets, or a `Library/PackageCache/com.reacho.flexibleuitool@...` folder when it is installed as a package). If you are reading the original file and a path starts with a placeholder in double curly braces, that placeholder means the folder that contains this file.
+> **Where this file lives.** The Unity editor copies it to `Library/FlexibleUITool/AGENTS.md` when the project opens and fills in the tool folder in every path below (`Assets/FlexibleUITool` when the tool sits in Assets, or a `Library/PackageCache/com.raccooncoder7.flexibleuitool@...` folder when it is installed as a package). If you are reading the original file and a path starts with a placeholder in double curly braces, that placeholder means the folder that contains this file.
 
 The human manual is `{{ToolPath}}/MANUAL.md` (English). Read it when the user picks "Manual" or asks how the GUI windows work.
 

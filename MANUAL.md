@@ -23,22 +23,22 @@ This is the only manual. It replaces the earlier Korean and Japanese PDF guides.
 
 ## 0. Installation
 
-The tool is a Unity package (`com.reacho.flexibleuitool`). Tested on Unity 6.3. It needs `com.unity.ugui`, which Package Manager installs with it.
+The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unity 6.3. It needs `com.unity.ugui`, which Package Manager installs with it.
 
 **From a git repository (recommended)**
 
-1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste the repository URL, for example `git@github.com:<owner>/<repo>.git` or `https://github.com/<owner>/<repo>.git`. Add `#v1.0.0` to pin a tag.
+1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste `https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.0` (the part after `#` pins a version tag; leave it out to follow the latest commit).
 2. Or add it to `Packages/manifest.json` yourself:
 
    ```json
    "dependencies": {
-     "com.reacho.flexibleuitool": "git@github.com:<owner>/<repo>.git#v1.0.0"
+     "com.raccooncoder7.flexibleuitool": "https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.0"
    }
    ```
 
-   For a private repository, the machine needs git access to it (an SSH key or saved credentials), because Unity runs `git` itself.
+   Unity runs `git` itself to fetch the package, so git must be installed on the machine.
 
-**From a local folder** (while developing the tool): `"com.reacho.flexibleuitool": "file:C:/path/to/FlexibleUITool"`.
+**From a local folder** (while developing the tool): `"com.raccooncoder7.flexibleuitool": "file:C:/path/to/FlexibleUITool"`.
 
 **After installing**
 

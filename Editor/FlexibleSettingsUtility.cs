@@ -8,7 +8,7 @@ namespace FlexibleUITool.EditorTools
     // 툴 위치(Assets 안 또는 UPM 패키지)와 프로젝트 데이터 위치, 공용 프로필 설정 애셋 조회·생성
     public static class FlexibleSettingsUtility
     {
-        public const string PackageName = "com.reacho.flexibleuitool";
+        public const string PackageName = "com.raccooncoder7.flexibleuitool";
 
         // 프로젝트마다 생기는 데이터(설정 애셋·작업 프리팹). 패키지는 읽기 전용이라 항상 프로젝트 Assets 쪽
         public const string DataFolder = "Assets/FlexibleUITool";
@@ -17,7 +17,7 @@ namespace FlexibleUITool.EditorTools
         private static string toolAssetPath;
         private static string toolFullPath;
 
-        // 툴 파일이 있는 곳: "Assets/FlexibleUITool" 또는 "Packages/com.reacho.flexibleuitool"
+        // 툴 파일이 있는 곳: "Assets/FlexibleUITool" 또는 "Packages/com.raccooncoder7.flexibleuitool"
         public static string ToolAssetPath
         {
             get
