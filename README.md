@@ -8,3 +8,4 @@ One UI prefab for portrait, square and landscape screens. The prefab itself is t
 - **Windows**: `Tools > FlexibleUITool > Layout Window / Preview Window / Review Window`
 - **Languages**: English, Korean, Japanese (`Tools > FlexibleUITool > Language`)
 - No dependency on project code (`com.unity.ugui` only). Assemblies: `FlexibleUITool.Runtime`, `FlexibleUITool.Editor`. Tested on Unity 6.3; the agent CLI needs Windows PowerShell.
+- License: MIT ([`LICENSE.md`](LICENSE.md))

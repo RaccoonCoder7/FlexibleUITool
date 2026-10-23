@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "displayName": "Flexible UI Tool",
   "description": "One UI prefab for portrait, square and landscape screens. Profile layouts are stored as data on the prefab and switched at runtime by aspect ratio. Includes Layout / Preview / Review editor windows (English, Korean, Japanese) and a command line for coding agents.",
+  "license": "MIT",
   "unity": "6000.0",
   "keywords": [
     "ui",
