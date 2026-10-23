@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4620d495e3aa51b49890779226f7f005, type: 3}
+  m_Name: FlexibleProfileSettings
+  m_EditorClassIdentifier: FlexibleUITool.Runtime::FlexibleUITool.FlexibleProfileSettings
+  baseProfileId: portrait
+  hysteresis: 0.01
+  profiles:
+  - id: portrait
+    displayName: Portrait
+    minAspect: 0
+    workResolution: {x: 1080, y: 1920}
+    grid:
+      columns: 4
+      rows: 8
+      margin: 24
+      gutter: 16
+  - id: square
+    displayName: Square
+    minAspect: 0.8
+    workResolution: {x: 1080, y: 1080}
+    grid:
+      columns: 6
+      rows: 6
+      margin: 24
+      gutter: 16
+  - id: landscape
+    displayName: Landscape
+    minAspect: 1.25
+    workResolution: {x: 1920, y: 1080}
+    grid:
+      columns: 8
+      rows: 5
+      margin: 24
+      gutter: 16
+  roles:
+  - Header
+  - Footer
+  - Main
+  - Side
+  - Sub
+  - Overlay
+  templates: []
+  previewPresets:
+  - name: Phone portrait (19.5:9)
+    resolution: {x: 1179, y: 2556}
+    safeLeft: 0
+    safeRight: 0
+    safeTop: 0.069
+    safeBottom: 0.04
+  - name: Phone landscape (19.5:9)
+    resolution: {x: 2556, y: 1179}
+    safeLeft: 0.069
+    safeRight: 0.069
+    safeTop: 0
+    safeBottom: 0.053
+  - name: Phone portrait (16:9)
+    resolution: {x: 1080, y: 1920}
+    safeLeft: 0
+    safeRight: 0
+    safeTop: 0
+    safeBottom: 0
+  - name: Foldable (open)
+    resolution: {x: 2176, y: 1812}
+    safeLeft: 0
+    safeRight: 0
+    safeTop: 0
+    safeBottom: 0
+  - name: Tablet portrait (3:4)
+    resolution: {x: 1640, y: 2360}
+    safeLeft: 0
+    safeRight: 0
+    safeTop: 0.01
+    safeBottom: 0.017
+  - name: Tablet landscape (4:3)
+    resolution: {x: 2360, y: 1640}
+    safeLeft: 0
+    safeRight: 0
+    safeTop: 0.015
+    safeBottom: 0.024
+  - name: Tablet split (half)
+    resolution: {x: 1180, y: 1640}
+    safeLeft: 0
+    safeRight: 0
+    safeTop: 0.015
+    safeBottom: 0.024

@@ -1,0 +1,1057 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &36316949780321553
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3657642791238129843}
+  - component: {fileID: 6862770976942121212}
+  - component: {fileID: 7633364735498073222}
+  m_Layer: 0
+  m_Name: SubLeft
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &3657642791238129843
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 36316949780321553}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 24, y: 198}
+  m_SizeDelta: {x: 300, y: 200}
+  m_Pivot: {x: 0, y: 0}
+--- !u!222 &6862770976942121212
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 36316949780321553}
+  m_CullTransparentMesh: 1
+--- !u!114 &7633364735498073222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 36316949780321553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 0.9, b: 0.1, a: 0.8}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &2953368597767722484
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 37372689152622033}
+  - component: {fileID: 1027313985427039785}
+  - component: {fileID: 5817243832850280194}
+  m_Layer: 0
+  m_Name: SubRight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &37372689152622033
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2953368597767722484}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: -24, y: 198}
+  m_SizeDelta: {x: 200, y: 200}
+  m_Pivot: {x: 1, y: 0}
+--- !u!222 &1027313985427039785
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2953368597767722484}
+  m_CullTransparentMesh: 1
+--- !u!114 &5817243832850280194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2953368597767722484}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 0.5, b: 0.1, a: 0.8}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &5040083292525005420
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6139206221209445691}
+  - component: {fileID: 5223346428436736111}
+  - component: {fileID: 3894469948308431695}
+  m_Layer: 0
+  m_Name: Header
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6139206221209445691
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5040083292525005420}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 150}
+  m_Pivot: {x: 0.5, y: 1}
+--- !u!222 &5223346428436736111
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5040083292525005420}
+  m_CullTransparentMesh: 1
+--- !u!114 &3894469948308431695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5040083292525005420}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 0.3, b: 0.3, a: 0.6}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &5149493570956484885
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7761974572100762564}
+  - component: {fileID: 6323735790639068054}
+  m_Layer: 0
+  m_Name: FlexibleSample
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7761974572100762564
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5149493570956484885}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6139206221209445691}
+  - {fileID: 5346409853112799421}
+  - {fileID: 29208965017025625}
+  - {fileID: 6231119586044642952}
+  - {fileID: 3657642791238129843}
+  - {fileID: 37372689152622033}
+  - {fileID: 4727924881761773295}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &6323735790639068054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5149493570956484885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 628e51dbc60718243870a8702872a87d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FlexibleUITool.Runtime::FlexibleUITool.FlexibleLayout
+  settings: {fileID: 11400000, guid: a24763bbde3975d4ab4d689197160972, type: 2}
+  entries:
+  - target: {fileID: 5346409853112799421}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: square
+      rect:
+        anchorMin: {x: 0.022222223, y: 0.7425926}
+        anchorMax: {x: 0.022222223, y: 0.7425926}
+        pivot: {x: 0, y: 0.5}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 333.33334, y: 158.66669}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+    - profileId: landscape
+      rect:
+        anchorMin: {x: 0.022222223, y: 0.98749775}
+        anchorMax: {x: 0.022222223, y: 0.98749775}
+        pivot: {x: 0, y: 1}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 246, y: 361.52856}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  - target: {fileID: 29208965017025625}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: square
+      rect:
+        anchorMin: {x: 0.5, y: 0.49999997}
+        anchorMax: {x: 0.5, y: 0.49999997}
+        pivot: {x: 0.5, y: 0.5}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 333.33334, y: 682.6667}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+    - profileId: landscape
+      rect:
+        anchorMin: {x: 0.31805557, y: 0.50000006}
+        anchorMax: {x: 0.31805557, y: 0.50000006}
+        pivot: {x: 0.5, y: 0.5}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 377, y: 1116.5857}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  - target: {fileID: 6231119586044642952}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: landscape
+      rect:
+        anchorMin: {x: 0.9777778, y: 0.20916842}
+        anchorMax: {x: 0.9777778, y: 0.7908317}
+        pivot: {x: 1, y: 0.5}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 246, y: 0}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  - target: {fileID: 3657642791238129843}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: square
+      rect:
+        anchorMin: {x: 0.022222223, y: 0.41913578}
+        anchorMax: {x: 0.022222223, y: 0.41913578}
+        pivot: {x: 0, y: 0.5}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 333.33334, y: 508}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+    - profileId: landscape
+      rect:
+        anchorMin: {x: 0.022222223, y: 0.012502327}
+        anchorMax: {x: 0.022222223, y: 0.012502327}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 115, y: 361.52856}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  - target: {fileID: 37372689152622033}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: landscape
+      rect:
+        anchorMin: {x: 0.9777778, y: 0.012502327}
+        anchorMax: {x: 0.9777778, y: 0.012502327}
+        pivot: {x: 1, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 115, y: 361.52856}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  - target: {fileID: 4727924881761773295}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: square
+      rect:
+        anchorMin: {x: 0.022222223, y: 0.022222165}
+        anchorMax: {x: 0.9777778, y: 0.022222165}
+        pivot: {x: 0.5, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 158.66669}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+    - profileId: landscape
+      rect:
+        anchorMin: {x: 0.5, y: 0.012502327}
+        anchorMax: {x: 0.5, y: 0.012502327}
+        pivot: {x: 0.5, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 508, y: 361.52856}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  - target: {fileID: 6139206221209445691}
+    layoutGroup: {fileID: 0}
+    states:
+    - profileId: square
+      rect:
+        anchorMin: {x: 0.022222223, y: 0.9777778}
+        anchorMax: {x: 0.9777778, y: 0.9777778}
+        pivot: {x: 0.5, y: 1}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 158.66669}
+        localScale: {x: 1, y: 1, z: 1}
+      controlActive: 0
+      active: 1
+      controlLayoutGroup: 0
+      layoutGroup:
+        paddingLeft: 0
+        paddingRight: 0
+        paddingTop: 0
+        paddingBottom: 0
+        childAlignment: 0
+        spacing: 0
+        cellSize: {x: 0, y: 0}
+        gridSpacing: {x: 0, y: 0}
+        startCorner: 0
+        startAxis: 0
+        constraint: 0
+        constraintCount: 0
+      gridPlaced: 0
+      gridCell:
+        column: 0
+        row: 0
+        width: 0
+        height: 0
+      gridModeX: 0
+      gridModeY: 0
+      gridInsideSafeArea: 0
+      gridOrigin: 0
+      gridResult:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        pivot: {x: 0, y: 0}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        localScale: {x: 0, y: 0, z: 0}
+  roles: []
+--- !u!1 &5834620923596276113
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 29208965017025625}
+  - component: {fileID: 3860590657032783253}
+  - component: {fileID: 3590263846772454885}
+  m_Layer: 0
+  m_Name: Main
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &29208965017025625
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5834620923596276113}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 24, y: 52}
+  m_SizeDelta: {x: 620, y: -740}
+  m_Pivot: {x: 0, y: 0.5}
+--- !u!222 &3860590657032783253
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5834620923596276113}
+  m_CullTransparentMesh: 1
+--- !u!114 &3590263846772454885
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5834620923596276113}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.2, g: 0.6, b: 1, a: 0.7}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &7055333842058382717
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5346409853112799421}
+  - component: {fileID: 8867300297213236698}
+  - component: {fileID: 8425480695214738965}
+  m_Layer: 0
+  m_Name: Title
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &5346409853112799421
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7055333842058382717}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 24, y: -174}
+  m_SizeDelta: {x: 400, y: 120}
+  m_Pivot: {x: 0, y: 1}
+--- !u!222 &8867300297213236698
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7055333842058382717}
+  m_CullTransparentMesh: 1
+--- !u!114 &8425480695214738965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7055333842058382717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.1, g: 0.1, b: 0.1, a: 0.8}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &7249660677385412461
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4727924881761773295}
+  - component: {fileID: 7294484416393632400}
+  - component: {fileID: 7803634893419730095}
+  m_Layer: 0
+  m_Name: Footer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4727924881761773295
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7249660677385412461}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: 0, y: 24}
+  m_SizeDelta: {x: -48, y: 150}
+  m_Pivot: {x: 0.5, y: 0}
+--- !u!222 &7294484416393632400
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7249660677385412461}
+  m_CullTransparentMesh: 1
+--- !u!114 &7803634893419730095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7249660677385412461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.2, g: 0.7, b: 0.3, a: 0.7}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!1 &9071326801534221485
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6231119586044642952}
+  - component: {fileID: 303570071189156704}
+  - component: {fileID: 927323643178539813}
+  m_Layer: 0
+  m_Name: Side
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6231119586044642952
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9071326801534221485}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7761974572100762564}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -24, y: 124}
+  m_SizeDelta: {x: 360, y: -596}
+  m_Pivot: {x: 1, y: 0.5}
+--- !u!222 &303570071189156704
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9071326801534221485}
+  m_CullTransparentMesh: 1
+--- !u!114 &927323643178539813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9071326801534221485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.6, g: 0.3, b: 0.8, a: 0.7}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1

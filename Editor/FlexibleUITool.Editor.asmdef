@@ -1,0 +1,20 @@
+{
+    "name": "FlexibleUITool.Editor",
+    "rootNamespace": "FlexibleUITool.EditorTools",
+    "references": [
+        "FlexibleUITool.Runtime",
+        "UnityEngine.UI",
+        "UnityEditor.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
