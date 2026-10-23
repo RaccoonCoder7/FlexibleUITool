@@ -31,6 +31,15 @@ namespace FlexibleUITool.EditorTools
     // 작업 프리팹 안에서의 그리드 배치(기록 포함)·템플릿 저장/적용
     public static class FlexibleGridPlacementService
     {
+        private static string baseMapSource;
+        private static Dictionary<string, RectTransform> baseMap;
+
+        // 원본 프리팹 구조는 창이 그려질 때마다 다시 읽지 않는다. 애셋이 바뀌면 다시 읽는다
+        static FlexibleGridPlacementService()
+        {
+            EditorApplication.projectChanged += () => baseMap = null;
+        }
+
         // 배치하면서 그리드 기록을 남긴다 (반영 시 그리드/수동 블록 구분에 쓰인다)
         public static bool Apply(FlexibleGridContext context, FlexibleWorkspace workspace, RectTransform target,
             FlexibleCell cell, FlexibleAxisMode modeX, FlexibleAxisMode modeY, bool insideSafeArea)
@@ -138,7 +147,18 @@ namespace FlexibleUITool.EditorTools
                 return target.localScale;
 
             string path = workspace.links.Find(l => l.target == target)?.sourcePath ?? FlexiblePathUtility.GetPath(workspace.transform, target);
-            return FlexiblePathUtility.BuildMap(sourceRoot).TryGetValue(path, out RectTransform baseTarget) ? baseTarget.localScale : target.localScale;
+            if (baseMap == null || baseMapSource != sourcePath)
+            {
+                baseMap = FlexiblePathUtility.BuildMap(sourceRoot);
+                baseMapSource = sourcePath;
+            }
+            if (baseMap.TryGetValue(path, out RectTransform baseTarget) && baseTarget == null)
+            {
+                // 원본이 다시 임포트되어 옛 객체가 사라졌으면 다시 읽는다
+                baseMap = FlexiblePathUtility.BuildMap(sourceRoot);
+                baseMap.TryGetValue(path, out baseTarget);
+            }
+            return baseTarget != null ? baseTarget.localScale : target.localScale;
         }
 
         public static void ReapplyStale(FlexibleWorkspace workspace, List<(FlexibleGridPlacement placement, FlexibleRectState expected)> stale)

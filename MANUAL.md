@@ -27,12 +27,12 @@ The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unit
 
 **From a git repository (recommended)**
 
-1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste `https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.0` (the part after `#` pins a version tag; leave it out to follow the latest commit).
+1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste `https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.1` (the part after `#` pins a version tag; leave it out to follow the latest commit).
 2. Or add it to `Packages/manifest.json` yourself:
 
    ```json
    "dependencies": {
-     "com.raccooncoder7.flexibleuitool": "https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.0"
+     "com.raccooncoder7.flexibleuitool": "https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.1"
    }
    ```
 

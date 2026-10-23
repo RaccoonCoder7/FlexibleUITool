@@ -31,6 +31,7 @@ namespace FlexibleUITool.EditorTools
 
         private DefaultAsset folder;
         private float thumbnailHeight = 200f;
+        private float renderedHeight; // 마지막 검수 때 썸네일을 그린 높이 (화면 단위)
         private bool[] presetEnabled;
         private bool onlyIssues;
         private bool includeEdges = true;
@@ -115,6 +116,9 @@ namespace FlexibleUITool.EditorTools
                 return;
             }
 
+            if (thumbnailHeight > renderedHeight * 1.1f)
+                EditorGUILayout.HelpBox(F("Thumbnails were rendered smaller. Press [{0}] again for sharp thumbnails at this size.", T("Run review")), MessageType.None);
+
             int total = rows.Sum(r => r.cells.Sum(c => c.issues.Count));
             EditorGUILayout.LabelField(F("{0} prefabs · {1} issues", rows.Count, total), EditorStyles.boldLabel);
 
@@ -190,6 +194,7 @@ namespace FlexibleUITool.EditorTools
                     screens.AddRange(settings.GetEdgeAspects(i).Select(a => (name: (string)null, aspect: a, safeArea: settings.GetSafeArea(i), profileIndex: i)));
             }
             float scale = EditorGUIUtility.pixelsPerPoint;
+            renderedHeight = thumbnailHeight;
 
             using (var renderer = new FlexiblePreviewRenderer())
             {
@@ -208,7 +213,8 @@ namespace FlexibleUITool.EditorTools
                     {
                         FlexibleProfile profile = settings.Profiles[screen.profileIndex];
                         Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(screen.aspect, settings.ReferenceShortSide);
-                        int height = Mathf.RoundToInt(400f * scale);
+                        // GPU 메모리를 아끼려고 지금 보이는 크기로만 그린다 (문제 판정은 논리 크기 기준이라 영향 없음)
+                        int height = Mathf.RoundToInt(thumbnailHeight * scale);
                         var pixel = new Vector2Int(Mathf.RoundToInt(height * screen.aspect), height);
                         renderer.Render(asset, profile.id, logical, pixel, screen.safeArea);
 

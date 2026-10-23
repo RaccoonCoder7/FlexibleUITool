@@ -17,6 +17,8 @@ namespace FlexibleUITool.EditorTools
         private static FlexibleGameViewShots shots;
         private static string shotsId;
         private static bool agentKitWritten;
+        private static double nextPoll;
+        private const double PollInterval = 0.1;
 
         public static string WorkFolder => Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Library", "FlexibleUITool");
         private static string InboxFolder => Path.Combine(WorkFolder, "inbox");
@@ -86,10 +88,7 @@ namespace FlexibleUITool.EditorTools
                 WriteAgentKit();
             }
 
-            // 컴파일·임포트 중에는 쌓아 두고, 플레이 중에는 플레이용 명령(ping, game-view)만 처리한다
-            if (!Directory.Exists(InboxFolder))
-                return;
-
+            // 진행 중인 Game 뷰 캡처는 매 갱신마다 진행한다 (대기 시간이 정확해야 한다)
             if (shots != null)
             {
                 if (shots.Tick(now))
@@ -99,6 +98,13 @@ namespace FlexibleUITool.EditorTools
                 }
                 return;
             }
+
+            // 명령 폴더는 0.1초마다만 확인한다. 컴파일·임포트 중에는 쌓아 두고, 플레이 중에는 플레이용 명령(ping, game-view)만 처리한다
+            if (now < nextPoll)
+                return;
+            nextPoll = now + PollInterval;
+            if (!Directory.Exists(InboxFolder))
+                return;
 
             string[] files = Directory.GetFiles(InboxFolder, "*.json").OrderBy(File.GetLastWriteTimeUtc).ToArray();
             string file = null;

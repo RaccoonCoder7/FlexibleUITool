@@ -16,6 +16,13 @@ namespace FlexibleUITool.EditorTools
 
         private static string toolAssetPath;
         private static string toolFullPath;
+        private static FlexibleProfileSettings cachedSettings;
+
+        // 애셋 검색은 한 번에 수 ms 걸려서 창이 그려질 때마다 하지 않는다. 애셋이 바뀌면 다시 찾는다
+        static FlexibleSettingsUtility()
+        {
+            EditorApplication.projectChanged += () => cachedSettings = null;
+        }
 
         // 툴 파일이 있는 곳: "Assets/FlexibleUITool" 또는 "Packages/com.raccooncoder7.flexibleuitool"
         public static string ToolAssetPath
@@ -43,6 +50,14 @@ namespace FlexibleUITool.EditorTools
             UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(FlexibleSettingsUtility).Assembly);
 
         public static FlexibleProfileSettings GetOrCreateDefault()
+        {
+            if (cachedSettings != null)
+                return cachedSettings;
+            cachedSettings = FindOrCreateDefault();
+            return cachedSettings;
+        }
+
+        private static FlexibleProfileSettings FindOrCreateDefault()
         {
             string[] guids = AssetDatabase.FindAssets("t:" + nameof(FlexibleProfileSettings));
             if (guids.Length > 0)
