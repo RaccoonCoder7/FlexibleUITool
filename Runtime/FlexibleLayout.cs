@@ -97,8 +97,9 @@ namespace FlexibleUITool
                 if (entry.target == null)
                     continue;
 
-                FlexibleProfileState state = entry.Find(profileId) ?? baseStates[i];
-                state.ApplyTo(entry);
+                FlexibleProfileState baseState = baseStates[i];
+                FlexibleProfileState state = entry.Find(profileId) ?? baseState;
+                state.ApplyTo(entry, baseState);
             }
         }
 

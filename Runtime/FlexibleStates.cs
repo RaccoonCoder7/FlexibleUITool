@@ -173,13 +173,22 @@ namespace FlexibleUITool
 
         public void ApplyTo(FlexibleLayoutEntry entry)
         {
+            ApplyTo(entry, null);
+        }
+
+        // 이 상태가 활성 여부·LayoutGroup을 기록하지 않았으면 fallback(기동 시점 기본 상태)의 값을 쓴다.
+        // 그래야 다른 프로필이 바꿔 둔 값(예: 가로에서 숨김)이 이 프로필로 돌아왔을 때 남지 않는다
+        public void ApplyTo(FlexibleLayoutEntry entry, FlexibleProfileState fallback)
+        {
             rect.ApplyTo(entry.target);
 
-            if (controlLayoutGroup && entry.layoutGroup != null)
-                layoutGroup.ApplyTo(entry.layoutGroup);
+            FlexibleProfileState group = controlLayoutGroup ? this : fallback;
+            if (group != null && group.controlLayoutGroup && entry.layoutGroup != null)
+                group.layoutGroup.ApplyTo(entry.layoutGroup);
 
-            if (controlActive && entry.target.gameObject.activeSelf != active)
-                entry.target.gameObject.SetActive(active);
+            FlexibleProfileState visibility = controlActive ? this : fallback;
+            if (visibility != null && visibility.controlActive && entry.target.gameObject.activeSelf != visibility.active)
+                entry.target.gameObject.SetActive(visibility.active);
         }
     }
 

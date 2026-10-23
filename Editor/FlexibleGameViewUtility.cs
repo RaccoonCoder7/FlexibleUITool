@@ -125,6 +125,67 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
+        // Game 뷰 확대 배율을 기본(창에 맞춤)으로 되돌린다. 플레이 진입·해상도 변경 뒤 가끔 확대된 채로 남는다
+        public static void TrySnapZoomToFit()
+        {
+            try
+            {
+                EditorWindow gameView = FindGameView();
+                if (gameView == null)
+                    return;
+
+                object fit = GameViewType.GetField("m_defaultScale", Flags)?.GetValue(gameView) ?? GameViewType.GetProperty("minScale", Flags)?.GetValue(gameView);
+                if (!(fit is float target) || target <= 0f)
+                    return;
+                object current = GameViewType.GetProperty("zoomAreaScale", Flags)?.GetValue(gameView);
+                if (current is Vector2 scale && Mathf.Abs(scale.x - target) < 0.001f)
+                    return;
+                GameViewType.GetMethod("SnapZoom", Flags)?.Invoke(gameView, new object[] { target });
+                gameView.Repaint();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning(F("[FlexibleUITool] Could not reset the Game view zoom: {0}", e.Message));
+            }
+        }
+
+        // Game 뷰가 실제로 그리는 렌더 텍스처 크기
+        public static bool TryGetTargetSize(out Vector2Int size)
+        {
+            size = default;
+            try
+            {
+                EditorWindow gameView = FindGameView();
+                var texture = gameView != null ? EditorAssembly.GetType("UnityEditor.PlayModeView").GetField("m_TargetTexture", Flags).GetValue(gameView) as RenderTexture : null;
+                if (texture == null)
+                    return false;
+                size = new Vector2Int(texture.width, texture.height);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // Game 뷰를 지금 바로 한 번 그린다 (캡처가 이전 상태의 화면을 읽지 않도록)
+        public static bool TryRenderNow()
+        {
+            try
+            {
+                EditorWindow gameView = FindGameView();
+                if (gameView == null)
+                    return false;
+                EditorAssembly.GetType("UnityEditor.PlayModeView").GetMethod("RenderView", Flags)?.Invoke(gameView, new object[] { Vector2.zero, false });
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning(F("[FlexibleUITool] Could not render the Game view: {0}", e.Message));
+                return false;
+            }
+        }
+
         private static void FlipVertically(Texture2D image)
         {
             Color32[] pixels = image.GetPixels32();
