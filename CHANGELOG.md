@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.2]
+
+- The tutorial sample is imported into `Assets/FlexibleUITool/Samples/` with `Tools > FlexibleUITool > Import Tutorial Sample` (or the agent's `import-samples`), so everything the tool creates stays in `Assets/FlexibleUITool/`. The Package Manager sample entry is removed, because it always imports into `Assets/Samples/<package>/<version>/`.
+- A sample imported by an earlier version is moved to the new folder, and the empty `Assets/Samples/...` folders are removed.
+
 ## [1.0.1]
 
 Editor performance and memory.

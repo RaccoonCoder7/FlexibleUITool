@@ -210,7 +210,7 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
 | `apply-spec` | change layouts | `-Spec file.json`, `-DryRun` to preview changes |
 | `set-role` | label a block | `-Prefab -Path -Role` (`-Role ''` clears; `-Role` is required) |
 | `duplicate` | copy a prefab, e.g. a practice copy | `-Prefab <source> -Out <Name>` (next to the source) or `-Out Assets/.../Name.prefab` |
-| `import-samples` | bring the tutorial sample (`FlexibleSample`, `SampleScene`) into the project | Needed once when the tool is installed as a package. Returns the sample `folder`. |
+| `import-samples` | bring the tutorial sample (`FlexibleSample`, `SampleScene`) into `Assets/FlexibleUITool/Samples/` | Needed once when the tool is installed as a package. Moves a sample from an older import location. Returns the sample `folder`. |
 | `clear-profile` | delete every record of one profile, so it follows the base layout | `-Prefab -Profile` (not the base profile) |
 | `cleanup-tutorial` | remove a tutorial practice copy and what the tutorial made for it | `-Prefab`. Only `Samples/*Tutorial*.prefab` (never `FlexibleSample`). Prefab goes to the OS trash; workspaces, test instances, specs and renders are deleted. |
 | `scene-place` | put a prefab in a test scene to try it at runtime | `-Prefab`, optional `-Scene` (default: the `SampleScene` next to `FlexibleSample`). Opens and saves the scene; replaces an earlier test instance. |
@@ -277,7 +277,7 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
 |---|---|
 | `EDITOR_NOT_RUNNING` | Open the Unity editor on this project. |
 | `PROJECT_NOT_FOUND` | Run the script from the Unity project folder, or pass `-Project <path>`. |
-| `SAMPLE_NOT_FOUND` | The tutorial sample is missing. Ask the user to import it in Package Manager > Flexible UI Tool > Samples. |
+| `SAMPLE_NOT_FOUND` | The tutorial sample is missing and could not be imported. Ask the user to reinstall the package. |
 | `EDITOR_PLAYING` | The editor is in Play Mode. Ask the user to stop it. |
 | `PREFAB_OPEN` | The user has this prefab, or its workspace, open in Prefab Mode (for `scene-place`: any prefab). Ask them to close it. |
 | `SCENE_UNSAVED` | An open scene has unsaved changes. Ask the user to save it. |

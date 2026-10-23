@@ -27,12 +27,12 @@ The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unit
 
 **From a git repository (recommended)**
 
-1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste `https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.1` (the part after `#` pins a version tag; leave it out to follow the latest commit).
+1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste `https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.2` (the part after `#` pins a version tag; leave it out to follow the latest commit).
 2. Or add it to `Packages/manifest.json` yourself:
 
    ```json
    "dependencies": {
-     "com.raccooncoder7.flexibleuitool": "https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.1"
+     "com.raccooncoder7.flexibleuitool": "https://github.com/RaccoonCoder7/FlexibleUITool.git#v1.0.2"
    }
    ```
 
@@ -42,8 +42,8 @@ The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unit
 
 **After installing**
 
-- Import the tutorial sample if you want it: `Package Manager > Flexible UI Tool > Samples > Tutorial sample > Import`, or let the agent run `import-samples`. It lands in `Assets/Samples/Flexible UI Tool/<version>/Tutorial sample/`.
-- The tool keeps project data in `Assets/FlexibleUITool/`: `Settings/FlexibleProfileSettings.asset` (created on first use; commit it) and `Workspace/` (temporary, git-ignored automatically).
+- Import the tutorial sample if you want it: `Tools > FlexibleUITool > Import Tutorial Sample`, or let the agent run `import-samples`. It lands in `Assets/FlexibleUITool/Samples/` (`FlexibleSample` prefab and `SampleScene`). A sample imported by an older version into `Assets/Samples/Flexible UI Tool/...` is moved there, and the empty folders are removed.
+- Everything the tool creates in your project stays in `Assets/FlexibleUITool/`: `Settings/FlexibleProfileSettings.asset` (created on first use; commit it), `Workspace/` (temporary, git-ignored automatically) and `Samples/` (only if you import the tutorial sample).
 - Open the project once in Unity so the agent files appear in `Library/FlexibleUITool/`.
 
 To update, change the tag in `manifest.json` (or remove the package's entry from `packages-lock.json` to fetch the latest commit).
@@ -78,7 +78,7 @@ Tool (package or `Assets/FlexibleUITool/`):
 | `Runtime/` | `FlexibleLayout` (runtime switching), `FlexibleCanvasScaler` (short-side scaling), `FlexibleSafeArea`, profile settings and state data |
 | `Editor/` | Layout / Preview / Review windows, workspace create and commit, grid placement, templates, preview renderer, CLI bridge, `Localization/Strings.tsv` |
 | `Cli/` | `flexui.ps1`, the command line used by agents |
-| `Samples~/Tutorial` | Tutorial sample: prefab `FlexibleSample`, test scene `SampleScene`, default settings (imported on request) |
+| `Samples~/Tutorial` | Tutorial sample source: prefab `FlexibleSample`, test scene `SampleScene`, default settings (copied to `Assets/FlexibleUITool/Samples/` on request) |
 
 Project data (`Assets/FlexibleUITool/`, always in the project):
 
@@ -86,6 +86,7 @@ Project data (`Assets/FlexibleUITool/`, always in the project):
 |---|---|
 | `Settings/` | Project-wide settings: `FlexibleProfileSettings.asset` (profiles, grids, roles, templates, preview presets) |
 | `Workspace/` | Temporary workspaces (not in git, deleted on commit) |
+| `Samples/` | Tutorial sample, after `Import Tutorial Sample` |
 
 Per machine: `Library/FlexibleUITool/` holds `AGENTS.md`, `flexui.ps1`, the CLI inbox and outbox, and rendered images.
 
@@ -148,7 +149,7 @@ About 30 to 40 minutes. You try every feature on a practice copy of the sample p
 ### Preparation
 
 1. Open the project in Unity and check the Console for compile errors.
-2. Find the sample prefab `FlexibleSample` in the Project window (import the tutorial sample first if the tool is installed as a package, see [Installation](#0-installation)). Duplicate it with `Ctrl+D`, and rename the copy `FlexibleTutorial`. Do the whole tutorial on this copy and leave the sample untouched.
+2. Find the sample prefab `FlexibleSample` in the Project window (if the tool is installed as a package, import it first with `Tools > FlexibleUITool > Import Tutorial Sample`). Duplicate it with `Ctrl+D`, and rename the copy `FlexibleTutorial`. Do the whole tutorial on this copy and leave the sample untouched.
 3. Open the **Layout Window** and the **Preview Window** from `Tools > FlexibleUITool` and dock them where you can see them.
 4. Make sure the Game view resolution list has `1080x1920` (portrait) and `1920x1080` (landscape). Workspaces switch automatically, but you pick them by hand in step 10. Add missing ones with `+` under the resolution dropdown.
 

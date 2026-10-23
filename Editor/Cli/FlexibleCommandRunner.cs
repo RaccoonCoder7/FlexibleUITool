@@ -34,14 +34,10 @@ namespace FlexibleUITool.EditorTools
             { "import-samples", ImportSamples },
         };
 
-        private const string SamplePrefabName = "FlexibleSample";
+        private const string SamplePrefabName = FlexibleSettingsUtility.SamplePrefabName;
 
-        // 튜토리얼 샘플 폴더 (FlexibleSample 프리팹이 있는 곳). 툴이 Assets 안이면 그 Samples, 패키지면 Import한 위치. 없으면 null
-        public static string SampleFolder => AssetDatabase.FindAssets(SamplePrefabName + " t:Prefab")
-            .Select(AssetDatabase.GUIDToAssetPath)
-            .Where(p => Path.GetFileNameWithoutExtension(p) == SamplePrefabName && p.StartsWith("Assets/"))
-            .Select(p => Path.GetDirectoryName(p)?.Replace('\\', '/'))
-            .FirstOrDefault();
+        // 튜토리얼 샘플 폴더 (FlexibleSample 프리팹이 있는 곳). 없으면 null
+        public static string SampleFolder => FlexibleSettingsUtility.FindSampleFolder();
 
         // 샘플 폴더의 SampleScene
         public static string DefaultTestScene => SampleFolder != null ? SampleFolder + "/SampleScene.unity" : null;
@@ -570,65 +566,13 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
-        // 패키지의 튜토리얼 샘플(FlexibleSample, SampleScene, 기본 설정)을 프로젝트 Assets로 가져온다
+        // 튜토리얼 샘플(FlexibleSample, SampleScene, 기본 설정)을 Assets/FlexibleUITool/Samples 로 가져온다
         private static void ImportSamples(FlexibleCommand command, FlexibleJson json, List<string> warnings, bool inEditor)
         {
-            if (SampleFolder != null)
-            {
-                json.Value("imported", false).Value("folder", SampleFolder);
-                return;
-            }
-
-            UnityEditor.PackageManager.PackageInfo info = FlexibleSettingsUtility.PackageInfo;
-            if (info == null)
-                throw new FlexibleCommandException("SAMPLE_NOT_FOUND", $"{SamplePrefabName} is missing from the project and the tool is not installed as a package. Restore the Samples folder.");
-
-            int imported = 0;
-            foreach (UnityEditor.PackageManager.UI.Sample sample in UnityEditor.PackageManager.UI.Sample.FindByPackage(info.name, info.version))
-            {
-                if (sample.isImported)
-                    continue;
-                if (sample.Import(UnityEditor.PackageManager.UI.Sample.ImportOptions.HideImportWindow | UnityEditor.PackageManager.UI.Sample.ImportOptions.OverridePreviousImports))
-                    imported++;
-            }
-            AssetDatabase.Refresh();
-            if (SampleFolder == null)
-                throw new FlexibleCommandException("SAMPLE_NOT_FOUND", "Could not import the tutorial sample. Import it in Package Manager > Flexible UI Tool > Samples.");
-            UseOneSettingsAsset(SampleFolder);
-            json.Value("imported", imported > 0).Value("folder", SampleFolder);
-        }
-
-        // 샘플에 딸린 설정 애셋을 프로젝트 설정으로 쓴다. 프로젝트 설정이 이미 있으면 샘플 프리팹을 그쪽에 연결하고 샘플 사본은 지운다
-        private static void UseOneSettingsAsset(string sampleFolder)
-        {
-            string sampleSettings = sampleFolder + "/FlexibleProfileSettings.asset";
-            if (AssetDatabase.LoadAssetAtPath<FlexibleProfileSettings>(sampleSettings) == null)
-                return;
-
-            var project = AssetDatabase.LoadAssetAtPath<FlexibleProfileSettings>(FlexibleSettingsUtility.SettingsPath);
-            if (project == null)
-            {
-                FlexibleSettingsUtility.EnsureFolder(Path.GetDirectoryName(FlexibleSettingsUtility.SettingsPath)?.Replace('\\', '/'));
-                AssetDatabase.MoveAsset(sampleSettings, FlexibleSettingsUtility.SettingsPath);
-                return;
-            }
-
-            string prefabPath = sampleFolder + "/" + SamplePrefabName + ".prefab";
-            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
-            try
-            {
-                var layout = root.GetComponent<FlexibleLayout>();
-                if (layout != null)
-                {
-                    layout.Settings = project;
-                    PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
-                }
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-            AssetDatabase.DeleteAsset(sampleSettings);
+            string folder = FlexibleSettingsUtility.ImportTutorialSample(out bool imported);
+            if (folder == null)
+                throw new FlexibleCommandException("SAMPLE_NOT_FOUND", $"{SamplePrefabName} is missing and could not be imported. Restore the tool's Samples folder, or reinstall the package.");
+            json.Value("imported", imported).Value("folder", folder);
         }
 
         // 테스트 씬을 열고 캔버스 아래에 프리팹을 부모에 맞춰 놓은 뒤 저장한다 (이전 테스트 배치는 교체)
