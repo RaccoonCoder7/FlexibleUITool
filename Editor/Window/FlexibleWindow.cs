@@ -115,7 +115,6 @@ namespace FlexibleUITool.EditorTools
 
         private void OnSelectionChanged()
         {
-            edit.OnSelectionChanged();
             OnAnyChange();
             SceneView.RepaintAll();
         }

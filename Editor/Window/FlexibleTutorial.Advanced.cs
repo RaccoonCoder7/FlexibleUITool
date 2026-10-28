@@ -78,7 +78,6 @@ namespace FlexibleUITool.EditorTools
             FlexibleScreenSession.ShowProfile(stage, Landscape);
             window.ShowTab(FlexibleWindow.Tab.Edit);
             FlexibleEditPanel edit = window.EditPanel;
-            edit.ResetPlacementInput();
             edit.SetFoldouts(chapter >= 1 && chapter <= 3, chapter == 5);
 
             // Game 뷰가 가로 크기로 바뀌어 프리팹 모양이 가로가 된 뒤에 칸을 계산해야 위치가 맞는다
@@ -150,7 +149,6 @@ namespace FlexibleUITool.EditorTools
                     Mark = FlexibleGridPlacementService.ApplyCount;
                     break;
                 case Step.SetMode:
-                    window.EditPanel.ResetPlacementInput();
                     Mark = FlexibleGridPlacementService.ApplyCount;
                     break;
                 case Step.SaveAdjust:

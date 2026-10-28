@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5]
+
+- Several blocks at once: with more than one block selected, the Edit tab works like Unity's Inspector. A value shared by all selected blocks is shown as it is, a value that differs is shown as `—`, and changing a value (role, column, row, width, height, horizontal, vertical, safe area) sets it on all of them with one Undo. `Back to Portrait` resets the selected blocks that have their own layout. Dragging in the Scene view works with one block at a time.
+- Fixed: the orange frame in the Scene view kept the cells of the previous screen after switching screens. It now shows the cells the selected blocks sit on in the current screen (or the range being dragged), and the column / row / mode fields follow the selected block and screen.
+- The `(optional)` label is removed from the `Place on a grid` and `Templates` headers.
+- New look for the tutorial raccoon.
+
 ## [1.0.4]
 
 - Grid placement in the Edit tab applies right away: changing `Column` / `Row` / `Width` / `Height` (when you finish typing) or `Horizontal` / `Vertical` moves the selected block at once. The `Apply to selected block` button is removed. Hand nudges on top of the cells are kept.

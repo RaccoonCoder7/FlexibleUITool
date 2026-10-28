@@ -18,24 +18,25 @@ namespace FlexibleUITool.EditorTools
         private static GUIStyle title;
         private static GUIStyle headerLabel;
 
-        // 너구리 (16x16, 위에서 아래로). . 투명 k 외곽 g 회색 l 흰색 m 마스크 e 눈 w 눈빛 p 분홍
+        // 너구리 (16x16, 위에서 아래로). . 투명 k 외곽 g 털 l 흰색 m 마스크 c 볼 띠 e 동공·코 w 눈빛
+        // y 노랑(귀·눈) v 보라(눈) p 속귀 r 볼터치 h 앞머리
         private static readonly string[] MascotPixels =
         {
+            "................",
             "..kk........kk..",
-            ".kgpk......kpgk.",
-            ".kggkkkkkkkkggk.",
-            "kggggggggggggggk",
-            "kgllllggggllllgk",
+            ".kpyk......kypk.",
+            ".kyykkkhhkkkyyk.",
+            "kgggggghhggggggk",
+            "kggllggggggllggk",
             "kmmmmmllllmmmmmk",
-            "kmmewmllllmewmmk",
-            "kmmeemllllmeemmk",
-            "kgmmmllllllmmmgk",
-            "kggllllkkllllggk",
-            "kpgllllllllllgpk",
-            ".kgglllkklllggk.",
-            "..kggllllllggk..",
-            "...kkggggggkk...",
-            ".....kkkkkk.....",
+            "kmmwvmllllmwvmmk",
+            "kmmyemllllmeymmk",
+            "kgcccllllllcccgk",
+            "kgrrlllkklllrrgk",
+            "kggllllllllllggk",
+            ".kggllllllllggk.",
+            "..kkggggggggkk..",
+            "....kkkkkkkk....",
             "................",
         };
 
@@ -187,13 +188,18 @@ namespace FlexibleUITool.EditorTools
         {
             switch (c)
             {
-                case 'k': return Hex(0x3a3a46);
-                case 'g': return Hex(0x9aa0ab);
-                case 'l': return Hex(0xeef0f3);
-                case 'm': return Hex(0x4c4c5a);
-                case 'e': return Hex(0x16161c);
+                case 'k': return Hex(0x26242c);
+                case 'g': return Hex(0x5d5966);
+                case 'l': return Hex(0xf4f4f4);
+                case 'm': return Hex(0x16161b);
+                case 'c': return Hex(0x7c7f8a);
+                case 'e': return Hex(0x0c0c10);
                 case 'w': return Color.white;
-                case 'p': return Hex(0xf29bb0);
+                case 'y': return Hex(0xe9c53a);
+                case 'v': return Hex(0xa77fe6);
+                case 'p': return Hex(0xf2a6b6);
+                case 'r': return Hex(0xf3a0b4);
+                case 'h': return Hex(0xf7d3df);
                 default: return new Color(0f, 0f, 0f, 0f);
             }
         }

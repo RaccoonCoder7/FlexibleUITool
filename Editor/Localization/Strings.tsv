@@ -125,7 +125,6 @@ Back to {0}	{0}로 되돌리기	{0}に戻す
 New block (not saved yet). After saving it appears on every screen.	새 블록 (아직 저장 안 됨). 저장하면 모든 화면에 생깁니다.	新しいブロック（まだ未保存）。保存するとすべての画面に追加されます。
 Role (optional)	역할 (선택)	役割（任意）
 Used by templates and the check tab. Header, Main, Footer ...	템플릿과 검수 탭에서 씁니다. Header, Main, Footer ...	テンプレートとチェックタブで使います。Header, Main, Footer ...
-Place on a grid (optional)	그리드에 맞춰 놓기 (선택)	グリッドに合わせて置く（任意）
 Select a block, then drag over the blue cells in the Scene view. The block snaps to those cells.	블록을 선택하고 Scene 뷰의 파란 칸 위를 드래그하세요. 블록이 그 칸에 딱 맞춰집니다.	ブロックを選んで、Scene ビューの青いマスの上をドラッグしてね。ブロックがそのマスにぴったり収まります。
 The prefab is not drawn in a {0} shape, because Unity's Game view has a different size. Press the button to set it to {1:0}x{2:0}.	Unity의 Game 뷰 크기가 달라서 프리팹이 {0} 모양으로 보이지 않아요. 버튼을 누르면 {1:0}x{2:0}로 맞춥니다.	Unity の Game ビューのサイズが違うため、プレハブが{0}の形で表示されていません。ボタンを押すと {1:0}x{2:0} に合わせます。
 Fix the Game view size	Game 뷰 크기 맞추기	Game ビューのサイズを合わせる
@@ -135,7 +134,6 @@ Keep inside the safe area (red = notch / home bar)	안전 영역 안에만 놓�
 SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}	기준 기기의 SafeArea 여백: 왼쪽 {0:P1} · 오른쪽 {1:P1} · 위 {2:P1} · 아래 {3:P1}	基準端末の SafeArea の余白：左 {0:P1} · 右 {1:P1} · 上 {2:P1} · 下 {3:P1}
 Select the block to place.	놓을 블록을 선택하세요.	置くブロックを選んでね。
 {0}: {1}	{0}: {1}	{0}：{1}
-Templates (optional)	템플릿 (선택)	テンプレート（任意）
 Save where each role (Header, Main, ...) sits on the grid of the {0} screen, and reuse it on other prefabs.	{0} 화면에서 역할(Header, Main ...)마다 그리드 어디에 있는지 저장해 두고 다른 프리팹에 다시 쓸 수 있어요.	{0}画面で役割（Header, Main ...）ごとにグリッドのどこに置いたかを保存して、ほかのプレハブで使い回せます。
 More	그 밖	その他
 Change the Game view size when switching screens	화면을 바꿀 때 Game 뷰 크기도 바꾸기	画面を切り替えたら Game ビューのサイズも変える
@@ -300,3 +298,8 @@ Leave it empty and the AI decides by itself. Example: "In landscape, put the men
 Changes here move the selected block right away. Save keeps them.	여기서 바꾸면 선택한 블록이 바로 움직여요. 저장하면 그대로 남아요.	ここで変えると選んだブロックがすぐ動きます。保存するとそのまま残ります。
 Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height. The block moves as soon as you finish typing.)	Scene 뷰의 파란 칸 위를 끌어 보세요. 손을 떼면 Main이 끈 칸에 딱 맞춰져요.\n(열·행·폭·높이 숫자를 넣어도 돼요. 입력을 마치면 블록이 바로 움직여요.)	シーンビューの青いマスの上をドラッグしてみよう。手を離すと Main がそのマスにぴったり合うよ。\n（列・行・幅・高さの数字を入れてもいいよ。入力し終えるとブロックがすぐ動くよ。）
 Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle.\nChange <b>Horizontal</b> from Stretch to another mode. The block changes right away.	블록이 화면 크기를 따라가는 방식을 정해요.\n<b>늘이기</b>: 화면과 함께 커져요. <b>왼쪽·오른쪽 고정</b>: 크기는 그대로, 그쪽에 붙어요. <b>가운데 고정</b>: 크기는 그대로, 가운데에 있어요.\n<b>가로축</b>을 늘이기에서 다른 방식으로 바꿔 보세요. 블록에 바로 적용돼요.	ブロックが画面サイズにどう追従するかを決めるよ。\n<b>伸縮</b>：画面と一緒に大きくなる。<b>左・右に固定</b>：サイズはそのままでその側にくっつく。<b>中央に固定</b>：サイズはそのままで真ん中。\n<b>横軸</b>を伸縮からほかの方式に変えてみよう。ブロックにすぐ反映されるよ。
+{0} blocks selected	블록 {0}개 선택됨	ブロック {0} 個を選択中
+{0} of {1} blocks have their own layout on this screen	{1}개 중 {0}개가 이 화면에서 따로 배치돼 있어요	{1} 個のうち {0} 個がこの画面で独自の配置です
+Place on a grid	그리드에 맞춰 놓기	グリッドに合わせて置く
+... and {0} more	... 외 {0}개	... ほか {0} 個
+Changes here apply to all selected blocks right away. Save keeps them. Dragging in the Scene view works with one block at a time.	여기서 바꾸면 선택한 블록 전부에 바로 적용돼요. 저장하면 그대로 남아요. Scene 뷰 드래그는 블록을 하나만 골랐을 때 돼요.	ここで変えると選んだブロックすべてにすぐ反映されます。保存するとそのまま残ります。シーンビューのドラッグはブロックを1つだけ選んだときに使えます。

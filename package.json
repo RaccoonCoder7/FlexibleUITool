@@ -1,6 +1,6 @@
 {
   "name": "com.raccooncoder7.flexibleuitool",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "displayName": "Flexible UI Tool",
   "description": "One UI prefab for portrait, square and landscape screens. Profile layouts are stored as data on the prefab and switched at runtime by aspect ratio. Includes one editor window with Edit / Preview / Check tabs, a built-in tutorial, optional auto-layout with Claude Code (English, Korean, Japanese), and a command line for coding agents.",
   "license": "MIT",

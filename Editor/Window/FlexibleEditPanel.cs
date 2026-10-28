@@ -23,14 +23,24 @@ namespace FlexibleUITool.EditorTools
         [SerializeField] private bool showTemplates;
         [SerializeField] private bool showMore;
         [SerializeField] private bool dragPlacement = true;
-        [SerializeField] private FlexibleCell cell = new FlexibleCell(0, 0, 1, 1);
-        [SerializeField] private FlexibleAxisMode modeX = FlexibleAxisMode.Stretch;
-        [SerializeField] private FlexibleAxisMode modeY = FlexibleAxisMode.Stretch;
         [SerializeField] private int templateIndex;
         [SerializeField] private string templateName = "";
+        // 칸에 놓은 적 없는 블록에 쓰는 SafeArea 기본값 (사용자별)
         private bool insideSafeArea = true;
         private bool dragging;
         private Vector2Int dragStart;
+        private FlexibleCell dragCell;
+
+        // 블록 하나의 그리드 입력값: 칸에 놓였으면 그 기록, 아니면 지금 덮고 있는 칸 + Stretch
+        private struct BlockInput
+        {
+            public RectTransform target;
+            public FlexibleGridPlacement placement;
+            public FlexibleCell cell;
+            public FlexibleAxisMode modeX;
+            public FlexibleAxisMode modeY;
+            public bool insideSafeArea;
+        }
 
         public bool GridOpen => showGrid;
 
@@ -46,12 +56,6 @@ namespace FlexibleUITool.EditorTools
             SceneView.RepaintAll();
         }
 
-        public void ResetPlacementInput()
-        {
-            modeX = FlexibleAxisMode.Stretch;
-            modeY = FlexibleAxisMode.Stretch;
-        }
-
         public void SuggestTemplateName(string name)
         {
             if (string.IsNullOrWhiteSpace(templateName))
@@ -63,22 +67,77 @@ namespace FlexibleUITool.EditorTools
             insideSafeArea = EditorPrefs.GetBool(InsideSafeAreaKey, true);
         }
 
-        // 그리드로 놓은 적 있는 블록을 고르면 그때의 칸·모드를 채워 둔다
-        public void OnSelectionChanged()
+        private BlockInput GetInput(RectTransform target, FlexibleWorkspace session, FlexibleGridContext context)
         {
-            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
-            FlexibleWorkspace session = FlexibleScreenSession.GetSession(stage);
-            if (session == null)
-                return;
+            var input = new BlockInput { target = target, placement = session.FindPlacement(target) };
+            if (input.placement != null)
+            {
+                input.cell = input.placement.cell.Clamped(context.grid);
+                // 예전 버전의 Auto는 지금 블록이 실제로 쓰는 모드로 보여 준다
+                input.modeX = FlexibleGridMath.ResolveX(input.placement.modeX, input.cell, context.grid);
+                input.modeY = FlexibleGridMath.ResolveY(input.placement.modeY, input.cell, context.grid);
+                input.insideSafeArea = input.placement.insideSafeArea;
+                return input;
+            }
 
-            RectTransform target = GetSelectedBlock((RectTransform)stage.prefabContentsRoot.transform);
-            FlexibleGridPlacement placement = target != null ? session.FindPlacement(target) : null;
-            if (placement == null)
-                return;
-            cell = placement.cell;
-            modeX = placement.modeX;
-            modeY = placement.modeY;
-            insideSafeArea = placement.insideSafeArea;
+            input.modeX = FlexibleAxisMode.Stretch;
+            input.modeY = FlexibleAxisMode.Stretch;
+            input.insideSafeArea = insideSafeArea;
+            input.cell = new FlexibleCell(0, 0, 1, 1);
+            var corners = new Vector3[4];
+            target.GetWorldCorners(corners);
+            Vector2 min = context.root.InverseTransformPoint(corners[0]);
+            Vector2 max = context.root.InverseTransformPoint(corners[2]);
+            Rect area = context.GetArea(input.insideSafeArea);
+            // 칸 경계에 딱 붙은 가장자리가 이웃 칸으로 잡히지 않게 조금 안쪽을 본다
+            if (FlexibleGridMath.TryGetCell(area, context.grid, min + Vector2.one, out Vector2Int a)
+                && FlexibleGridMath.TryGetCell(area, context.grid, max - Vector2.one, out Vector2Int b))
+                input.cell = FlexibleCell.FromCorners(a, b);
+            return input;
+        }
+
+        // 입력값대로 다시 놓는다. 손으로 옮긴 보정은 새 칸·모드 위에 그대로 얹는다
+        private static void Place(FlexibleGridContext context, FlexibleWorkspace session, BlockInput input)
+        {
+            FlexibleGridAdjustment adjustment = default;
+            if (input.placement != null)
+                FlexibleGridPlacementService.TryGetAdjustment(input.placement, out adjustment);
+            FlexibleGridPlacementService.Apply(context, session, input.target, input.cell.Clamped(context.grid), input.modeX, input.modeY, input.insideSafeArea, adjustment);
+        }
+
+        // 고른 블록 전부에 한 번에 적용하고 Undo 한 번으로 묶는다
+        private static void PlaceAll(FlexibleGridContext context, FlexibleWorkspace session, List<BlockInput> inputs, System.Func<BlockInput, BlockInput> change)
+        {
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            foreach (BlockInput input in inputs)
+                Place(context, session, change(input));
+            Undo.CollapseUndoOperations(group);
+            SceneView.RepaintAll();
+        }
+
+        // 고른 블록들의 값이 모두 같으면 그 값, 다르면 「—」로 보여 주는 숫자 칸. 바꾼 값을 돌려준다
+        private static bool MixedIntField(string label, List<BlockInput> inputs, System.Func<BlockInput, int> get, out int value)
+        {
+            int first = get(inputs[0]);
+            EditorGUI.showMixedValue = inputs.Exists(i => get(i) != first);
+            EditorGUI.BeginChangeCheck();
+            value = EditorGUILayout.DelayedIntField(label, first);
+            bool changed = EditorGUI.EndChangeCheck();
+            EditorGUI.showMixedValue = false;
+            return changed;
+        }
+
+        private static bool MixedModeField(string label, string[] labels, List<BlockInput> inputs, System.Func<BlockInput, FlexibleAxisMode> get, out FlexibleAxisMode value)
+        {
+            FlexibleAxisMode first = get(inputs[0]);
+            EditorGUI.showMixedValue = inputs.Exists(i => get(i) != first);
+            EditorGUI.BeginChangeCheck();
+            // 선택지는 Stretch부터 (Auto는 고를 수 없다)
+            value = (FlexibleAxisMode)(EditorGUILayout.Popup(label, (int)first - 1, labels) + 1);
+            bool changed = EditorGUI.EndChangeCheck();
+            EditorGUI.showMixedValue = false;
+            return changed;
         }
 
         public void Draw()
@@ -262,8 +321,8 @@ namespace FlexibleUITool.EditorTools
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             FlexibleProfileSettings settings = layout.Settings;
             FlexibleGui.Section(T("Selected block"));
-            RectTransform target = GetSelectedBlock(root);
-            if (target == null)
+            List<RectTransform> targets = GetSelectedBlocks(root);
+            if (targets.Count == 0)
             {
                 GUILayout.Label(T("Click a block in the Hierarchy or the Scene view."), EditorStyles.wordWrappedMiniLabel);
                 return;
@@ -272,37 +331,49 @@ namespace FlexibleUITool.EditorTools
             FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUILayout.Label(target.name, EditorStyles.boldLabel);
-                switch (FlexibleScreenSession.GetStatus(stage, target))
+                GUILayout.Label(targets.Count == 1 ? targets[0].name : F("{0} blocks selected", targets.Count), EditorStyles.boldLabel);
+                if (targets.Count > 1)
+                    GUILayout.Label(Shorten(string.Join(", ", targets.Select(t => t.name)), 120), EditorStyles.wordWrappedMiniLabel);
+
+                // 여러 개면 상태가 모두 같을 때만 그 안내를 보이고, 다르면 화면마다 따로 둔 블록 수를 알린다
+                List<FlexibleBlockStatus> statuses = targets.Select(t => FlexibleScreenSession.GetStatus(stage, t)).ToList();
+                List<RectTransform> own = targets.Where((t, i) => statuses[i] == FlexibleBlockStatus.Own).ToList();
+                bool same = statuses.All(s => s == statuses[0]);
+                if (same && statuses[0] == FlexibleBlockStatus.BaseScreen)
+                    GUILayout.Label(T("Base screen: changes here apply to every screen (except where a screen has its own layout)."), EditorStyles.wordWrappedMiniLabel);
+                else if (same && statuses[0] == FlexibleBlockStatus.SameAsBase)
+                    GUILayout.Label(F("○ Same as {0}. Move it to give this screen its own layout.", Name(baseProfile)), FlexibleGui.WrapLabel);
+                else if (same && statuses[0] == FlexibleBlockStatus.NotSavedYet)
+                    GUILayout.Label(T("New block (not saved yet). After saving it appears on every screen."), EditorStyles.wordWrappedMiniLabel);
+                else if (own.Count > 0)
                 {
-                    case FlexibleBlockStatus.BaseScreen:
-                        GUILayout.Label(T("Base screen: changes here apply to every screen (except where a screen has its own layout)."), EditorStyles.wordWrappedMiniLabel);
-                        break;
-                    case FlexibleBlockStatus.SameAsBase:
-                        GUILayout.Label(F("○ Same as {0}. Move it to give this screen its own layout.", Name(baseProfile)), FlexibleGui.WrapLabel);
-                        break;
-                    case FlexibleBlockStatus.Own:
-                        using (new EditorGUILayout.HorizontalScope())
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        string text = own.Count == targets.Count ? T("Has its own layout on this screen") : F("{0} of {1} blocks have their own layout on this screen", own.Count, targets.Count);
+                        GUILayout.Label($"<color=#{ColorUtility.ToHtmlStringRGB(FlexibleGui.Good)}>●</color> " + text, FlexibleGui.WrapLabel);
+                        if (GUILayout.Button(F("Back to {0}", Name(baseProfile)), GUILayout.Width(130f)))
                         {
-                            GUILayout.Label($"<color=#{ColorUtility.ToHtmlStringRGB(FlexibleGui.Good)}>●</color> " + T("Has its own layout on this screen"), FlexibleGui.WrapLabel);
-                            if (GUILayout.Button(F("Back to {0}", Name(baseProfile)), GUILayout.Width(130f)))
-                                FlexibleScreenSession.ResetToBase(stage, target);
+                            foreach (RectTransform t in own)
+                                FlexibleScreenSession.ResetToBase(stage, t);
                         }
-                        break;
-                    case FlexibleBlockStatus.NotSavedYet:
-                        GUILayout.Label(T("New block (not saved yet). After saving it appears on every screen."), EditorStyles.wordWrappedMiniLabel);
-                        break;
+                    }
                 }
 
-                DrawRolePopup(layout, target, settings);
+                DrawRolePopup(layout, targets, settings);
             }
         }
 
-        private static void DrawRolePopup(FlexibleLayout layout, RectTransform target, FlexibleProfileSettings settings)
+        private static string Shorten(string text, int max)
+        {
+            return text.Length <= max ? text : text.Substring(0, max) + "…";
+        }
+
+        private static void DrawRolePopup(FlexibleLayout layout, List<RectTransform> targets, FlexibleProfileSettings settings)
         {
             var options = new List<string> { T("(none)") };
             options.AddRange(settings.Roles);
-            string current = layout.GetRole(target);
+            List<string> roles = targets.Select(t => layout.GetRole(t)).ToList();
+            string current = roles[0];
             int index = string.IsNullOrEmpty(current) ? 0 : options.IndexOf(current);
             if (index < 0)
             {
@@ -310,13 +381,16 @@ namespace FlexibleUITool.EditorTools
                 index = options.Count - 1;
             }
 
+            EditorGUI.showMixedValue = roles.Any(r => (r ?? "") != (current ?? ""));
             EditorGUI.BeginChangeCheck();
             index = EditorGUILayout.Popup(new GUIContent(T("Role (optional)"), T("Used by templates and the check tab. Header, Main, Footer ...")), index, options.ToArray());
+            EditorGUI.showMixedValue = false;
             FlexibleGui.Mark("role");
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(layout, "Flexible Role");
-                layout.SetRole(target, index == 0 ? null : options[index]);
+                foreach (RectTransform t in targets)
+                    layout.SetRole(t, index == 0 ? null : options[index]);
                 EditorUtility.SetDirty(layout);
             }
         }
@@ -327,7 +401,7 @@ namespace FlexibleUITool.EditorTools
         {
             EditorGUILayout.Space(6f);
             EditorGUI.BeginChangeCheck();
-            showGrid = EditorGUILayout.Foldout(showGrid, T("Place on a grid (optional)"), true, EditorStyles.foldoutHeader);
+            showGrid = EditorGUILayout.Foldout(showGrid, T("Place on a grid"), true, EditorStyles.foldoutHeader);
             if (EditorGUI.EndChangeCheck())
                 SceneView.RepaintAll();
             FlexibleGui.Mark("grid");
@@ -344,12 +418,15 @@ namespace FlexibleUITool.EditorTools
             FlexibleProfile profile = settings.Profiles[profileIndex];
             var context = new FlexibleGridContext(root, profile.grid, settings.GetSafeInsets(profileIndex));
 
+            List<BlockInput> inputs = context.grid.IsValid
+                ? GetSelectedBlocks(root).Select(t => GetInput(t, session, context)).ToList()
+                : new List<BlockInput>();
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 GUILayout.Label(T("Select a block, then drag over the blue cells in the Scene view. The block snaps to those cells."), EditorStyles.wordWrappedMiniLabel);
-                DrawGridSettings(settings, profileIndex, context);
+                DrawGridSettings(settings, profileIndex, context, session, inputs);
                 DrawStalePlacements(context, session);
-                DrawPlacement(context, session);
+                DrawPlacement(context, session, inputs);
             }
         }
 
@@ -364,7 +441,7 @@ namespace FlexibleUITool.EditorTools
                 FlexibleScreenSession.SelectWorkResolution(profile);
         }
 
-        private void DrawGridSettings(FlexibleProfileSettings settings, int profileIndex, FlexibleGridContext context)
+        private void DrawGridSettings(FlexibleProfileSettings settings, int profileIndex, FlexibleGridContext context, FlexibleWorkspace session, List<BlockInput> inputs)
         {
             var serialized = new SerializedObject(settings);
             SerializedProperty grid = serialized.FindProperty("profiles").GetArrayElementAtIndex(profileIndex).FindPropertyRelative("grid");
@@ -398,11 +475,24 @@ namespace FlexibleUITool.EditorTools
 
             EditorGUI.BeginChangeCheck();
             dragPlacement = EditorGUILayout.ToggleLeft(T("Place by dragging in the Scene view"), dragPlacement);
-            insideSafeArea = EditorGUILayout.ToggleLeft(new GUIContent(T("Keep inside the safe area (red = notch / home bar)"),
-                F("SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}", context.safeInsets.x, context.safeInsets.y, context.safeInsets.z, context.safeInsets.w)), insideSafeArea);
+            if (EditorGUI.EndChangeCheck())
+                SceneView.RepaintAll();
+
+            // 블록을 고르면 그 블록들의 값(다르면 「—」), 안 고르면 새로 놓을 때의 기본값
+            bool shown = inputs.Count > 0 ? inputs[0].insideSafeArea : insideSafeArea;
+            EditorGUI.showMixedValue = inputs.Exists(i => i.insideSafeArea != shown);
+            EditorGUI.BeginChangeCheck();
+            bool inside = EditorGUILayout.ToggleLeft(new GUIContent(T("Keep inside the safe area (red = notch / home bar)"),
+                F("SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}", context.safeInsets.x, context.safeInsets.y, context.safeInsets.z, context.safeInsets.w)), shown);
+            EditorGUI.showMixedValue = false;
             if (EditorGUI.EndChangeCheck())
             {
-                EditorPrefs.SetBool(InsideSafeAreaKey, insideSafeArea);
+                insideSafeArea = inside;
+                EditorPrefs.SetBool(InsideSafeAreaKey, inside);
+                // 칸에 놓인 선택 블록은 바로 다시 놓는다
+                List<BlockInput> placed = inputs.Where(i => i.placement != null).ToList();
+                if (placed.Count > 0)
+                    PlaceAll(context, session, placed, i => { i.insideSafeArea = inside; return i; });
                 SceneView.RepaintAll();
             }
         }
@@ -418,79 +508,74 @@ namespace FlexibleUITool.EditorTools
                 FlexibleGridPlacementService.ReapplyStale(session, stale);
         }
 
-        private void DrawPlacement(FlexibleGridContext context, FlexibleWorkspace session)
+        private void DrawPlacement(FlexibleGridContext context, FlexibleWorkspace session, List<BlockInput> inputs)
         {
-            RectTransform root = context.root;
-            FlexibleGrid grid = context.grid;
-            RectTransform target = GetSelectedBlock(root);
-            if (target == null)
-            {
-                GUILayout.Label(T("Select the block to place."), EditorStyles.miniBoldLabel);
-                return;
-            }
-            if (!grid.IsValid)
+            if (!context.grid.IsValid)
             {
                 EditorGUILayout.HelpBox(T("Grid columns and rows must be 1 or more."), MessageType.Error);
                 return;
             }
+            if (inputs.Count == 0)
+            {
+                GUILayout.Label(T("Select the block to place."), EditorStyles.miniBoldLabel);
+                return;
+            }
 
-            FlexibleGridPlacement placement = session.FindPlacement(target);
-            string where = placement != null && placement.insideSafeArea ? T(", inside SafeArea") : "";
-            string kind;
-            if (placement == null)
-                kind = T("Not placed on the grid");
-            else if (FlexibleWorkspaceService.IsUntouchedPlacement(placement))
-                kind = F("Grid block {0}{1}", placement.cell, where);
-            else if (FlexibleGridPlacementService.TryGetAdjustment(placement, out FlexibleGridAdjustment adjustment))
-                kind = F("Grid {0}{1} + adjustment ({2})", placement.cell, where, adjustment);
-            else
-                kind = F("Manually adjusted (anchors or pivot changed from grid {0}{1}; excluded from templates)", placement.cell, where);
-            EditorGUILayout.LabelField(F("{0}: {1}", target.name, kind), EditorStyles.wordWrappedMiniLabel);
+            // 블록마다 지금 상태 한 줄 (많으면 앞의 몇 개만)
+            const int MaxLines = 5;
+            foreach (BlockInput input in inputs.Take(MaxLines))
+                EditorGUILayout.LabelField(F("{0}: {1}", input.target.name, Describe(input.placement)), EditorStyles.wordWrappedMiniLabel);
+            if (inputs.Count > MaxLines)
+                GUILayout.Label(F("... and {0} more", inputs.Count - MaxLines), EditorStyles.miniLabel);
 
+            // 값을 바꾸면 고른 블록 전부에 바로 적용한다 (숫자는 입력을 마쳤을 때). 블록마다 값이 다르면 「—」
             float labelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = FlexibleGui.FitLabels(T("Column"), T("Row"), T("Width (cells)"), T("Height (cells)"), T("Horizontal"), T("Vertical"));
-            // 값을 바꾸면 바로 선택 블록에 적용한다 (숫자는 입력을 마쳤을 때)
-            EditorGUI.BeginChangeCheck();
             using (new EditorGUILayout.HorizontalScope())
             {
-                cell.column = EditorGUILayout.DelayedIntField(T("Column"), cell.column);
-                cell.row = EditorGUILayout.DelayedIntField(T("Row"), cell.row);
+                if (MixedIntField(T("Column"), inputs, i => i.cell.column, out int column))
+                    PlaceAll(context, session, inputs, i => { i.cell.column = column; return i; });
+                if (MixedIntField(T("Row"), inputs, i => i.cell.row, out int row))
+                    PlaceAll(context, session, inputs, i => { i.cell.row = row; return i; });
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                cell.width = EditorGUILayout.DelayedIntField(T("Width (cells)"), cell.width);
-                cell.height = EditorGUILayout.DelayedIntField(T("Height (cells)"), cell.height);
+                if (MixedIntField(T("Width (cells)"), inputs, i => i.cell.width, out int width))
+                    PlaceAll(context, session, inputs, i => { i.cell.width = width; return i; });
+                if (MixedIntField(T("Height (cells)"), inputs, i => i.cell.height, out int height))
+                    PlaceAll(context, session, inputs, i => { i.cell.height = height; return i; });
             }
-            cell = cell.Clamped(grid);
-            // 예전 버전의 Auto는 지금 블록이 실제로 쓰는 모드로 보여 준다 (새 입력이면 Stretch)
-            if (modeX == FlexibleAxisMode.Auto)
-                modeX = placement != null ? FlexibleGridMath.ResolveX(modeX, cell, grid) : FlexibleAxisMode.Stretch;
-            if (modeY == FlexibleAxisMode.Auto)
-                modeY = placement != null ? FlexibleGridMath.ResolveY(modeY, cell, grid) : FlexibleAxisMode.Stretch;
             using (new EditorGUILayout.VerticalScope())
             {
-                modeX = (FlexibleAxisMode)(EditorGUILayout.Popup(T("Horizontal"), (int)modeX - 1, ModeLabelsX) + 1);
-                modeY = (FlexibleAxisMode)(EditorGUILayout.Popup(T("Vertical"), (int)modeY - 1, ModeLabelsY) + 1);
+                if (MixedModeField(T("Horizontal"), ModeLabelsX, inputs, i => i.modeX, out FlexibleAxisMode modeX))
+                    PlaceAll(context, session, inputs, i => { i.modeX = modeX; return i; });
+                if (MixedModeField(T("Vertical"), ModeLabelsY, inputs, i => i.modeY, out FlexibleAxisMode modeY))
+                    PlaceAll(context, session, inputs, i => { i.modeY = modeY; return i; });
             }
             FlexibleGui.Mark("grid:mode");
-            if (EditorGUI.EndChangeCheck())
-            {
-                // 손으로 옮긴 보정은 새 칸·모드 위에 그대로 얹는다
-                FlexibleGridAdjustment adjustment = default;
-                if (placement != null)
-                    FlexibleGridPlacementService.TryGetAdjustment(placement, out adjustment);
-                FlexibleGridPlacementService.Apply(context, session, target, cell, modeX, modeY, insideSafeArea, adjustment);
-                SceneView.RepaintAll();
-            }
             EditorGUIUtility.labelWidth = labelWidth;
-            GUILayout.Label(T("Changes here move the selected block right away. Save keeps them."), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(inputs.Count == 1
+                ? T("Changes here move the selected block right away. Save keeps them.")
+                : T("Changes here apply to all selected blocks right away. Save keeps them. Dragging in the Scene view works with one block at a time."), EditorStyles.wordWrappedMiniLabel);
+        }
+
+        private static string Describe(FlexibleGridPlacement placement)
+        {
+            if (placement == null)
+                return T("Not placed on the grid");
+            string where = placement.insideSafeArea ? T(", inside SafeArea") : "";
+            if (FlexibleWorkspaceService.IsUntouchedPlacement(placement))
+                return F("Grid block {0}{1}", placement.cell, where);
+            if (FlexibleGridPlacementService.TryGetAdjustment(placement, out FlexibleGridAdjustment adjustment))
+                return F("Grid {0}{1} + adjustment ({2})", placement.cell, where, adjustment);
+            return F("Manually adjusted (anchors or pivot changed from grid {0}{1}; excluded from templates)", placement.cell, where);
         }
 
         // ───────── 템플릿 ─────────
 
         private void DrawTemplates(PrefabStage stage, FlexibleLayout layout)
         {
-            showTemplates = EditorGUILayout.Foldout(showTemplates, T("Templates (optional)"), true, EditorStyles.foldoutHeader);
+            showTemplates = EditorGUILayout.Foldout(showTemplates, T("Templates"), true, EditorStyles.foldoutHeader);
             FlexibleGui.Mark("templates");
             if (!showTemplates)
                 return;
@@ -710,6 +795,20 @@ namespace FlexibleUITool.EditorTools
             return target != null && target != root && target.IsChildOf(root) ? target : null;
         }
 
+        // 고른 블록 전부 (프리팹 루트와 프리팹 밖 오브젝트는 뺀다), Hierarchy 순서
+        public static List<RectTransform> GetSelectedBlocks(RectTransform root)
+        {
+            var picked = new HashSet<RectTransform>();
+            foreach (GameObject go in Selection.gameObjects)
+            {
+                if (go != null && go.transform is RectTransform rt && rt != root && rt.IsChildOf(root))
+                    picked.Add(rt);
+            }
+            if (picked.Count <= 1)
+                return picked.ToList();
+            return root.GetComponentsInChildren<RectTransform>(true).Where(picked.Contains).ToList();
+        }
+
         // ───────── Scene 뷰 그리드 ─────────
 
         public void OnSceneGUI(SceneView sceneView)
@@ -731,22 +830,38 @@ namespace FlexibleUITool.EditorTools
 
             var context = new FlexibleGridContext(root, settings.Profiles[profileIndex].grid, settings.GetSafeInsets(profileIndex));
             FlexibleGrid grid = context.grid;
-            Rect area = context.GetArea(insideSafeArea);
+            List<RectTransform> targets = GetSelectedBlocks(root);
+            // 드래그는 블록 하나일 때만 (여러 블록을 같은 칸에 겹쳐 놓는 일은 없으므로)
+            BlockInput? single = targets.Count == 1 ? GetInput(targets[0], session, context) : (BlockInput?)null;
+            Rect area = context.GetArea(single?.insideSafeArea ?? insideSafeArea);
             DrawUnsafeArea(root, root.rect, context.GetArea(true));
             for (int r = 0; r < grid.rows; r++)
             for (int c = 0; c < grid.columns; c++)
                 DrawRect(root, FlexibleGridMath.GetSlotRect(area, grid, new FlexibleCell(c, r, 1, 1)),
                     new Color(0.2f, 0.6f, 1f, 0.05f), new Color(0.2f, 0.6f, 1f, 0.5f));
 
-            if (GetSelectedBlock(root) != null)
-                DrawRect(root, FlexibleGridMath.GetSlotRect(area, grid, cell.Clamped(grid)),
-                    new Color(1f, 0.6f, 0.1f, 0.15f), new Color(1f, 0.6f, 0.1f, 1f));
+            // 주황 = 드래그 중인 범위, 아니면 선택 블록들이 이 화면에서 놓인 칸 (칸에 놓은 적 없으면 그리지 않는다)
+            var orangeFill = new Color(1f, 0.6f, 0.1f, 0.15f);
+            var orangeLine = new Color(1f, 0.6f, 0.1f, 1f);
+            if (dragging)
+                DrawRect(root, FlexibleGridMath.GetSlotRect(area, grid, dragCell.Clamped(grid)), orangeFill, orangeLine);
+            else
+            {
+                foreach (RectTransform target in targets)
+                {
+                    FlexibleGridPlacement placed = session.FindPlacement(target);
+                    if (placed != null)
+                        DrawRect(root, FlexibleGridMath.GetSlotRect(context.GetArea(placed.insideSafeArea), grid, placed.cell.Clamped(grid)), orangeFill, orangeLine);
+                }
+            }
 
-            if (dragPlacement)
-                HandleDrag(context, session, area);
+            if (dragPlacement && single.HasValue)
+                HandleDrag(context, session, area, single.Value);
+            else
+                dragging = false;
         }
 
-        private void HandleDrag(FlexibleGridContext context, FlexibleWorkspace session, Rect area)
+        private void HandleDrag(FlexibleGridContext context, FlexibleWorkspace session, Rect area, BlockInput input)
         {
             RectTransform root = context.root;
             FlexibleGrid grid = context.grid;
@@ -755,17 +870,16 @@ namespace FlexibleUITool.EditorTools
             switch (e.GetTypeForControl(id))
             {
                 case EventType.Layout:
-                    if (GetSelectedBlock(root) != null)
-                        HandleUtility.AddDefaultControl(id);
+                    HandleUtility.AddDefaultControl(id);
                     break;
 
                 case EventType.MouseDown:
-                    if (e.button == 0 && !e.alt && GetSelectedBlock(root) != null && TryPickCell(root, area, grid, e.mousePosition, out Vector2Int start))
+                    if (e.button == 0 && !e.alt && TryPickCell(root, area, grid, e.mousePosition, out Vector2Int start))
                     {
                         GUIUtility.hotControl = id;
                         dragging = true;
                         dragStart = start;
-                        cell = FlexibleCell.FromCorners(start, start);
+                        dragCell = FlexibleCell.FromCorners(start, start);
                         e.Use();
                     }
                     break;
@@ -774,7 +888,7 @@ namespace FlexibleUITool.EditorTools
                     if (dragging && GUIUtility.hotControl == id)
                     {
                         if (TryPickCell(root, area, grid, e.mousePosition, out Vector2Int current))
-                            cell = FlexibleCell.FromCorners(dragStart, current);
+                            dragCell = FlexibleCell.FromCorners(dragStart, current);
                         e.Use();
                     }
                     break;
@@ -785,9 +899,8 @@ namespace FlexibleUITool.EditorTools
                         GUIUtility.hotControl = 0;
                         dragging = false;
                         e.Use();
-                        RectTransform target = GetSelectedBlock(root);
-                        if (target != null)
-                            FlexibleGridPlacementService.Apply(context, session, target, cell, modeX, modeY, insideSafeArea);
+                        // 드래그로 칸을 새로 정하면 손으로 옮긴 보정은 버린다 (모드·SafeArea는 유지)
+                        FlexibleGridPlacementService.Apply(context, session, input.target, dragCell, input.modeX, input.modeY, input.insideSafeArea);
                     }
                     break;
             }
