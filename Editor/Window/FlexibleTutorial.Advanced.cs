@@ -131,7 +131,7 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             var root = (RectTransform)stage.prefabContentsRoot.transform;
-            var context = new FlexibleGridContext(root, settings.Profiles[index].grid, settings.GetSafeInsets(index));
+            var context = new FlexibleGridContext(root, layout.GetGrid(Landscape), settings.GetSafeInsets(index));
             FlexibleGridPlacementService.Apply(context, session, target, cellOf(context.grid), FlexibleAxisMode.Stretch, FlexibleAxisMode.Stretch, true);
         }
 
@@ -176,7 +176,7 @@ namespace FlexibleUITool.EditorTools
                 case Step.OpenGrid:
                     return T("Open <b>Place on a grid</b> (orange frame).\nBlue cells (the grid) appear in the Scene view. Each screen has its own grid.");
                 case Step.ChangeGrid:
-                    return T("<b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view. (I'll put the grid back when the tutorial ends.)");
+                    return T("<b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view.\nThis practice prefab has <b>Use a grid only for this prefab</b> on, so other prefabs are not affected. Without it, every prefab shares the project grid (<b>Project grids...</b>).");
                 case Step.SelectBlock:
                     return T("Pick the block to place. Click <b>Main</b> in the Hierarchy or the Scene view.");
                 case Step.DragCells:
@@ -324,10 +324,14 @@ namespace FlexibleUITool.EditorTools
 
         private static string TemplateKey(FlexibleTemplate template) => template.profileId + "\n" + template.name;
 
+        // 연습 프리팹이 쓰는 그리드 (연습 프리팹은 전용 그리드를 쓴다)
         private static string GridKey()
         {
-            FlexibleProfileSettings settings = Settings;
-            return settings == null ? "" : string.Join("|", settings.Profiles.Select(p => JsonUtility.ToJson(p.grid)));
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            var layout = stage != null ? stage.prefabContentsRoot.GetComponent<FlexibleLayout>() : null;
+            if (layout == null || layout.Settings == null)
+                return "";
+            return string.Join("|", layout.Settings.Profiles.Select(p => JsonUtility.ToJson(layout.GetGrid(p.id))));
         }
 
         // 튜토리얼이 처음 공용 설정을 바꾸기 전에 한 번만 기억한다

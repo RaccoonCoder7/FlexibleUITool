@@ -222,10 +222,13 @@ namespace FlexibleUITool.EditorTools
                     int index = settings.IndexOf(profile.id);
                     Vector4 insets = settings.GetSafeInsets(index);
 
+                    // 프리팹이 전용 그리드를 쓰면 그 값 (ownGrid: true)
+                    FlexibleGrid grid = layout != null ? layout.GetGrid(profile.id) : profile.grid;
                     json.BeginObject().Value("profile", profile.id).Value("isBase", profile.id == settings.BaseProfileId)
                         .Numbers("canvas", size.x, size.y)
-                        .BeginObject("grid").Value("columns", profile.grid.columns).Value("rows", profile.grid.rows)
-                        .Value("margin", profile.grid.margin).Value("gutter", profile.grid.gutter)
+                        .BeginObject("grid").Value("columns", grid.columns).Value("rows", grid.rows)
+                        .Value("margin", grid.margin).Value("gutter", grid.gutter)
+                        .Value("ownGrid", layout != null && layout.UseOwnGrid)
                         .Numbers("safeInsets", insets.x, insets.y, insets.z, insets.w).EndObject()
                         .BeginArray("blocks");
                     foreach (RectTransform block in SelectBlocks(root, command.all))

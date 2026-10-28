@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
+using static FlexibleUITool.EditorTools.FlexibleText;
 namespace FlexibleUITool.EditorTools
 {
     // 창 공용 그리기: 튜토리얼 캐릭터·말풍선, 눌러야 할 곳 강조, 큰 버튼 스타일
@@ -107,6 +108,34 @@ namespace FlexibleUITool.EditorTools
         public static Color Accent => EditorGUIUtility.isProSkin ? new Color(0.35f, 0.7f, 1f) : new Color(0.1f, 0.45f, 0.85f);
 
         public static Color Good => EditorGUIUtility.isProSkin ? new Color(0.45f, 0.85f, 0.5f) : new Color(0.15f, 0.55f, 0.2f);
+
+        // 그리드 열·행·여백·간격 입력칸 (편집 탭·프로젝트 그리드 창 공용). 바뀌면 true
+        public static bool GridFields(ref FlexibleGrid grid)
+        {
+            float labelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = FitLabels(T("Columns"), T("Rows"), T("Margin"), T("Gutter"));
+            EditorGUI.BeginChangeCheck();
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                grid.columns = EditorGUILayout.IntField(T("Columns"), grid.columns);
+                grid.rows = EditorGUILayout.IntField(T("Rows"), grid.rows);
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                grid.margin = EditorGUILayout.FloatField(T("Margin"), grid.margin);
+                grid.gutter = EditorGUILayout.FloatField(T("Gutter"), grid.gutter);
+            }
+            bool changed = EditorGUI.EndChangeCheck();
+            EditorGUIUtility.labelWidth = labelWidth;
+            if (changed)
+            {
+                grid.columns = Mathf.Max(1, grid.columns);
+                grid.rows = Mathf.Max(1, grid.rows);
+                grid.margin = Mathf.Max(0f, grid.margin);
+                grid.gutter = Mathf.Max(0f, grid.gutter);
+            }
+            return changed;
+        }
 
         // 캐릭터와 말풍선. 말풍선 아래에 버튼을 놓을 수 있게 세로 영역을 열어 둔다 (EndMascot으로 닫는다)
         public static void BeginMascot(string text)

@@ -476,6 +476,9 @@ namespace FlexibleUITool.EditorTools
                     foreach (FlexibleLayoutEntry entry in layout.Entries)
                         entry.states.RemoveAll(s => s.profileId != baseId);
                     layout.Entries.RemoveAll(e => e.states.Count == 0);
+                    // 연습 중 그리드를 바꿔도 다른 프리팹에 영향이 없게 전용 그리드를 쓴다
+                    layout.UseOwnGrid = true;
+                    layout.FillOwnGrids();
                 }
                 PrefabUtility.SaveAsPrefabAsset(root, PracticePath);
             }

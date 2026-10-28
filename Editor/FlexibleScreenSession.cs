@@ -359,10 +359,22 @@ namespace FlexibleUITool.EditorTools
                 RectTransform saved = FindSavedByPath(stage, link.sourcePath);
                 if (saved == null)
                     continue;
+                FlexibleGridPlacement placement = session.FindPlacement(link.target);
                 if (!FlexibleWorkspaceService.TryBuildState(link.target, saved, profileId, out FlexibleProfileState state, out LayoutGroup savedGroup))
-                    continue;
+                {
+                    // 칸에 놓은 결과가 기준 배치와 똑같아도 칸 설정(칸·모드·SafeArea)은 남긴다
+                    if (placement == null)
+                        continue;
+                    state = new FlexibleProfileState
+                    {
+                        profileId = profileId,
+                        rect = FlexibleRectState.Capture(link.target),
+                        active = link.target.gameObject.activeSelf,
+                    };
+                    savedGroup = null;
+                }
 
-                FlexibleWorkspaceService.MarkGridPlacement(state, session.FindPlacement(link.target));
+                FlexibleWorkspaceService.MarkGridPlacement(state, placement);
                 FlexibleLayoutEntry target = layout.Entries.Find(e => e.target == link.target);
                 if (target == null)
                 {

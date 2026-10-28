@@ -128,9 +128,7 @@ Used by templates and the check tab. Header, Main, Footer ...	템플릿과 검�
 Select a block, then drag over the blue cells in the Scene view. The block snaps to those cells.	블록을 선택하고 Scene 뷰의 파란 칸 위를 드래그하세요. 블록이 그 칸에 딱 맞춰집니다.	ブロックを選んで、Scene ビューの青いマスの上をドラッグしてね。ブロックがそのマスにぴったり収まります。
 The prefab is not drawn in a {0} shape, because Unity's Game view has a different size. Press the button to set it to {1:0}x{2:0}.	Unity의 Game 뷰 크기가 달라서 프리팹이 {0} 모양으로 보이지 않아요. 버튼을 누르면 {1:0}x{2:0}로 맞춥니다.	Unity の Game ビューのサイズが違うため、プレハブが{0}の形で表示されていません。ボタンを押すと {1:0}x{2:0} に合わせます。
 Fix the Game view size	Game 뷰 크기 맞추기	Game ビューのサイズを合わせる
-The grid is shared by the whole project (one per screen).	그리드는 프로젝트 전체가 함께 씁니다 (화면마다 하나).	グリッドはプロジェクト全体で共通です（画面ごとに 1 つ）。
 Place by dragging in the Scene view	Scene 뷰에서 드래그해서 놓기	Scene ビューでドラッグして置く
-Keep inside the safe area (red = notch / home bar)	안전 영역 안에만 놓기 (빨간 곳 = 노치 / 홈 바)	セーフエリアの内側に置く（赤 = ノッチ / ホームバー）
 SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}	기준 기기의 SafeArea 여백: 왼쪽 {0:P1} · 오른쪽 {1:P1} · 위 {2:P1} · 아래 {3:P1}	基準端末の SafeArea の余白：左 {0:P1} · 右 {1:P1} · 上 {2:P1} · 下 {3:P1}
 Select the block to place.	놓을 블록을 선택하세요.	置くブロックを選んでね。
 {0}: {1}	{0}: {1}	{0}：{1}
@@ -202,7 +200,6 @@ Templates	템플릿	テンプレート
 Practice template	연습 템플릿	練習テンプレート
 Now let's place blocks precisely.\nYou'll learn the grid (cells), how blocks follow the screen size, fine-tuning, and roles and templates. We practice on the <b>Landscape</b> screen of a fresh practice prefab.	이번엔 블록을 정확하게 놓는 법을 배워요.\n그리드(칸), 화면 크기 따라가기, 미세 조정, 역할과 템플릿까지 해 봐요. 새 연습용 프리팹의 <b>가로</b> 화면에서 연습해요.	今度はブロックを正確に置く方法を覚えよう。\nグリッド（マス）、画面サイズへの追従、微調整、役割とテンプレートまでやってみるよ。新しい練習用プレハブの<b>横</b>画面で練習するよ。
 Open <b>Place on a grid</b> (orange frame).\nBlue cells (the grid) appear in the Scene view. Each screen has its own grid.	<b>그리드에 맞춰 놓기</b>(주황 테두리)를 펼치세요.\nScene 뷰에 파란 칸(그리드)이 나타나요. 그리드는 화면마다 따로 있어요.	<b>グリッドに合わせて置く</b>（オレンジの枠）を開いてね。\nシーンビューに青いマス（グリッド）が出るよ。グリッドは画面ごとに別々だよ。
-<b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view. (I'll put the grid back when the tutorial ends.)	<b>열</b>과 <b>행</b>은 칸의 개수, <b>바깥 여백</b>은 화면 가장자리의 빈 공간, <b>칸 간격</b>은 칸 사이의 공간이에요.\n아무 숫자나 바꾸고 Scene 뷰를 보세요. (튜토리얼이 끝나면 그리드는 원래대로 돌려 놓을게요.)	<b>列数</b>と<b>行数</b>はマスの数、<b>外側の余白</b>は画面の端の空き、<b>マス間隔</b>はマスとマスの間の空きだよ。\n好きな数字を変えてシーンビューを見てね。（チュートリアルが終わったらグリッドは元に戻すよ。）
 Pick the block to place. Click <b>Main</b> in the Hierarchy or the Scene view.	칸에 놓을 블록을 고르세요. Hierarchy나 Scene 뷰에서 <b>Main</b>을 클릭하세요.	マスに置くブロックを選ぼう。ヒエラルキーかシーンビューで<b>Main</b>をクリックしてね。
 Open the <b>Preview</b> tab and make the window wider and narrower.\nStretched blocks grow with it; stuck blocks keep their size. Press <b>Got it</b> when you've seen it.	<b>미리보기</b> 탭을 열고 창을 넓혔다 좁혔다 해 보세요.\n늘이기 블록은 함께 커지고, 고정 블록은 크기를 지켜요. 확인했으면 <b>확인했어요</b>를 누르세요.	<b>プレビュー</b>タブを開いて、ウィンドウを広げたり狭めたりしてみよう。\n伸縮のブロックは一緒に大きくなって、固定のブロックはサイズを保つよ。見たら<b>わかった</b>を押してね。
 After placing on cells you can still adjust by hand.\nChange <b>Pos X</b> or <b>Width</b> of Main in the Inspector. (To drag it in the Scene view, close <b>Place on a grid</b> first.)\nThe adjustment is kept even when the grid changes.	칸에 놓은 뒤에도 손으로 조정할 수 있어요.\nInspector에서 Main의 <b>Pos X</b>나 <b>Width</b>를 바꿔 보세요. (Scene 뷰에서 끌려면 먼저 <b>그리드에 맞춰 놓기</b>를 접으세요.)\n이 보정은 그리드가 바뀌어도 유지돼요.	マスに置いた後でも手で調整できるよ。\nインスペクターで Main の <b>Pos X</b> か <b>Width</b> を変えてみよう。（シーンビューでドラッグするなら、先に<b>グリッドに合わせて置く</b>を閉じてね。）\nこの補正はグリッドが変わっても残るよ。
@@ -303,3 +300,13 @@ Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the sc
 Place on a grid	그리드에 맞춰 놓기	グリッドに合わせて置く
 ... and {0} more	... 외 {0}개	... ほか {0} 個
 Changes here apply to all selected blocks right away. Save keeps them. Dragging in the Scene view works with one block at a time.	여기서 바꾸면 선택한 블록 전부에 바로 적용돼요. 저장하면 그대로 남아요. Scene 뷰 드래그는 블록을 하나만 골랐을 때 돼요.	ここで変えると選んだブロックすべてにすぐ反映されます。保存するとそのまま残ります。シーンビューのドラッグはブロックを1つだけ選んだときに使えます。
+Keep the selected blocks inside the safe area (red = notch / home bar)	선택한 블록을 안전 영역 안에만 놓기 (빨간 곳 = 노치 / 홈 바)	選んだブロックをセーフエリアの内側に置く（赤 = ノッチ / ホームバー）
+Turn it off for backgrounds and bars that should reach the screen edge.	화면 끝까지 닿아야 하는 배경이나 바는 꺼 두세요.	画面の端まで届く背景やバーはオフにしてね。
+Use a grid only for this prefab	이 프리팹 전용 그리드 사용	このプレハブ専用のグリッドを使う
+This prefab's own grid for the {0} screen. Other prefabs are not affected.	이 프리팹만 쓰는 {0} 화면 그리드예요. 다른 프리팹에는 영향이 없어요.	このプレハブだけが使う{0}画面のグリッドです。ほかのプレハブには影響しません。
+Project grid for the {0} screen, used by every prefab without its own grid. Change it in Project grids, or turn on the option above.	{0} 화면의 프로젝트 그리드예요. 전용 그리드가 없는 모든 프리팹이 써요. 바꾸려면 「프로젝트 그리드」에서 바꾸거나, 위 옵션을 켜세요.	{0}画面のプロジェクトグリッドです。専用グリッドのないすべてのプレハブが使います。変えるには「プロジェクトグリッド」で変えるか、上のオプションをオンにしてね。
+Project grids...	프로젝트 그리드...	プロジェクトグリッド...
+Project grids	프로젝트 그리드	プロジェクトグリッド
+This prefab uses its own grid. Templates keep cell numbers, so blocks may come out a different size than in other prefabs.	이 프리팹은 전용 그리드를 써요. 템플릿은 칸 번호로 저장되기 때문에 다른 프리팹과 블록 크기가 다르게 나올 수 있어요.	このプレハブは専用グリッドを使っています。テンプレートはマス番号で保存されるので、ほかのプレハブとブロックの大きさが変わることがあります。
+Each screen has its own grid. Every prefab that does not use its own grid uses these, so a change here applies to all of them. Blocks already placed do not move until you re-place them.	그리드는 화면마다 따로 있어요. 전용 그리드를 쓰지 않는 모든 프리팹이 이 그리드를 쓰기 때문에, 여기서 바꾸면 그 프리팹 전부에 적용돼요. 이미 놓은 블록은 다시 놓기 전까지 움직이지 않아요.	グリッドは画面ごとに別々です。専用グリッドを使わないすべてのプレハブがこのグリッドを使うので、ここで変えるとそれらすべてに反映されます。置き済みのブロックは置き直すまで動きません。
+<b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view.\nThis practice prefab has <b>Use a grid only for this prefab</b> on, so other prefabs are not affected. Without it, every prefab shares the project grid (<b>Project grids...</b>).	<b>열</b>과 <b>행</b>은 칸의 개수, <b>바깥 여백</b>은 화면 가장자리의 빈 공간, <b>칸 간격</b>은 칸 사이의 공간이에요.\n아무 숫자나 바꾸고 Scene 뷰를 보세요.\n이 연습 프리팹은 <b>이 프리팹 전용 그리드 사용</b>이 켜져 있어서 다른 프리팹에는 영향이 없어요. 끄면 모든 프리팹이 프로젝트 그리드(<b>프로젝트 그리드...</b>)를 함께 써요.	<b>列数</b>と<b>行数</b>はマスの数、<b>外側の余白</b>は画面の端の空き、<b>マス間隔</b>はマスとマスの間の空きだよ。\n好きな数字を変えてシーンビューを見てね。\nこの練習プレハブは<b>このプレハブ専用のグリッドを使う</b>がオンなので、ほかのプレハブには影響しないよ。オフにするとすべてのプレハブがプロジェクトグリッド（<b>プロジェクトグリッド...</b>）を共有するよ。

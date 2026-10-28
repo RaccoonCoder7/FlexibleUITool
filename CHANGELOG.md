@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.6]
+
+- Prefab grids: turn on `Use a grid only for this prefab` in the Edit tab to give a prefab its own grids (one per screen, starting as a copy of the project grids). With it off, the Edit tab shows the project grid read-only. The Scene view, grid placement, templates, AI auto-layout and `apply-spec` / `describe` use the grid the prefab uses (`describe` reports `ownGrid`).
+- Project grids window (`Tools > FlexibleUITool > Project Grids`, or `Project grids...` in the Edit tab) edits the grid of each screen for all prefabs without their own grid. Changes are saved to the settings file right away.
+- `Keep the selected blocks inside the safe area` moved next to the block's grid fields. It is a per-block, per-screen value: changing it places the selected blocks right away, like the other fields.
+- Fixed: a block placed on the grid lost its grid settings (cells, modes, safe area) after switching screens when its result was the same as on the portrait screen.
+- The tutorial practice prefab uses its own grid, so grid changes in the tutorial never touch other prefabs.
+
 ## [1.0.5]
 
 - Several blocks at once: with more than one block selected, the Edit tab works like Unity's Inspector. A value shared by all selected blocks is shown as it is, a value that differs is shown as `—`, and changing a value (role, column, row, width, height, horizontal, vertical, safe area) sets it on all of them with one Undo. `Back to Portrait` resets the selected blocks that have their own layout. Dragging in the Scene view works with one block at a time.

@@ -125,7 +125,7 @@ namespace FlexibleUITool.EditorTools
             GameObject sourceRoot = null;
             try
             {
-                var context = new FlexibleGridContext(rootRect, profile.grid, settings.GetSafeInsets(profileIndex));
+                var context = new FlexibleGridContext(rootRect, layout != null ? layout.GetGrid(profile.id) : profile.grid, settings.GetSafeInsets(profileIndex));
                 Dictionary<string, RectTransform> map = FlexiblePathUtility.BuildMap(rootRect);
                 foreach (FlexibleSpecBlock block in specProfile.blocks ?? Array.Empty<FlexibleSpecBlock>())
                 {

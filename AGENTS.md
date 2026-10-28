@@ -165,7 +165,7 @@ The user reviews in Unity, where the thumbnails are easier to read than images i
   - Same-named siblings are written `Name[1]`.
 - **Roles** are optional labels on blocks (`Header`, `Main`, `Side`, `Footer`, `Sub`, `Overlay`, ...).
   - A spec block with a role and no path applies to **every** block with that role.
-- **Grid**: each profile has a grid (`columns × rows`, `margin`, `gutter`, in canvas units).
+- **Grid**: each profile has a grid (`columns × rows`, `margin`, `gutter`, in canvas units). A prefab can use its own grids instead of the project grids; `describe` always reports the grid the prefab uses (`ownGrid: true` when it is the prefab's own).
   - A cell is `[column, row, width, height]`. `[0,0]` is the **top-left** cell.
   - With `safeArea: true` (the default), the grid fills only the area inside the largest notch / home-indicator insets of that profile's devices. Grid-placed blocks then never overlap the unsafe area.
 - **Axis modes** (`modeX`, `modeY`) decide how a block follows other aspect ratios inside its cells.

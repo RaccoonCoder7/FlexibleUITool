@@ -416,15 +416,16 @@ namespace FlexibleUITool.EditorTools
             FlexibleProfileSettings settings = layout.Settings;
             int profileIndex = settings.IndexOf(FlexibleScreenSession.GetActiveProfileId(stage));
             FlexibleProfile profile = settings.Profiles[profileIndex];
-            var context = new FlexibleGridContext(root, profile.grid, settings.GetSafeInsets(profileIndex));
 
-            List<BlockInput> inputs = context.grid.IsValid
-                ? GetSelectedBlocks(root).Select(t => GetInput(t, session, context)).ToList()
-                : new List<BlockInput>();
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 GUILayout.Label(T("Select a block, then drag over the blue cells in the Scene view. The block snaps to those cells."), EditorStyles.wordWrappedMiniLabel);
-                DrawGridSettings(settings, profileIndex, context, session, inputs);
+                DrawGridSettings(layout, profile);
+                // 그리드를 바꿨을 수 있으므로 칸 계산은 그 뒤에 한다
+                var context = new FlexibleGridContext(root, layout.GetGrid(profile.id), settings.GetSafeInsets(profileIndex));
+                List<BlockInput> inputs = context.grid.IsValid
+                    ? GetSelectedBlocks(root).Select(t => GetInput(t, session, context)).ToList()
+                    : new List<BlockInput>();
                 DrawStalePlacements(context, session);
                 DrawPlacement(context, session, inputs);
             }
@@ -441,60 +442,48 @@ namespace FlexibleUITool.EditorTools
                 FlexibleScreenSession.SelectWorkResolution(profile);
         }
 
-        private void DrawGridSettings(FlexibleProfileSettings settings, int profileIndex, FlexibleGridContext context, FlexibleWorkspace session, List<BlockInput> inputs)
+        // 전용 그리드를 켜면 이 프리팹의 화면별 그리드를 고칠 수 있고, 끄면 프로젝트 그리드를 읽기 전용으로 보여 준다
+        private void DrawGridSettings(FlexibleLayout layout, FlexibleProfile profile)
         {
-            var serialized = new SerializedObject(settings);
-            SerializedProperty grid = serialized.FindProperty("profiles").GetArrayElementAtIndex(profileIndex).FindPropertyRelative("grid");
-
-            float labelWidth = EditorGUIUtility.labelWidth;
-            EditorGUIUtility.labelWidth = FlexibleGui.FitLabels(T("Columns"), T("Rows"), T("Margin"), T("Gutter"));
             EditorGUI.BeginChangeCheck();
-            using (new EditorGUILayout.VerticalScope())
+            bool own = EditorGUILayout.ToggleLeft(T("Use a grid only for this prefab"), layout.UseOwnGrid);
+            if (EditorGUI.EndChangeCheck())
             {
-                using (new EditorGUILayout.HorizontalScope())
+                Undo.RecordObject(layout, "Flexible Own Grid");
+                layout.UseOwnGrid = own;
+                if (own)
+                    layout.FillOwnGrids();
+                EditorUtility.SetDirty(layout);
+                SceneView.RepaintAll();
+            }
+            FlexibleGui.Mark("grid:own");
+
+            FlexibleGrid grid = layout.GetGrid(profile.id);
+            using (new EditorGUI.DisabledScope(!layout.UseOwnGrid))
+            {
+                if (FlexibleGui.GridFields(ref grid))
                 {
-                    EditorGUILayout.PropertyField(grid.FindPropertyRelative("columns"), new GUIContent(T("Columns")));
-                    EditorGUILayout.PropertyField(grid.FindPropertyRelative("rows"), new GUIContent(T("Rows")));
-                }
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    EditorGUILayout.PropertyField(grid.FindPropertyRelative("margin"), new GUIContent(T("Margin")));
-                    EditorGUILayout.PropertyField(grid.FindPropertyRelative("gutter"), new GUIContent(T("Gutter")));
+                    Undo.RecordObject(layout, "Flexible Own Grid");
+                    layout.SetOwnGrid(profile.id, grid);
+                    EditorUtility.SetDirty(layout);
+                    SceneView.RepaintAll();
                 }
             }
             FlexibleGui.Mark("grid:size");
-            if (EditorGUI.EndChangeCheck())
+
+            using (new EditorGUILayout.HorizontalScope())
             {
-                grid.FindPropertyRelative("columns").intValue = Mathf.Max(1, grid.FindPropertyRelative("columns").intValue);
-                grid.FindPropertyRelative("rows").intValue = Mathf.Max(1, grid.FindPropertyRelative("rows").intValue);
-                serialized.ApplyModifiedProperties();
-                SceneView.RepaintAll();
+                GUILayout.Label(layout.UseOwnGrid
+                    ? F("This prefab's own grid for the {0} screen. Other prefabs are not affected.", Name(profile))
+                    : F("Project grid for the {0} screen, used by every prefab without its own grid. Change it in Project grids, or turn on the option above.", Name(profile)), EditorStyles.wordWrappedMiniLabel);
+                if (GUILayout.Button(T("Project grids..."), EditorStyles.miniButton, GUILayout.Width(110f)))
+                    FlexibleProjectGridWindow.Open();
             }
-            EditorGUIUtility.labelWidth = labelWidth;
-            GUILayout.Label(T("The grid is shared by the whole project (one per screen)."), EditorStyles.miniLabel);
 
             EditorGUI.BeginChangeCheck();
             dragPlacement = EditorGUILayout.ToggleLeft(T("Place by dragging in the Scene view"), dragPlacement);
             if (EditorGUI.EndChangeCheck())
                 SceneView.RepaintAll();
-
-            // 블록을 고르면 그 블록들의 값(다르면 「—」), 안 고르면 새로 놓을 때의 기본값
-            bool shown = inputs.Count > 0 ? inputs[0].insideSafeArea : insideSafeArea;
-            EditorGUI.showMixedValue = inputs.Exists(i => i.insideSafeArea != shown);
-            EditorGUI.BeginChangeCheck();
-            bool inside = EditorGUILayout.ToggleLeft(new GUIContent(T("Keep inside the safe area (red = notch / home bar)"),
-                F("SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}", context.safeInsets.x, context.safeInsets.y, context.safeInsets.z, context.safeInsets.w)), shown);
-            EditorGUI.showMixedValue = false;
-            if (EditorGUI.EndChangeCheck())
-            {
-                insideSafeArea = inside;
-                EditorPrefs.SetBool(InsideSafeAreaKey, inside);
-                // 칸에 놓인 선택 블록은 바로 다시 놓는다
-                List<BlockInput> placed = inputs.Where(i => i.placement != null).ToList();
-                if (placed.Count > 0)
-                    PlaceAll(context, session, placed, i => { i.insideSafeArea = inside; return i; });
-                SceneView.RepaintAll();
-            }
         }
 
         private static void DrawStalePlacements(FlexibleGridContext context, FlexibleWorkspace session)
@@ -553,6 +542,22 @@ namespace FlexibleUITool.EditorTools
                     PlaceAll(context, session, inputs, i => { i.modeY = modeY; return i; });
             }
             FlexibleGui.Mark("grid:mode");
+
+            // SafeArea도 블록마다의 값이다. 바꾸면 고른 블록 전부를 그 값으로 바로 다시 놓는다 (칸에 안 놓인 블록은 지금 덮고 있는 칸에)
+            bool shownSafe = inputs[0].insideSafeArea;
+            EditorGUI.showMixedValue = inputs.Exists(i => i.insideSafeArea != shownSafe);
+            EditorGUI.BeginChangeCheck();
+            bool inside = EditorGUILayout.ToggleLeft(new GUIContent(T("Keep the selected blocks inside the safe area (red = notch / home bar)"),
+                T("Turn it off for backgrounds and bars that should reach the screen edge.") + "\n"
+                + F("SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}", context.safeInsets.x, context.safeInsets.y, context.safeInsets.z, context.safeInsets.w)), shownSafe);
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck())
+            {
+                // 마지막으로 고른 값은 다음에 새로 놓는 블록의 기본값이 된다
+                insideSafeArea = inside;
+                EditorPrefs.SetBool(InsideSafeAreaKey, inside);
+                PlaceAll(context, session, inputs, i => { i.insideSafeArea = inside; return i; });
+            }
             EditorGUIUtility.labelWidth = labelWidth;
             GUILayout.Label(inputs.Count == 1
                 ? T("Changes here move the selected block right away. Save keeps them.")
@@ -588,11 +593,14 @@ namespace FlexibleUITool.EditorTools
             FlexibleProfileSettings settings = layout.Settings;
             int profileIndex = settings.IndexOf(FlexibleScreenSession.GetActiveProfileId(stage));
             FlexibleProfile profile = settings.Profiles[profileIndex];
-            var context = new FlexibleGridContext(root, profile.grid, settings.GetSafeInsets(profileIndex));
+            var context = new FlexibleGridContext(root, layout.GetGrid(profile.id), settings.GetSafeInsets(profileIndex));
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 GUILayout.Label(F("Save where each role (Header, Main, ...) sits on the grid of the {0} screen, and reuse it on other prefabs.", Name(profile)), EditorStyles.wordWrappedMiniLabel);
+                // 템플릿은 칸 번호로 저장되므로, 전용 그리드를 쓰면 다른 프리팹과 크기가 달라질 수 있다
+                if (layout.UseOwnGrid)
+                    EditorGUILayout.HelpBox(T("This prefab uses its own grid. Templates keep cell numbers, so blocks may come out a different size than in other prefabs."), MessageType.Info);
                 List<FlexibleTemplate> templates = settings.Templates.Where(t => t.profileId == profile.id).ToList();
                 if (templates.Count > 0)
                 {
@@ -825,10 +833,10 @@ namespace FlexibleUITool.EditorTools
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             FlexibleProfileSettings settings = layout.Settings;
             int profileIndex = settings.IndexOf(FlexibleScreenSession.GetActiveProfileId(stage));
-            if (profileIndex < 0 || !settings.Profiles[profileIndex].grid.IsValid)
+            if (profileIndex < 0 || !layout.GetGrid(settings.Profiles[profileIndex].id).IsValid)
                 return;
 
-            var context = new FlexibleGridContext(root, settings.Profiles[profileIndex].grid, settings.GetSafeInsets(profileIndex));
+            var context = new FlexibleGridContext(root, layout.GetGrid(settings.Profiles[profileIndex].id), settings.GetSafeInsets(profileIndex));
             FlexibleGrid grid = context.grid;
             List<RectTransform> targets = GetSelectedBlocks(root);
             // 드래그는 블록 하나일 때만 (여러 블록을 같은 칸에 겹쳐 놓는 일은 없으므로)

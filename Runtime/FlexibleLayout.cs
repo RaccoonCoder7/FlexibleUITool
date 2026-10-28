@@ -15,6 +15,9 @@ namespace FlexibleUITool
         [SerializeField] private FlexibleProfileSettings settings;
         [SerializeField] private List<FlexibleLayoutEntry> entries = new List<FlexibleLayoutEntry>();
         [SerializeField] private List<FlexibleRoleTag> roles = new List<FlexibleRoleTag>();
+        // 에디터 배치용: 이 프리팹만 프로젝트 그리드 대신 쓰는 그리드 (실행 중에는 쓰지 않는다)
+        [SerializeField] private bool useOwnGrid;
+        [SerializeField] private List<FlexibleProfileGrid> ownGrids = new List<FlexibleProfileGrid>();
 
         private FlexibleProfileState[] baseStates;
         private int currentIndex = -1;
@@ -28,6 +31,12 @@ namespace FlexibleUITool
 
         public List<FlexibleLayoutEntry> Entries => entries;
         public List<FlexibleRoleTag> Roles => roles;
+
+        public bool UseOwnGrid
+        {
+            get => useOwnGrid;
+            set => useOwnGrid = value;
+        }
         public int CurrentProfileIndex => currentIndex;
 
         public FlexibleProfile CurrentProfile =>
@@ -116,6 +125,40 @@ namespace FlexibleUITool
                 roles.Add(new FlexibleRoleTag { target = target, role = role });
         }
 
+        // 이 프리팹이 그 화면에서 쓰는 그리드: 전용 그리드를 켰으면 그 값, 아니면 프로젝트 그리드
+        public FlexibleGrid GetGrid(string profileId)
+        {
+            if (useOwnGrid)
+            {
+                FlexibleProfileGrid own = ownGrids.Find(g => g.profileId == profileId);
+                if (own != null)
+                    return own.grid;
+            }
+            FlexibleProfile profile = settings != null ? settings.Find(profileId) : null;
+            return profile != null ? profile.grid : default;
+        }
+
+        // 전용 그리드를 켤 때, 아직 값이 없는 화면은 지금 프로젝트 그리드로 채운다
+        public void FillOwnGrids()
+        {
+            ownGrids.RemoveAll(g => g == null || settings == null || settings.Find(g.profileId) == null);
+            if (settings == null)
+                return;
+            foreach (FlexibleProfile profile in settings.Profiles)
+            {
+                if (ownGrids.Find(g => g.profileId == profile.id) == null)
+                    ownGrids.Add(new FlexibleProfileGrid { profileId = profile.id, grid = profile.grid });
+            }
+        }
+
+        public void SetOwnGrid(string profileId, FlexibleGrid grid)
+        {
+            FlexibleProfileGrid own = ownGrids.Find(g => g.profileId == profileId);
+            if (own == null)
+                ownGrids.Add(own = new FlexibleProfileGrid { profileId = profileId });
+            own.grid = grid;
+        }
+
         private void CaptureBase()
         {
             baseStates = new FlexibleProfileState[entries.Count];
@@ -128,5 +171,13 @@ namespace FlexibleUITool
                 baseStates[i] = FlexibleProfileState.Capture(entry, null, entry.ControlsActive, entry.ControlsLayoutGroup);
             }
         }
+    }
+
+    // 프리팹 전용 그리드 (화면 하나분)
+    [Serializable]
+    public class FlexibleProfileGrid
+    {
+        public string profileId;
+        public FlexibleGrid grid;
     }
 }
