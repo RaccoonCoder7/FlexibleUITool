@@ -48,9 +48,13 @@ namespace FlexibleUITool.EditorTools
         }
 
         // 기록은 순수 그리드 결과로 남기고, 실제 값에는 보정을 더한다 (그래서 보정이 있으면 수동 블록이 된다)
+        // 칸에 놓은 횟수 (튜토리얼 확인용)
+        public static int ApplyCount { get; private set; }
+
         public static bool Apply(FlexibleGridContext context, FlexibleWorkspace workspace, RectTransform target,
             FlexibleCell cell, FlexibleAxisMode modeX, FlexibleAxisMode modeY, bool insideSafeArea, FlexibleGridAdjustment adjustment)
         {
+            ApplyCount++;
             FlexibleCell clamped = cell.Clamped(context.grid);
             if (!FlexibleGridMath.TryComputePlacement(target, context, clamped, modeX, modeY, insideSafeArea, out FlexibleRectState state))
                 return false;

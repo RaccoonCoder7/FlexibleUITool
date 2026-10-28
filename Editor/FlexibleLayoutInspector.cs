@@ -24,13 +24,13 @@ namespace FlexibleUITool.EditorTools
                 {
                     string text = profile.id == layout.Settings.BaseProfileId
                         ? T("Base (the prefab itself)")
-                        : F("{0} records", layout.Entries.Count(e => e.Find(profile.id) != null));
+                        : F("{0} changed", layout.Entries.Count(e => e.Find(profile.id) != null));
                     EditorGUILayout.LabelField(Label(profile), text);
                 }
             }
 
             if (Application.isPlaying)
-                EditorGUILayout.LabelField(T("Current profile"), Label(layout.CurrentProfile));
+                EditorGUILayout.LabelField(T("Current screen"), Label(layout.CurrentProfile));
 
             showEntries = EditorGUILayout.Foldout(showEntries, F("Record data ({0})", layout.Entries.Count), true);
             if (showEntries)
@@ -41,8 +41,8 @@ namespace FlexibleUITool.EditorTools
 
             serializedObject.ApplyModifiedProperties();
 
-            if (GUILayout.Button(T("Open Flexible Layout window")))
-                FlexibleLayoutWindow.Open();
+            if (GUILayout.Button(T("Open the Flexible UI window")))
+                FlexibleWindow.Open();
         }
 
         // 프리팹을 씬에 놓으면 Scene 뷰 위치가 오프셋·Z로 들어가 화면에서 밀린다 (루트 위치는 Revert 대상이 아님)

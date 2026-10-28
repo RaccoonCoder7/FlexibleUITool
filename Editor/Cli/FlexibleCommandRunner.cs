@@ -180,7 +180,7 @@ namespace FlexibleUITool.EditorTools
         private static void List(FlexibleCommand command, FlexibleJson json, List<string> warnings, bool inEditor)
         {
             json.BeginArray("prefabs");
-            foreach (string path in FlexibleReviewWindow.FindTargets(string.IsNullOrEmpty(command.folder) ? "Assets" : command.folder))
+            foreach (string path in FlexibleReviewPanel.FindTargets(string.IsNullOrEmpty(command.folder) ? "Assets" : command.folder))
             {
                 var layout = AssetDatabase.LoadAssetAtPath<GameObject>(path)?.GetComponent<FlexibleLayout>();
                 json.BeginObject().Value("path", path);
@@ -322,7 +322,7 @@ namespace FlexibleUITool.EditorTools
         private static void Check(FlexibleCommand command, FlexibleJson json, List<string> warnings, bool inEditor)
         {
             List<string> prefabs = string.IsNullOrEmpty(command.prefab)
-                ? FlexibleReviewWindow.FindTargets(string.IsNullOrEmpty(command.folder) ? "Assets" : command.folder)
+                ? FlexibleReviewPanel.FindTargets(string.IsNullOrEmpty(command.folder) ? "Assets" : command.folder)
                 : new List<string> { ResolvePrefab(command.prefab) };
 
             int total = 0;
@@ -646,7 +646,7 @@ namespace FlexibleUITool.EditorTools
             json.Value("scene", scenePath).Value("removed", removed).Value("reopened", reopened ? previous : "");
         }
 
-        // Unity에서 Review Window를 열고 검수를 실행한다 (사람이 썸네일 표로 보게). 결과 요약도 돌려준다
+        // Unity에서 Flexible UI 창의 검수 탭을 열고 검수를 실행한다 (사람이 썸네일 표로 보게). 결과 요약도 돌려준다
         private static void Review(FlexibleCommand command, FlexibleJson json, List<string> warnings, bool inEditor)
         {
             if (!inEditor)
@@ -656,7 +656,7 @@ namespace FlexibleUITool.EditorTools
             if (string.IsNullOrEmpty(prefabPath) && !string.IsNullOrEmpty(command.folder) && !AssetDatabase.IsValidFolder(command.folder))
                 throw new FlexibleCommandException("BAD_REQUEST", $"Folder '{command.folder}' not found.");
 
-            FlexibleReviewWindow window = FlexibleReviewWindow.OpenAndRun(command.folder, prefabPath);
+            FlexibleReviewPanel window = FlexibleWindow.OpenAndReview(command.folder, prefabPath);
             int total = 0;
             var prefabs = new HashSet<string>();
             json.BeginArray("results");
@@ -956,7 +956,7 @@ namespace FlexibleUITool.EditorTools
                 throw new FlexibleCommandException("PREFAB_OPEN", $"'{prefabPath}' is open in Prefab Mode. Close it (save first if needed) and retry.");
 
             var workspace = stage.prefabContentsRoot.GetComponent<FlexibleWorkspace>();
-            if (workspace != null && AssetDatabase.GUIDToAssetPath(workspace.sourceGuid) == prefabPath)
+            if (workspace != null && !workspace.inPlace && AssetDatabase.GUIDToAssetPath(workspace.sourceGuid) == prefabPath)
                 throw new FlexibleCommandException("PREFAB_OPEN", $"A workspace of '{prefabPath}' is open in Prefab Mode. Commit or cancel it and retry.");
         }
 

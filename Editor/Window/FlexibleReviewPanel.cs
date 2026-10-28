@@ -7,8 +7,9 @@ using UnityEngine;
 using static FlexibleUITool.EditorTools.FlexibleText;
 namespace FlexibleUITool.EditorTools
 {
-    // FlexibleLayout이 붙은 모든 프리팹을 기기 프리셋별로 렌더링해 한 화면에서 검수하는 창
-    public class FlexibleReviewWindow : EditorWindow
+    // 검수 탭: FlexibleLayout이 붙은 프리팹을 기기 프리셋별로 렌더링해 한 화면에서 확인한다
+    [System.Serializable]
+    public class FlexibleReviewPanel
     {
         // 문구는 그릴 때 현재 언어로 만든다 (언어를 바꿔도 다시 검수할 필요 없게)
         private class Cell
@@ -29,44 +30,38 @@ namespace FlexibleUITool.EditorTools
             public readonly List<Cell> cells = new List<Cell>();
         }
 
-        private DefaultAsset folder;
-        private float thumbnailHeight = 200f;
+        [SerializeField] private DefaultAsset folder;
+        [SerializeField] private float thumbnailHeight = 200f;
+        [SerializeField] private bool onlyIssues;
+        [SerializeField] private bool includeEdges = true;
+        [SerializeField] private bool onlyOpenPrefab = true;
         private float renderedHeight; // 마지막 검수 때 썸네일을 그린 높이 (화면 단위)
         private bool[] presetEnabled;
-        private bool onlyIssues;
-        private bool includeEdges = true;
         private string targetPrefab; // 지정되면 이 프리팹만 검수 (CLI review -Prefab)
         private Vector2 scroll;
         private readonly List<Row> rows = new List<Row>();
 
-        [MenuItem("Tools/FlexibleUITool/Review Window")]
-        public static void Open()
-        {
-            GetWindow<FlexibleReviewWindow>("Flexible Review");
-        }
+        // 검수를 돌린 횟수 (튜토리얼 확인용)
+        public int RunCount { get; private set; }
 
-        private void OnDisable()
+        public void OnDisable()
         {
             ReleaseRows();
-        }
-
-        // 창을 열고 바로 검수한다 (CLI review). 프리팹을 주면 그것만, 아니면 폴더(비우면 Assets 전체)
-        public static FlexibleReviewWindow OpenAndRun(string folderPath, string prefabPath)
-        {
-            var window = GetWindow<FlexibleReviewWindow>("Flexible Review");
-            window.folder = string.IsNullOrEmpty(folderPath) ? null : AssetDatabase.LoadAssetAtPath<DefaultAsset>(folderPath);
-            window.targetPrefab = string.IsNullOrEmpty(prefabPath) ? null : prefabPath;
-            window.onlyIssues = false;
-            window.Run(FlexibleSettingsUtility.GetOrCreateDefault());
-            window.Show();
-            window.Focus();
-            window.Repaint();
-            return window;
         }
 
         // 검수 결과 요약 (프리팹, 화면 이름, 프로필 id, 문제 문장). 문장은 부르는 시점의 언어
         public IEnumerable<(string prefab, string screen, string profile, List<string> issues)> Results =>
             rows.SelectMany(r => r.cells.Select(c => (r.path, c.ScreenName, c.profile.id, c.Messages)));
+
+        // 바로 검수한다 (CLI review). 프리팹을 주면 그것만, 아니면 폴더(비우면 Assets 전체)
+        public void RunFor(string folderPath, string prefabPath)
+        {
+            folder = string.IsNullOrEmpty(folderPath) ? null : AssetDatabase.LoadAssetAtPath<DefaultAsset>(folderPath);
+            targetPrefab = string.IsNullOrEmpty(prefabPath) ? null : prefabPath;
+            onlyIssues = false;
+            onlyOpenPrefab = false;
+            Run(FlexibleSettingsUtility.GetOrCreateDefault());
+        }
 
         private void EnsurePresetFlags(FlexibleProfileSettings settings)
         {
@@ -74,50 +69,74 @@ namespace FlexibleUITool.EditorTools
                 presetEnabled = Enumerable.Repeat(true, settings.PreviewPresets.Count).ToArray();
         }
 
-        private void OnGUI()
+        public void Draw()
         {
             FlexibleProfileSettings settings = FlexibleSettingsUtility.GetOrCreateDefault();
             EnsurePresetFlags(settings);
+            string open = OpenPrefabPath();
 
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            GUILayout.Label(T("Shows your prefabs on many phones and tablets at once, and finds blocks that stick out of the screen, overlap, or sit under the notch."), EditorStyles.wordWrappedMiniLabel);
+            using (new EditorGUILayout.HorizontalScope())
             {
                 if (!string.IsNullOrEmpty(targetPrefab))
                 {
                     GUILayout.Label(F("Target: {0}", Path.GetFileNameWithoutExtension(targetPrefab)), GUILayout.ExpandWidth(false));
-                    if (GUILayout.Button(T("All"), EditorStyles.toolbarButton, GUILayout.Width(48f)))
+                    if (GUILayout.Button(T("All"), GUILayout.Width(48f)))
                         targetPrefab = null;
                 }
                 else
                 {
-                    GUILayout.Label(T("Folder"), GUILayout.ExpandWidth(false));
-                    folder = (DefaultAsset)EditorGUILayout.ObjectField(folder, typeof(DefaultAsset), false, GUILayout.Width(180f));
+                    using (new EditorGUI.DisabledScope(open == null))
+                        onlyOpenPrefab = GUILayout.Toggle(onlyOpenPrefab && open != null, T("Only the open prefab"), EditorStyles.miniButton, GUILayout.ExpandWidth(false));
+                    if (!(onlyOpenPrefab && open != null))
+                    {
+                        GUILayout.Label(T("Folder"), GUILayout.ExpandWidth(false));
+                        folder = (DefaultAsset)EditorGUILayout.ObjectField(folder, typeof(DefaultAsset), false, GUILayout.Width(160f));
+                    }
                 }
-                GUILayout.Label(T("Thumbnail"), GUILayout.ExpandWidth(false));
-                thumbnailHeight = GUILayout.HorizontalSlider(thumbnailHeight, 100f, 400f, GUILayout.Width(100f));
-                onlyIssues = GUILayout.Toggle(onlyIssues, T("Only issues"), EditorStyles.toolbarButton);
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button(T("Run review"), EditorStyles.toolbarButton, GUILayout.Width(90f)))
+                if (GUILayout.Button(T("Run check"), GUILayout.Width(100f), GUILayout.Height(22f)))
                 {
-                    Run(settings);
+                    if (onlyOpenPrefab && open != null && string.IsNullOrEmpty(targetPrefab))
+                    {
+                        UnityEditor.SceneManagement.PrefabStage stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+                        if (stage != null && stage.scene.isDirty)
+                            FlexibleScreenSession.Save(stage);
+                        targetPrefab = open;
+                        Run(settings);
+                        targetPrefab = null;
+                    }
+                    else
+                    {
+                        Run(settings);
+                    }
                     GUIUtility.ExitGUI();
                 }
+                FlexibleGui.Mark("check:run");
             }
 
             using (new EditorGUILayout.HorizontalScope())
             {
                 for (int i = 0; i < settings.PreviewPresets.Count; i++)
                     presetEnabled[i] = GUILayout.Toggle(presetEnabled[i], T(settings.PreviewPresets[i].name), EditorStyles.miniButton);
-                includeEdges = GUILayout.Toggle(includeEdges, new GUIContent(T("Profile edge ratios"), T("Also checks the narrowest and widest ratio where each profile can appear. Fixed-size blocks overflow there first.")), EditorStyles.miniButton);
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                includeEdges = GUILayout.Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size blocks overflow there first.")), EditorStyles.miniButton);
+                onlyIssues = GUILayout.Toggle(onlyIssues, T("Only issues"), EditorStyles.miniButton);
+                GUILayout.Label(T("Thumbnail"), GUILayout.ExpandWidth(false));
+                thumbnailHeight = GUILayout.HorizontalSlider(thumbnailHeight, 100f, 400f, GUILayout.Width(100f));
+                GUILayout.FlexibleSpace();
             }
 
             if (rows.Count == 0)
             {
-                EditorGUILayout.HelpBox(F("Press [{0}] to render every prefab with FlexibleLayout on each device preset (and profile edge ratio). Leave the folder empty to search all of Assets.", T("Run review")), MessageType.Info);
+                EditorGUILayout.HelpBox(F("Press [{0}].", T("Run check")), MessageType.Info);
                 return;
             }
 
             if (thumbnailHeight > renderedHeight * 1.1f)
-                EditorGUILayout.HelpBox(F("Thumbnails were rendered smaller. Press [{0}] again for sharp thumbnails at this size.", T("Run review")), MessageType.None);
+                EditorGUILayout.HelpBox(F("Thumbnails were rendered smaller. Press [{0}] again for sharp thumbnails at this size.", T("Run check")), MessageType.None);
 
             int total = rows.Sum(r => r.cells.Sum(c => c.issues.Count));
             EditorGUILayout.LabelField(F("{0} prefabs · {1} issues", rows.Count, total), EditorStyles.boldLabel);
@@ -132,6 +151,12 @@ namespace FlexibleUITool.EditorTools
             EditorGUILayout.EndScrollView();
         }
 
+        private static string OpenPrefabPath()
+        {
+            UnityEditor.SceneManagement.PrefabStage stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+            return FlexibleScreenSession.IsReady(stage, out _) ? stage.assetPath : null;
+        }
+
         private void DrawRow(Row row)
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -140,11 +165,10 @@ namespace FlexibleUITool.EditorTools
                 {
                     EditorGUILayout.LabelField(Path.GetFileNameWithoutExtension(row.path), EditorStyles.boldLabel, GUILayout.Width(220f));
                     EditorGUILayout.LabelField(Summarize(AssetDatabase.LoadAssetAtPath<GameObject>(row.path), FlexibleSettingsUtility.GetOrCreateDefault()), EditorStyles.miniLabel);
-                    if (GUILayout.Button(T("Select"), GUILayout.Width(60f)))
+                    if (GUILayout.Button(T("Open"), GUILayout.Width(60f)))
                     {
-                        var asset = AssetDatabase.LoadAssetAtPath<GameObject>(row.path);
-                        Selection.activeObject = asset;
-                        EditorGUIUtility.PingObject(asset);
+                        UnityEditor.SceneManagement.PrefabStageUtility.OpenPrefab(row.path);
+                        GUIUtility.ExitGUI();
                     }
                 }
 
@@ -165,7 +189,7 @@ namespace FlexibleUITool.EditorTools
             float width = thumbnailHeight * cell.texture.width / cell.texture.height;
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(Mathf.Max(width, 120f))))
             {
-                GUILayout.Label($"{cell.ScreenName}\n→ {Label(cell.profile)}", EditorStyles.miniLabel);
+                GUILayout.Label($"{cell.ScreenName}\n→ {FlexibleEditPanel.Name(cell.profile)}", EditorStyles.miniLabel);
                 Rect rect = GUILayoutUtility.GetRect(width, thumbnailHeight, GUILayout.Width(width), GUILayout.Height(thumbnailHeight));
                 GUI.DrawTexture(rect, cell.texture, ScaleMode.StretchToFill, false);
                 if (cell.issues.Count > 0)
@@ -180,6 +204,7 @@ namespace FlexibleUITool.EditorTools
 
         private void Run(FlexibleProfileSettings settings)
         {
+            RunCount++;
             ReleaseRows();
             EnsurePresetFlags(settings);
             List<string> paths = !string.IsNullOrEmpty(targetPrefab)
@@ -200,7 +225,7 @@ namespace FlexibleUITool.EditorTools
             {
                 for (int i = 0; i < paths.Count; i++)
                 {
-                    if (EditorUtility.DisplayCancelableProgressBar("Flexible Review", paths[i], (float)i / paths.Count))
+                    if (EditorUtility.DisplayCancelableProgressBar("Flexible UI", paths[i], (float)i / paths.Count))
                         break;
 
                     var asset = AssetDatabase.LoadAssetAtPath<GameObject>(paths[i]);
@@ -266,12 +291,8 @@ namespace FlexibleUITool.EditorTools
             {
                 if (profile.id == settings.BaseProfileId)
                     continue;
-
-                List<FlexibleProfileState> states = layout.Entries.Select(e => e.Find(profile.id)).Where(s => s != null).ToList();
-                int grid = states.Count(s => s.gridPlaced);
-                parts.Add(F("{0} {1} ({2} grid / {3} manual)", T(profile.displayName), states.Count, grid, states.Count - grid));
+                parts.Add(F("{0}: {1} changed", FlexibleEditPanel.Name(profile), FlexibleScreenSession.CountRecords(layout, profile.id)));
             }
-            parts.Add(F("{0} roles", layout.Roles.Count));
             return string.Join("   ", parts);
         }
 
@@ -282,7 +303,7 @@ namespace FlexibleUITool.EditorTools
                 if (cell.texture == null)
                     continue;
                 cell.texture.Release();
-                DestroyImmediate(cell.texture);
+                Object.DestroyImmediate(cell.texture);
             }
             rows.Clear();
         }

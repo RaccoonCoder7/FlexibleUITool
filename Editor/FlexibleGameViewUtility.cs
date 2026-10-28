@@ -66,7 +66,7 @@ namespace FlexibleUITool.EditorTools
                 {
                     object size = getSize.Invoke(group, new object[] { i });
                     if (IsFixed(size) && GetInt(size, "width") == width && GetInt(size, "height") == height)
-                        return TrySelectIndex(i);
+                        return (TryGetSelectedIndex(out int selected) && selected == i) || TrySelectIndex(i);
                 }
 
                 object fixedKind = Enum.Parse(SizeKindType, "FixedResolution");

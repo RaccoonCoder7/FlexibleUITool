@@ -10,11 +10,9 @@ position {0:0.#},{1:0.#} / size {2:0.#},{3:0.#}	위치 {0:0.#},{1:0.#} / 크기 
 {0} ({1}): never placed on the grid	{0} ({1}): 그리드로 배치한 적이 없음	{0} ({1}): グリッドで配置されていません
 {0} ({1}): this role is already included	{0} ({1}): 같은 역할이 이미 들어감	{0} ({1}): 同じ役割がすでに含まれています
 {0} ({1}): anchors or pivot changed after grid placement, so it cannot be saved as cells + adjustment	{0} ({1}): 그리드 배치 뒤 앵커·피벗이 바뀌어 칸+보정으로 표현할 수 없음	{0} ({1}): グリッド配置後にアンカー・ピボットが変わったため、マス＋補正で表せません
-Base (the prefab itself)	기준 (프리팹 자체)	基準（プレハブ自体）
-{0} records	기록 {0}개	記録 {0} 件
-Current profile	현재 프로필	現在のプロファイル
+Base (the prefab itself)	기준 (프리팹 자체)	基準（プレハブそのもの）
+Current screen	현재 화면	現在の画面
 Record data ({0})	기록 데이터 ({0})	記録データ ({0})
-Open Flexible Layout window	Flexible Layout 창 열기	Flexible Layout ウィンドウを開く
 Not fitted to the parent (offsets {0} / {1}, Z {2:0}). This usually happens when the prefab is dropped into a scene at the Scene view position.	부모에 딱 맞지 않습니다 (여백 {0} / {1}, Z {2:0}). 씬에 놓을 때 Scene 뷰 위치가 들어간 경우가 많습니다.	親にぴったり合っていません（余白 {0} / {1}、Z {2:0}）。シーンに置いたときに Scene ビューの位置が入った場合によく起こります。
 Fit to parent (offsets 0, Z 0)	부모에 맞추기 (여백 0, Z 0)	親に合わせる（余白 0、Z 0）
 Auto	자동	自動
@@ -24,53 +22,15 @@ Stick right	오른쪽 고정	右に固定
 Center	가운데 고정	中央に固定
 Stick bottom	아래 고정	下に固定
 Stick top	위 고정	上に固定
-Preview window	미리보기 창	プレビューウィンドウ
-Review window	일괄 검수 창	一括検収ウィンドウ
-Select a UI prefab in the Project window or open it in Prefab Mode.	UI 프리팹을 Project 창에서 선택하거나 프리팹 모드로 여세요.	Project ウィンドウで UI プレハブを選択するか、プレハブモードで開いてください。
-Source prefab	원본 프리팹	元のプレハブ
-The root is not a RectTransform.	루트가 RectTransform이 아닙니다.	ルートが RectTransform ではありません。
-The root does not stretch with its parent (anchors are not full stretch). Its ratio stays the same when the screen changes, so profiles do not switch.	루트가 부모에 맞춰 늘어나지 않습니다(앵커가 전체 Stretch가 아님). 화면 비율이 바뀌어도 루트 비율이 그대로라 프로필이 전환되지 않습니다.	ルートが親に合わせて伸縮しません（アンカーが全体 Stretch ではありません）。画面比率が変わってもルート比率が変わらないため、プロファイルが切り替わりません。
-Add FlexibleLayout	FlexibleLayout 추가	FlexibleLayout を追加
-No profile settings are assigned.	프로필 설정이 비어 있습니다.	プロファイル設定が設定されていません。
-Assign default profile settings	기본 프로필 설정 연결	既定のプロファイル設定を割り当て
-The source prefab has unsaved changes. Workspaces are made from the saved source, so save it first.	원본 프리팹에 저장 안 된 변경이 있습니다. 작업 프리팹은 저장된 원본에서 만들어지므로 먼저 저장하세요.	元のプレハブに未保存の変更があります。作業プレハブは保存済みの元から作られるので、先に保存してください。
-Profiles	프로필	プロファイル
-Select a block in the Hierarchy to set its role (Header, Main, ...). Roles are used by templates and the review.	Hierarchy에서 블록을 선택하면 역할(Header·Main 등)을 지정할 수 있습니다. 역할은 템플릿 적용과 검수에 쓰입니다.	Hierarchy でブロックを選択すると役割（Header・Main など）を設定できます。役割はテンプレートと検収で使われます。
-{0}  — base (the prefab itself)	{0}  — 기준 (프리팹 자체)	{0}  — 基準（プレハブ自体）
-{0}  — {1} records ({2} grid / {3} manual)	{0}  — 기록 {1}개 (그리드 {2} / 수동 {3})	{0}  — 記録 {1} 件（グリッド {2} / 手動 {3}）
-  · in progress	  · 작업 중	  · 作業中
-Open workspace	작업 프리팹 열기	作業プレハブを開く
-Create workspace	작업 프리팹 생성	作業プレハブを作成
-Delete records	기록 삭제	記録を削除
-Delete {1} layout records of {0}?	{0} 배치 기록 {1}개를 삭제할까요?	{0} の配置記録 {1} 件を削除しますか？
 Delete	삭제	削除
 Cancel	취소	キャンセル
 (none)	(없음)	（なし）
-Role: {0}	역할: {0}	役割: {0}
-Workspace	작업 프리팹	作業プレハブ
-Source: {0}	원본: {0}	元: {0}
-Select source	원본 선택	元を選択
-Profile '{0}' is not in the settings.	프로필 '{0}'가 설정에 없습니다.	プロファイル '{0}' が設定にありません。
-Profile: {0}	프로필: {0}	プロファイル: {0}
-Switch the Game view resolution when a workspace opens	작업 프리팹을 열면 Game 뷰 해상도 자동 전환	作業プレハブを開くと Game ビューの解像度を自動で切り替え
-Switch now	지금 전환	今すぐ切り替え
-Current root size: {0:0} x {1:0}  (ratio {2:0.00})	현재 루트 크기: {0:0} x {1:0}  (비율 {2:0.00})	現在のルートサイズ: {0:0} x {1:0}（比率 {2:0.00}）
-{0:0.00} or wider	{0:0.00} 이상	{0:0.00} 以上
-The root ratio is outside this profile ({0}). Press [{1}] or set the Game view to a {2:0}x{3:0} ratio. (Sizes are converted to the short side automatically.)	루트 비율이 이 프로필 구간({0})이 아닙니다. [{1}]을 누르거나 Game 뷰를 {2:0}x{3:0} 비율로 바꾸세요. (크기는 짧은 변 기준으로 자동 환산)	ルート比率がこのプロファイルの範囲（{0}）外です。[{1}] を押すか、Game ビューを {2:0}x{3:0} の比率にしてください。（サイズは短辺基準で自動換算）
-The recommended work size is {0:0}x{1:0}. Fixed-size blocks are computed from the current size.	권장 작업 크기는 {0:0}x{1:0}입니다. 고정 크기 블록은 현재 크기 기준으로 계산됩니다.	推奨の作業サイズは {0:0}x{1:0} です。固定サイズのブロックは現在のサイズを基準に計算されます。
-Grid (project-wide setting)	그리드 (프로젝트 공용 설정)	グリッド（プロジェクト共通設定）
 Columns	열	列数
 Rows	행	行数
 Margin	바깥 여백	外側の余白
 Gutter	칸 간격	マス間隔
-Show grid	그리드 표시	グリッドを表示
-Place by Scene view drag	Scene 뷰 드래그로 배치	Scene ビューのドラッグで配置
-Place inside SafeArea only (avoid notch and home indicator)	SafeArea 안쪽에만 배치 (노치·홈 인디케이터 영역 제외)	SafeArea の内側にだけ配置（ノッチ・ホームインジケーター領域を除外）
-SafeArea insets of the reference device (red area): left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}	대표 기기 SafeArea 여백 (붉은 영역): 좌 {0:P1} · 우 {1:P1} · 위 {2:P1} · 아래 {3:P1}	代表端末の SafeArea 余白（赤い領域）: 左 {0:P1} · 右 {1:P1} · 上 {2:P1} · 下 {3:P1}
 {0} grid blocks would move if placed again with the current grid or screen size. (Manually adjusted blocks are excluded.)	그리드 설정이나 화면 크기가 바뀌어 다시 계산하면 위치가 달라지는 그리드 블록이 {0}개 있습니다. (수동 조정한 블록은 제외)	グリッド設定や画面サイズが変わり、再計算すると位置が変わるグリッドブロックが {0} 個あります。（手動調整したブロックは除外）
 Re-place grid blocks ({0})	그리드 블록 다시 배치 ({0})	グリッドブロックを再配置 ({0})
-Cell placement	칸 배치	マス配置
-Select a block to place in the Hierarchy (an object under the workspace root).	Hierarchy에서 배치할 블록을 선택하세요. (작업 프리팹 루트 아래 오브젝트)	Hierarchy で配置するブロックを選択してください。（作業プレハブのルート配下のオブジェクト）
 Grid columns and rows must be 1 or more.	그리드 열·행은 1 이상이어야 합니다.	グリッドの列・行は 1 以上にしてください。
 Target: {0}	대상: {0}	対象: {0}
 , inside SafeArea	, SafeArea 안쪽	、SafeArea の内側
@@ -78,7 +38,6 @@ Not placed on the grid	그리드 배치 안 함	グリッド配置なし
 Grid block {0}{1}	그리드 블록 {0}{1}	グリッドブロック {0}{1}
 Grid {0}{1} + adjustment ({2})	그리드 {0}{1} + 보정 ({2})	グリッド {0}{1} ＋ 補正（{2}）
 Manually adjusted (anchors or pivot changed from grid {0}{1}; excluded from templates)	수동 조정됨 (그리드 {0}{1}에서 앵커·피벗 변경, 템플릿 제외)	手動調整済み（グリッド {0}{1} からアンカー・ピボットを変更、テンプレート対象外）
-State: {0}	상태: {0}	状態: {0}
 Column	열	列
 Row	행	行
 Width (cells)	가로 칸수	横マス数
@@ -87,12 +46,11 @@ Horizontal	가로축	横軸
 Vertical	세로축	縦軸
 Mode to apply: horizontal {0} / vertical {1}	적용될 모드: 가로 {0} / 세로 {1}	適用されるモード: 横 {0} / 縦 {1}
 Apply to selected block	선택 블록에 적용	選択ブロックに適用
-Templates (role-to-cell layouts)	템플릿 (역할별 칸 배치 묶음)	テンプレート（役割ごとのマス配置）
 {0} ({1} slots)	{0} ({1}칸)	{0}（{1} 枠）
 Apply	적용	適用
 Delete template	템플릿 삭제	テンプレートを削除
 Delete the template '{0}'? (shared by the project)	'{0}' 템플릿을 삭제할까요? (프로젝트 공용)	テンプレート '{0}' を削除しますか？（プロジェクト共通）
-No templates for this profile.	이 프로필용 템플릿이 없습니다.	このプロファイル用のテンプレートはありません。
+No templates for this screen yet.	이 화면의 템플릿은 아직 없습니다.	この画面のテンプレートはまだありません。
 Save current layout as template	현재 배치를 템플릿으로 저장	現在の配置をテンプレートとして保存
 Excluded blocks:	제외된 블록:	除外されたブロック:
 Save template	템플릿 저장	テンプレートを保存
@@ -103,16 +61,6 @@ Saved {1} roles to '{0}'.	'{0}'에 역할 {1}개를 저장했습니다.	'{0}' �
 Placed {0} blocks.	블록 {0}개를 배치했습니다.	ブロックを {0} 個配置しました。
 Roles missing in this prefab: {0}	이 프리팹에 없는 역할: {0}	このプレハブにない役割: {0}
 Apply template	템플릿 적용	テンプレートを適用
-Finish	마무리	仕上げ
-Commit	데이터로 반영	データに反映
-Cancel (delete)	작업 취소(삭제)	作業を取り消し（削除）
-Cancel work	작업 취소	作業の取り消し
-The workspace will be deleted. Changes that were not committed are lost.	작업 프리팹을 삭제합니다. 반영하지 않은 수정은 사라집니다.	作業プレハブを削除します。反映していない変更は失われます。
-Source changed	원본 변경됨	元が変更されました
-The source prefab changed after this workspace was created. Commit anyway?\n(Renamed objects are not committed.)	작업 프리팹을 만든 뒤 원본 프리팹이 수정되었습니다. 그래도 반영할까요?\n(이름이 바뀐 오브젝트는 반영되지 않습니다)	作業プレハブを作った後に元のプレハブが変更されました。それでも反映しますか？\n（名前が変わったオブジェクトは反映されません）
-{0}\nWrote {2} records to the '{1}' profile. The workspace was deleted.	{0}\n'{1}' 프로필에 {2}개 기록했습니다. 작업 프리팹은 삭제했습니다.	{0}\n'{1}' プロファイルに {2} 件記録しました。作業プレハブは削除しました。
-Could not commit. The workspace was kept.	반영하지 못했습니다. 작업 프리팹은 남겨 두었습니다.	反映できませんでした。作業プレハブは残しています。
-{0} more (see the Console)	외 {0}건 (Console 참고)	ほか {0} 件（Console を参照）
 Out of screen: {0}	화면 밖: {0}	画面外: {0}
 Overlap: {0} ↔ {1}	겹침: {0} ↔ {1}	重なり: {0} ↔ {1}
 Control outside SafeArea: {0}	SafeArea 밖 조작 요소: {0}	SafeArea 外の操作要素: {0}
@@ -121,25 +69,17 @@ Rotate	회전	回転
 Show issues	문제 표시	問題を表示
 Lock	고정	固定
 Refresh	새로고침	更新
-{0} (in progress)	{0} (작업 중)	{0}（作業中）
 {0} (editing)	{0} (편집 중)	{0}（編集中）
 {0} more	외 {0}건	ほか {0} 件
-  · workspace content	  · 작업 프리팹 내용	  · 作業プレハブの内容
-Profile: {0}{1}   ratio {2:0.00}   logical {3:0}x{4:0}   {5} issues	프로필: {0}{1}   비율 {2:0.00}   논리 {3:0}x{4:0}   문제 {5}건	プロファイル: {0}{1}   比率 {2:0.00}   論理 {3:0}x{4:0}   問題 {5} 件
-Edge {0:0.00}	경계 {0:0.00}	境界 {0:0.00}
+Edge {0:0.00}	경계 {0:0.00}	境目 {0:0.00}
 All	전체로	全体
 Folder	폴더	フォルダー
 Thumbnail	썸네일	サムネイル
 Only issues	문제 있는 것만	問題があるものだけ
-Run review	검수 실행	検収を実行
-Profile edge ratios	프로필 경계 비율	プロファイル境界比率
-Also checks the narrowest and widest ratio where each profile can appear. Fixed-size blocks overflow there first.	프로필마다 화면에 나올 수 있는 가장 좁은·넓은 비율도 검사합니다. 고정 크기 블록은 여기서 넘치기 쉽습니다.	各プロファイルが表示されうる最も狭い・広い比率も検査します。固定サイズのブロックはここで先にはみ出します。
-Press [{0}] to render every prefab with FlexibleLayout on each device preset (and profile edge ratio). Leave the folder empty to search all of Assets.	[{0}]을 누르면 FlexibleLayout이 붙은 프리팹을 기기 프리셋별(과 프로필 경계 비율)로 렌더링합니다. 폴더를 비우면 Assets 전체를 찾습니다.	[{0}] を押すと、FlexibleLayout が付いたプレハブを端末プリセットごと（とプロファイル境界比率）にレンダリングします。フォルダーを空にすると Assets 全体を探します。
+Screen edge ratios	화면 경계 비율	画面の境目の比率
+Also checks the narrowest and widest ratio where each screen can appear. Fixed-size blocks overflow there first.	각 화면이 나올 수 있는 가장 좁은·넓은 비율도 검사합니다. 크기가 고정된 블록은 여기서 먼저 넘칩니다.	各画面が出るいちばん細い・いちばん広い比率でもチェックします。サイズ固定のブロックはここで最初にはみ出します。
 {0} prefabs · {1} issues	프리팹 {0}개 · 문제 {1}건	プレハブ {0} 個 · 問題 {1} 件
-Select	선택	選択
 No issues	문제 없음	問題なし
-{0} {1} ({2} grid / {3} manual)	{0} {1}개 (그리드 {2} / 수동 {3})	{0} {1} 件（グリッド {2} / 手動 {3}）
-{0} roles	역할 {0}개	役割 {0} 個
 No workspace marker (FlexibleWorkspace) found.	작업 프리팹 표식(FlexibleWorkspace)이 없습니다.	作業プレハブの目印（FlexibleWorkspace）がありません。
 Source prefab not found.	원본 프리팹을 찾을 수 없습니다.	元のプレハブが見つかりません。
 Failed to save the source prefab.	원본 프리팹 저장에 실패했습니다.	元のプレハブの保存に失敗しました。
@@ -160,3 +100,205 @@ Tablet split (half)	태블릿 분할 (절반)	タブレット分割（半分）
 Thumbnails were rendered smaller. Press [{0}] again for sharp thumbnails at this size.	썸네일이 이보다 작게 그려져 있습니다. 이 크기로 선명하게 보려면 [{0}]을 다시 누르세요.	サムネイルはこれより小さく描画されています。このサイズで鮮明に見るには [{0}] をもう一度押してください。
 [FlexibleUITool] Could not reset the Game view zoom: {0}	[FlexibleUITool] Game 뷰 배율을 되돌리지 못했습니다: {0}	[FlexibleUITool] Game ビューの拡大率を戻せませんでした: {0}
 [FlexibleUITool] Could not render the Game view: {0}	[FlexibleUITool] Game 뷰를 그리지 못했습니다: {0}	[FlexibleUITool] Game ビューを描画できませんでした: {0}
+Open the Flexible UI window	Flexible UI 창 열기	Flexible UI ウィンドウを開く
+The screen view was reset to the base screen after a script reload.	스크립트를 다시 불러와서 기준 화면으로 되돌렸습니다.	スクリプトの再読み込みがあったので、基準の画面に戻しました。
+Open a UI prefab	UI 프리팹을 열어 주세요	UI プレハブを開いてね
+Double-click a UI prefab in the Project window. It opens in Prefab Mode, and the screen buttons (Portrait / Square / Landscape) appear here.	Project 창에서 UI 프리팹을 더블클릭하세요. 프리팹 모드로 열리고, 여기에 화면 버튼(세로 / 정사각 / 가로)이 나타납니다.	Project ウィンドウで UI プレハブをダブルクリックしてください。プレハブモードで開いて、ここに画面ボタン（縦 / 正方形 / 横）が出ます。
+Open "{0}"	"{0}" 열기	「{0}」を開く
+This prefab is not UI (its root has no RectTransform), so it cannot be used.	이 프리팹은 UI가 아니라서(루트에 RectTransform이 없음) 쓸 수 없습니다.	このプレハブは UI ではない（ルートに RectTransform がない）ので使えません。
+This prefab is not ready for screen switching yet. Press the button and it is set up automatically.	이 프리팹은 아직 화면 전환 준비가 안 됐어요. 버튼을 누르면 자동으로 준비합니다.	このプレハブはまだ画面切り替えの準備ができていません。ボタンを押すと自動で準備します。
+Has the Flexible Layout component	Flexible Layout 컴포넌트가 있음	Flexible Layout コンポーネントがある
+Uses the project's screen settings	프로젝트 화면 설정을 사용함	プロジェクトの画面設定を使っている
+Fills the whole screen (anchors stretch, offsets 0)	화면 전체를 채움 (앵커 늘이기, 오프셋 0)	画面全体に広がっている（アンカーがストレッチ、オフセット 0）
+Set up this prefab	이 프리팹 준비하기	このプレハブを準備する
+Save (Ctrl+S)	저장 (Ctrl+S)	保存 (Ctrl+S)
+Which screen are you editing?	어느 화면을 편집할까요?	どの画面を編集する？
+<b>{0}</b> is the base screen. What you build here is used by every screen. To change only another screen, press its button.	<b>{0}</b> 화면이 기준이에요. 여기서 만든 내용은 모든 화면에 쓰입니다. 다른 화면만 바꾸고 싶으면 그 화면 버튼을 누르세요.	<b>{0}</b>画面が基準です。ここで作ったものはすべての画面で使われます。ほかの画面だけ変えたいときは、その画面のボタンを押してね。
+You are adjusting only the <b>{0}</b> screen. Move, resize, show or hide blocks freely. Blocks you do not touch stay the same as {1}.	지금은 <b>{0}</b> 화면만 고치고 있어요. 블록을 자유롭게 옮기고, 크기를 바꾸고, 숨기거나 보이게 하세요. 손대지 않은 블록은 {1}와 같게 유지됩니다.	いまは<b>{0}</b>画面だけを調整しています。ブロックを自由に動かしたり、サイズを変えたり、表示・非表示を切り替えたりしてね。触らなかったブロックは{1}と同じままです。
+● Unsaved changes. Save with Ctrl+S (switching screens also saves).	● 저장 안 한 변경이 있어요. Ctrl+S로 저장하세요 (화면을 바꿔도 저장됩니다).	● 未保存の変更があります。Ctrl+S で保存してね（画面を切り替えても保存されます）。
+base	기준	基準
+{0} changed	{0}개 변경	{0}個 変更
+Edit the {0} screen ({1:0}x{2:0}). Switching screens saves the prefab.	{0} 화면({1:0}x{2:0})을 편집합니다. 화면을 바꾸면 프리팹이 저장됩니다.	{0}画面（{1:0}x{2:0}）を編集します。画面を切り替えるとプレハブが保存されます。
+Selected block	선택한 블록	選択中のブロック
+Click a block in the Hierarchy or the Scene view.	Hierarchy나 Scene 뷰에서 블록을 클릭하세요.	Hierarchy か Scene ビューでブロックをクリックしてね。
+Base screen: changes here apply to every screen (except where a screen has its own layout).	기준 화면: 여기서 바꾸면 모든 화면에 적용됩니다 (그 화면만의 배치가 있는 곳은 제외).	基準の画面：ここで変えるとすべての画面に反映されます（その画面だけの配置があるところは除く）。
+○ Same as {0}. Move it to give this screen its own layout.	○ {0}와 같음. 옮기면 이 화면만의 배치가 됩니다.	○ {0}と同じ。動かすとこの画面だけの配置になります。
+Has its own layout on this screen	이 화면만의 배치가 있음	この画面だけの配置あり
+Back to {0}	{0}로 되돌리기	{0}に戻す
+New block (not saved yet). After saving it appears on every screen.	새 블록 (아직 저장 안 됨). 저장하면 모든 화면에 생깁니다.	新しいブロック（まだ未保存）。保存するとすべての画面に追加されます。
+Role (optional)	역할 (선택)	役割（任意）
+Used by templates and the check tab. Header, Main, Footer ...	템플릿과 검수 탭에서 씁니다. Header, Main, Footer ...	テンプレートとチェックタブで使います。Header, Main, Footer ...
+Place on a grid (optional)	그리드에 맞춰 놓기 (선택)	グリッドに合わせて置く（任意）
+Select a block, then drag over the blue cells in the Scene view. The block snaps to those cells.	블록을 선택하고 Scene 뷰의 파란 칸 위를 드래그하세요. 블록이 그 칸에 딱 맞춰집니다.	ブロックを選んで、Scene ビューの青いマスの上をドラッグしてね。ブロックがそのマスにぴったり収まります。
+The prefab is not drawn in a {0} shape, because Unity's Game view has a different size. Press the button to set it to {1:0}x{2:0}.	Unity의 Game 뷰 크기가 달라서 프리팹이 {0} 모양으로 보이지 않아요. 버튼을 누르면 {1:0}x{2:0}로 맞춥니다.	Unity の Game ビューのサイズが違うため、プレハブが{0}の形で表示されていません。ボタンを押すと {1:0}x{2:0} に合わせます。
+Fix the Game view size	Game 뷰 크기 맞추기	Game ビューのサイズを合わせる
+The grid is shared by the whole project (one per screen).	그리드는 프로젝트 전체가 함께 씁니다 (화면마다 하나).	グリッドはプロジェクト全体で共通です（画面ごとに 1 つ）。
+Place by dragging in the Scene view	Scene 뷰에서 드래그해서 놓기	Scene ビューでドラッグして置く
+Keep inside the safe area (red = notch / home bar)	안전 영역 안에만 놓기 (빨간 곳 = 노치 / 홈 바)	セーフエリアの内側に置く（赤 = ノッチ / ホームバー）
+SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}	기준 기기의 SafeArea 여백: 왼쪽 {0:P1} · 오른쪽 {1:P1} · 위 {2:P1} · 아래 {3:P1}	基準端末の SafeArea の余白：左 {0:P1} · 右 {1:P1} · 上 {2:P1} · 下 {3:P1}
+Select the block to place.	놓을 블록을 선택하세요.	置くブロックを選んでね。
+{0}: {1}	{0}: {1}	{0}：{1}
+Templates (optional)	템플릿 (선택)	テンプレート（任意）
+Save where each role (Header, Main, ...) sits on the grid of the {0} screen, and reuse it on other prefabs.	{0} 화면에서 역할(Header, Main ...)마다 그리드 어디에 있는지 저장해 두고 다른 프리팹에 다시 쓸 수 있어요.	{0}画面で役割（Header, Main ...）ごとにグリッドのどこに置いたかを保存して、ほかのプレハブで使い回せます。
+More	그 밖	その他
+Change the Game view size when switching screens	화면을 바꿀 때 Game 뷰 크기도 바꾸기	画面を切り替えたら Game ビューのサイズも変える
+Undo all {0} changes ({1} blocks)	{0} 화면 변경을 모두 취소 ({1}개 블록)	{0}画面の変更をすべて取り消す（{1}個のブロック）
+Undo all changes	변경 모두 취소	変更をすべて取り消す
+Make every block of the {0} screen the same as {1} again? This cannot be undone.	{0} 화면의 모든 블록을 다시 {1}와 같게 할까요? 되돌릴 수 없습니다.	{0}画面のすべてのブロックを{1}と同じに戻しますか？元に戻せません。
+Yes	예	はい
+Select the screen settings asset	화면 설정 애셋 선택	画面設定アセットを選択
+Old work copy	예전 작업 사본	古い作業コピー
+This is a work copy made by an older version of the tool ({0} screen of {1}). Now you edit the original prefab directly, so this copy is no longer needed.	예전 버전의 툴이 만든 작업 사본입니다 ({1}의 {0} 화면). 이제는 원래 프리팹을 바로 편집하므로 이 사본은 필요 없어요.	古いバージョンのツールが作った作業コピーです（{1} の {0} 画面）。いまは元のプレハブを直接編集するので、このコピーはもういりません。
+Apply it to the original and open the original	원래 프리팹에 반영하고 열기	元のプレハブに反映して開く
+Discard it	버리기	捨てる
+Discard	버리기	捨てる
+Delete this old work copy? Changes in it are lost.	이 예전 작업 사본을 지울까요? 그 안의 변경은 사라집니다.	この古い作業コピーを削除しますか？中の変更は失われます。
+Unfinished work from an older version of the tool: {0}	예전 버전의 툴에서 끝내지 않은 작업이 있어요: {0}	古いバージョンのツールでやりかけの作業があります：{0}
+Apply it	반영하기	反映する
+Delete the old work copies? Changes in them are lost.	예전 작업 사본을 지울까요? 그 안의 변경은 사라집니다.	古い作業コピーを削除しますか？中の変更は失われます。
+Applied the {0} screen to {1}.	{0} 화면을 {1}에 반영했습니다.	{0}画面を {1} に反映しました。
+Could not apply. The old work copy was kept.	반영하지 못했습니다. 예전 작업 사본은 그대로 두었습니다.	反映できませんでした。古い作業コピーは残してあります。
+Drag the window edge to change its shape. The layout switches automatically at each screen ratio.	창 가장자리를 끌어 모양을 바꿔 보세요. 화면 비율에 따라 배치가 자동으로 바뀝니다.	ウィンドウの端をドラッグして形を変えてみてね。画面の比率に合わせて配置が自動で切り替わります。
+Open a UI prefab (double-click it in the Project window) or select one.	UI 프리팹을 열거나(Project 창에서 더블클릭) 선택하세요.	UI プレハブを開くか（Project ウィンドウでダブルクリック）、選択してね。
+Keep showing this prefab even when the selection changes.	선택이 바뀌어도 이 프리팹을 계속 보여 줍니다.	選択が変わってもこのプレハブを表示し続けます。
+{0} (saved)	{0} (저장된 내용)	{0}（保存済みの内容）
+Now showing: {0}   ratio {1:0.00}   size {2:0}x{3:0}   {4} issues	표시 중: {0}   비율 {1:0.00}   크기 {2:0}x{3:0}   문제 {4}개	表示中：{0}   比率 {1:0.00}   サイズ {2:0}x{3:0}   問題 {4}件
+Shows your prefabs on many phones and tablets at once, and finds blocks that stick out of the screen, overlap, or sit under the notch.	여러 휴대폰·태블릿 화면으로 한 번에 보여 주고, 화면 밖으로 나가거나 겹치거나 노치 밑에 들어간 블록을 찾아 줍니다.	いろいろなスマホ・タブレットの画面でまとめて表示して、はみ出し・重なり・ノッチの下に入ったブロックを見つけます。
+Only the open prefab	열린 프리팹만	開いているプレハブだけ
+Run check	검수 시작	チェック開始
+Press [{0}].	[{0}]을 누르세요.	[{0}] を押してね。
+Open	열기	開く
+{0}: {1} changed	{0}: {1}개 변경	{0}：{1}個 変更
+● Unsaved	● 저장 안 됨	● 未保存
+Save	저장	保存
+Window	창	ウィンドウ
+Tutorial {0} / {1}	튜토리얼 {0} / {1}	チュートリアル {0} / {1}
+Quit tutorial	튜토리얼 그만하기	チュートリアルをやめる
+Hi! Let's learn this tool in about 2 minutes.\nI'll make a practice prefab for you, so nothing of yours is touched.	안녕하세요! 2분 정도면 이 툴을 익힐 수 있어요.\n연습용 프리팹을 만들어 드릴 테니 원래 파일은 건드리지 않아요.	やあ！2分くらいでこのツールの使い方を覚えよう。\n練習用のプレハブを作るから、きみのファイルには触らないよ。
+This is the <b>Portrait</b> screen. It is the base of every screen.\nNow press the <b>Landscape</b> button (orange frame)!	여기가 <b>세로</b> 화면이에요. 모든 화면의 기준이에요.\n이제 <b>가로</b> 버튼(주황 테두리)을 눌러 보세요!	これが<b>縦</b>画面。すべての画面の基準になるよ。\nじゃあ<b>横</b>ボタン（オレンジの枠）を押してみよう！
+Open the practice prefab first.	먼저 연습용 프리팹을 열어 주세요.	まずは練習用のプレハブを開いてね。
+You are on the <b>Landscape</b> screen now.\nMove the <b>Main</b> block anywhere you like: drag it in the Scene view, or change Pos X in the Inspector.	지금은 <b>가로</b> 화면이에요.\n<b>Main</b> 블록을 원하는 곳으로 옮겨 보세요. Scene 뷰에서 끌거나 Inspector의 Pos X를 바꾸면 돼요.	いまは<b>横</b>画面だよ。\n<b>Main</b>ブロックを好きな場所に動かしてみよう。Scene ビューでドラッグするか、Inspector の Pos X を変えてね。
+Nice! Now save with <b>Ctrl+S</b> (or the Save button).	좋아요! 이제 <b>Ctrl+S</b>(또는 저장 버튼)로 저장하세요.	いいね！じゃあ <b>Ctrl+S</b>（か保存ボタン）で保存しよう。
+Press the <b>Portrait</b> button.\nMain goes back to its portrait position. The two screens are separate!	<b>세로</b> 버튼을 눌러 보세요.\nMain이 세로 화면 위치로 돌아가요. 두 화면은 따로따로예요!	<b>縦</b>ボタンを押してみよう。\nMain が縦画面の位置に戻るよ。2つの画面は別々なんだ！
+Press <b>Landscape</b> again.\nYour landscape layout is still there.	다시 <b>가로</b>를 눌러 보세요.\n가로 화면 배치가 그대로 남아 있어요.	もう一度<b>横</b>を押してみよう。\n横画面の配置がちゃんと残っているよ。
+(Optional) For neat alignment, open <b>Place on a grid</b>, select a block and drag over the blue cells in the Scene view.	(선택) 깔끔하게 맞추고 싶으면 <b>그리드에 맞춰 놓기</b>를 열고, 블록을 선택한 뒤 Scene 뷰의 파란 칸 위를 드래그해 보세요.	（任意）きれいに揃えたいときは<b>グリッドに合わせて置く</b>を開いて、ブロックを選んで Scene ビューの青いマスの上をドラッグしてみよう。
+Open the <b>Preview</b> tab. Drag the window edge to make it wide, then let go and make it narrow.\nWhen the screen name at the bottom changes, you're done.	<b>미리보기</b> 탭을 여세요. 창 가장자리를 끌어 넓게 만들고, 손을 뗀 다음 좁게 만들어 보세요.\n아래쪽 화면 이름이 바뀌면 성공이에요.	<b>プレビュー</b>タブを開いてね。ウィンドウの端をドラッグして横長にして、手を離してから縦長にしてみよう。\n下の画面名が変わったら成功だよ。
+Tablets use the <b>Square</b> screen. It works the same way.\nPress the <b>Square</b> button. Blocks you don't touch keep the portrait layout.	태블릿은 <b>정사각</b> 화면을 써요. 쓰는 법은 똑같아요.\n<b>정사각</b> 버튼을 눌러 보세요. 손대지 않은 블록은 세로 화면 배치를 따라가요.	タブレットは<b>正方形</b>画面を使うよ。使い方は同じ。\n<b>正方形</b>ボタンを押してみよう。触らなかったブロックは縦画面の配置のままだよ。
+All done! In the check, a red bar on a thumbnail means a problem on that device.\nJust remember: 1. Press a screen button  2. Move blocks  3. Ctrl+S\nShall I delete the practice prefab?	끝! 검수에서 썸네일에 빨간 줄이 있으면 그 기기에서 문제가 있다는 뜻이에요.\n이것만 기억하세요: 1. 화면 버튼 누르기  2. 블록 옮기기  3. Ctrl+S\n연습용 프리팹은 지울까요?	おしまい！チェックでサムネイルに赤い線があれば、その機種で問題があるという意味だよ。\n覚えるのはこれだけ：1. 画面ボタンを押す  2. ブロックを動かす  3. Ctrl+S\n練習用のプレハブは削除する？
+Last one: the <b>Check</b> tab shows the prefab on many phones and tablets at once.\nOpen it and press <b>Run check</b>.	마지막! <b>검수</b> 탭은 여러 폰·태블릿에서 프리팹이 어떻게 보이는지 한 번에 보여 줘요.\n검수 탭을 열고 <b>검수 시작</b>을 눌러 보세요.	最後！<b>チェック</b>タブでは、たくさんのスマホ・タブレットでの見え方を一度に確認できるよ。\nチェックタブを開いて<b>チェック開始</b>を押してみよう。
+First go back to the <b>Edit</b> tab (orange frame).	먼저 <b>편집</b> 탭(주황 테두리)으로 돌아가세요.	まず<b>編集</b>タブ（オレンジの枠）に戻ってね。
+Start!	시작!	はじめる！
+Open the practice prefab	연습용 프리팹 열기	練習用プレハブを開く
+Select Main for me	Main 선택해 줘	Main を選んで
+Skip	건너뛰기	スキップ
+Delete it and finish	지우고 끝내기	削除しておしまい
+Keep it and finish	남겨 두고 끝내기	残しておしまい
+The tutorial sample could not be found. Reinstall the package and try again.	튜토리얼 샘플을 찾지 못했습니다. 패키지를 다시 설치한 뒤 시도해 주세요.	チュートリアルのサンプルが見つかりませんでした。パッケージを入れ直してからもう一度試してね。
+Edit	편집	編集
+Preview	미리보기	プレビュー
+Check	검수	チェック
+Tutorial	튜토리얼	チュートリアル
+Grid size	그리드 칸 정하기	グリッドのマスを決める
+Place on cells	칸에 맞춰 놓기	マスに合わせて置く
+Following the screen size	화면 크기 따라가기	画面サイズへの追従
+Fine-tuning by hand	손으로 미세 조정	手で微調整
+Roles	역할	役割
+Templates	템플릿	テンプレート
+Practice template	연습 템플릿	練習テンプレート
+Now let's place blocks precisely.\nYou'll learn the grid (cells), how blocks follow the screen size, fine-tuning, and roles and templates. We practice on the <b>Landscape</b> screen of a fresh practice prefab.	이번엔 블록을 정확하게 놓는 법을 배워요.\n그리드(칸), 화면 크기 따라가기, 미세 조정, 역할과 템플릿까지 해 봐요. 새 연습용 프리팹의 <b>가로</b> 화면에서 연습해요.	今度はブロックを正確に置く方法を覚えよう。\nグリッド（マス）、画面サイズへの追従、微調整、役割とテンプレートまでやってみるよ。新しい練習用プレハブの<b>横</b>画面で練習するよ。
+Open <b>Place on a grid</b> (orange frame).\nBlue cells (the grid) appear in the Scene view. Each screen has its own grid.	<b>그리드에 맞춰 놓기</b>(주황 테두리)를 펼치세요.\nScene 뷰에 파란 칸(그리드)이 나타나요. 그리드는 화면마다 따로 있어요.	<b>グリッドに合わせて置く</b>（オレンジの枠）を開いてね。\nシーンビューに青いマス（グリッド）が出るよ。グリッドは画面ごとに別々だよ。
+<b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view. (I'll put the grid back when the tutorial ends.)	<b>열</b>과 <b>행</b>은 칸의 개수, <b>바깥 여백</b>은 화면 가장자리의 빈 공간, <b>칸 간격</b>은 칸 사이의 공간이에요.\n아무 숫자나 바꾸고 Scene 뷰를 보세요. (튜토리얼이 끝나면 그리드는 원래대로 돌려 놓을게요.)	<b>列数</b>と<b>行数</b>はマスの数、<b>外側の余白</b>は画面の端の空き、<b>マス間隔</b>はマスとマスの間の空きだよ。\n好きな数字を変えてシーンビューを見てね。（チュートリアルが終わったらグリッドは元に戻すよ。）
+Pick the block to place. Click <b>Main</b> in the Hierarchy or the Scene view.	칸에 놓을 블록을 고르세요. Hierarchy나 Scene 뷰에서 <b>Main</b>을 클릭하세요.	マスに置くブロックを選ぼう。ヒエラルキーかシーンビューで<b>Main</b>をクリックしてね。
+Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height and press <b>Apply to selected block</b>.)	Scene 뷰의 파란 칸 위를 끌어 보세요. 손을 떼면 Main이 끈 칸에 딱 맞춰져요.\n(열·행·폭·높이 숫자를 넣고 <b>선택 블록에 적용</b>을 눌러도 돼요.)	シーンビューの青いマスの上をドラッグしてみよう。手を離すと Main がそのマスにぴったり合うよ。\n（列・行・幅・高さの数字を入れて<b>選択ブロックに適用</b>を押してもいいよ。）
+Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle. <b>Auto</b>: decided by which screen edges the cells touch.\nSet <b>Horizontal</b> to something other than Auto, then press <b>Apply to selected block</b>.	블록이 화면 크기를 따라가는 방식을 정해요.\n<b>늘이기</b>: 화면과 함께 커져요. <b>왼쪽·오른쪽 고정</b>: 크기는 그대로, 그쪽에 붙어요. <b>가운데 고정</b>: 크기는 그대로, 가운데에 있어요. <b>자동</b>: 칸이 화면 어느 가장자리에 닿는지로 정해져요.\n<b>가로축</b>을 자동이 아닌 것으로 바꾸고 <b>선택 블록에 적용</b>을 누르세요.	ブロックが画面サイズにどう追従するかを決めるよ。\n<b>伸縮</b>：画面と一緒に大きくなる。<b>左・右に固定</b>：サイズはそのままでその側にくっつく。<b>中央に固定</b>：サイズはそのままで真ん中。<b>自動</b>：マスが画面のどの端に触れているかで決まる。\n<b>横軸</b>を自動以外にして、<b>選択ブロックに適用</b>を押してね。
+Open the <b>Preview</b> tab and make the window wider and narrower.\nStretched blocks grow with it; stuck blocks keep their size. Press <b>Got it</b> when you've seen it.	<b>미리보기</b> 탭을 열고 창을 넓혔다 좁혔다 해 보세요.\n늘이기 블록은 함께 커지고, 고정 블록은 크기를 지켜요. 확인했으면 <b>확인했어요</b>를 누르세요.	<b>プレビュー</b>タブを開いて、ウィンドウを広げたり狭めたりしてみよう。\n伸縮のブロックは一緒に大きくなって、固定のブロックはサイズを保つよ。見たら<b>わかった</b>を押してね。
+After placing on cells you can still adjust by hand.\nChange <b>Pos X</b> or <b>Width</b> of Main in the Inspector. (To drag it in the Scene view, close <b>Place on a grid</b> first.)\nThe adjustment is kept even when the grid changes.	칸에 놓은 뒤에도 손으로 조정할 수 있어요.\nInspector에서 Main의 <b>Pos X</b>나 <b>Width</b>를 바꿔 보세요. (Scene 뷰에서 끌려면 먼저 <b>그리드에 맞춰 놓기</b>를 접으세요.)\n이 보정은 그리드가 바뀌어도 유지돼요.	マスに置いた後でも手で調整できるよ。\nインスペクターで Main の <b>Pos X</b> か <b>Width</b> を変えてみよう。（シーンビューでドラッグするなら、先に<b>グリッドに合わせて置く</b>を閉じてね。）\nこの補正はグリッドが変わっても残るよ。
+A <b>role</b> (Header, Main, ...) says what a block is for. Blocks with roles can be laid out in one go with a template.\nSelect Main and set <b>Role</b> to Main.	<b>역할</b>(Header, Main 등)은 블록이 무슨 용도인지 알려 줘요. 역할이 있는 블록은 템플릿으로 한 번에 배치할 수 있어요.\nMain을 고르고 <b>역할</b>을 Main으로 정하세요.	<b>役割</b>（Header、Main など）はブロックが何のためのものかを表すよ。役割のあるブロックはテンプレートで一度に配置できるよ。\nMain を選んで<b>役割</b>を Main にしてね。
+Open <b>Templates</b> (orange frame).	<b>템플릿</b>(주황 테두리)을 펼치세요.	<b>テンプレート</b>（オレンジの枠）を開いてね。
+Type a name and press <b>Save current layout as template</b>.\nOnly blocks that have a role and were placed on cells are saved.	이름을 적고 <b>현재 배치를 템플릿으로 저장</b>을 누르세요.\n역할이 있고 칸에 놓인 블록만 저장돼요.	名前を入れて<b>現在の配置をテンプレートとして保存</b>を押してね。\n役割があって、マスに置いたブロックだけが保存されるよ。
+Now use it. Move Main anywhere, then press <b>Apply</b> next to the template.\nMain goes back to its saved cells. Any prefab whose blocks have the same roles can be laid out like this in one click.	이제 써 볼게요. Main을 아무 데나 옮긴 다음, 템플릿 옆의 <b>적용</b>을 누르세요.\nMain이 저장한 칸으로 돌아와요. 같은 역할을 가진 블록이 있는 프리팹이라면 어디든 이렇게 한 번에 배치돼요.	使ってみよう。Main を好きな所に動かしてから、テンプレートの横の<b>適用</b>を押してね。\nMain が保存したマスに戻るよ。同じ役割のブロックがあるプレハブなら、どれでもこうして一発で配置できるよ。
+Advanced done! Grid → place on cells → how blocks follow → fine-tune → roles and templates.\nThe grid settings and practice templates changed during the tutorial were put back.	심화 끝! 그리드 → 칸에 놓기 → 따라가는 방식 → 미세 조정 → 역할과 템플릿.\n튜토리얼 중에 바꾼 그리드 설정과 연습 템플릿은 원래대로 돌려 놓았어요.	応用おしまい！グリッド → マスに置く → 追従のしかた → 微調整 → 役割とテンプレート。\nチュートリアル中に変えたグリッド設定と練習テンプレートは元に戻したよ。
+This part is done!\nThe grid settings and practice templates changed during the tutorial were put back.	이 부분은 끝!\n튜토리얼 중에 바꾼 그리드 설정과 연습 템플릿은 원래대로 돌려 놓았어요.	ここはおしまい！\nチュートリアル中に変えたグリッド設定と練習テンプレートは元に戻したよ。
+Got it	확인했어요	わかった
+Choose another tutorial	다른 튜토리얼 고르기	ほかのチュートリアルを選ぶ
+Choose a tutorial	튜토리얼 고르기	チュートリアルを選ぶ
+Advanced {0} / {1} · {2}	심화 {0} / {1} · {2}	応用 {0} / {1} · {2}
+Advanced tutorial	심화 튜토리얼	応用チュートリアル
+Which tutorial do you want to do?	어떤 튜토리얼을 해 볼까요?	どのチュートリアルをやってみる？
+Try the advanced tutorial	심화 튜토리얼 해 보기	応用チュートリアルをやってみる
+Basic: switch screens and move blocks	기본: 화면 바꿔 가며 블록 옮기기	基本：画面を切り替えてブロックを動かす
+Advanced: everything	심화: 처음부터 끝까지	応用：最初から最後まで
+Advanced {0}. {1}	심화 {0}. {1}	応用 {0}. {1}
+Auto-layout with AI (Claude Code)	AI로 자동 배치 (Claude Code)	AIで自動配置（Claude Code）
+The AI is working. See the box at the top of this window.	AI가 작업 중이에요. 창 맨 위 상자를 보세요.	AIが作業中です。ウィンドウ上部のボックスを見てね。
+Checking Claude Code on this PC...	이 PC의 Claude Code를 확인하는 중...	このPCの Claude Code を確認中...
+Claude Code is not installed on this PC. Press Install: a window opens and installs it (about a minute). Then press Check again.	이 PC에 Claude Code가 설치돼 있지 않아요. 설치를 누르면 창이 열리고 설치돼요(1분 정도). 끝나면 다시 확인을 누르세요.	このPCには Claude Code がインストールされていません。インストールを押すとウィンドウが開いてインストールされます（1分ほど）。終わったら再確認を押してね。
+Install Claude Code	Claude Code 설치	Claude Code をインストール
+Check again	다시 확인	再確認
+Log in to Claude once. Press Log in: a window and your browser open. Log in with your Claude account (Pro, Max, Team or Enterprise), then press Check again.	Claude에 한 번만 로그인하면 돼요. 로그인을 누르면 창과 브라우저가 열려요. Claude 계정(Pro, Max, Team, Enterprise)으로 로그인한 뒤 다시 확인을 누르세요.	Claude に一度だけログインすればOK。ログインを押すとウィンドウとブラウザが開きます。Claude アカウント（Pro、Max、Team、Enterprise）でログインしてから再確認を押してね。
+Log in	로그인	ログイン
+The AI can make the landscape and square layouts for you. It uses Claude Code on this PC with your Claude subscription.	AI가 가로·정사각 배치를 대신 만들어 줘요. 이 PC의 Claude Code를 내 Claude 구독으로 사용해요.	AIが横・正方形の配置を代わりに作ってくれます。このPCの Claude Code を自分の Claude サブスクリプションで使います。
+Connect AI	AI 연결	AIに接続
+Or choose claude.exe yourself	또는 claude.exe를 직접 고르기	または claude.exe を自分で選ぶ
+Choose...	고르기...	選択...
+Screens to make:	만들 화면:	作る画面：
+Auto-layout with AI	AI로 자동 배치	AIで自動配置
+Disconnect	연결 끊기	接続を解除
+These screens already have their own layout. The AI may change it.	이 화면들에는 이미 따로 만든 배치가 있어요. AI가 바꿀 수 있어요.	これらの画面にはすでに独自の配置があります。AIが変更するかもしれません。
+You can go back with Undo AI changes afterwards.	끝난 뒤 「AI 변경 되돌리기」로 되돌릴 수 있어요.	終わった後に「AIの変更を元に戻す」で戻せます。
+Continue	계속	続ける
+AI is laying out {0}... ({1:0}s)	AI가 {0}을(를) 배치하는 중... ({1:0}초)	AIが {0} を配置中...（{1:0}秒）
+{0} (step {1})	{0} ({1}번째 작업)	{0}（{1}回目の作業）
+Do not open this prefab until the AI is done.	AI가 끝날 때까지 이 프리팹을 열지 마세요.	AIが終わるまでこのプレハブを開かないでね。
+Stop	중지	中止
+AI finished {0} ({1:0}s)	AI가 {0} 배치를 마쳤어요 ({1:0}초)	AIが {0} の配置を終えました（{1:0}秒）
+AI stopped	AI를 멈췄어요	AIを止めました
+AI could not finish	AI가 끝내지 못했어요	AIが完了できませんでした
+Check each screen with the screen buttons. Fix anything by hand and save, or undo everything the AI did.	화면 버튼으로 각 화면을 확인해 보세요. 손으로 고치고 저장해도 되고, AI가 한 것을 모두 되돌려도 돼요.	画面ボタンで各画面を確認してね。手で直して保存してもいいし、AIがやったことを全部元に戻してもいいよ。
+Undo AI changes	AI 변경 되돌리기	AIの変更を元に戻す
+Put the prefab back as it was before the AI started?	프리팹을 AI가 시작하기 전 상태로 되돌릴까요?	プレハブをAIが始める前の状態に戻しますか？
+Undo	되돌리기	元に戻す
+Keep it	유지하기	このままにする
+Close	닫기	閉じる
+Stop Play Mode first.	먼저 플레이 모드를 멈추세요.	先にプレイモードを止めてね。
+The tool is still getting ready in Unity. Wait a few seconds and try again.	Unity에서 툴이 아직 준비 중이에요. 몇 초 뒤에 다시 시도하세요.	Unity でツールがまだ準備中です。数秒後にもう一度試してね。
+Starting Claude Code...	Claude Code를 시작하는 중...	Claude Code を起動中...
+Could not start Claude Code.	Claude Code를 시작하지 못했어요.	Claude Code を起動できませんでした。
+Stopping...	멈추는 중...	停止中...
+Connecting to Unity	Unity와 연결 확인 중	Unity との接続を確認中
+Reading the screen settings	화면 설정 읽는 중	画面設定を読み込み中
+Reading where the blocks are	블록 위치 읽는 중	ブロックの位置を読み込み中
+Drawing the screens to look at them	화면을 그려서 확인하는 중	画面を描いて確認中
+Checking for problems	문제 검사 중	問題をチェック中
+Applying a layout	배치 적용 중	配置を適用中
+Giving blocks roles	블록에 역할 붙이는 중	ブロックに役割を付けています
+Reading the current layout	현재 배치 읽는 중	現在の配置を読み込み中
+Looking at a drawn screen	그린 화면 보는 중	描いた画面を見ています
+Reading the instructions	사용법 읽는 중	使い方を読み込み中
+Writing a layout plan	배치안 작성 중	配置案を作成中
+Thinking	생각하는 중	考え中
+Stopped. Changes made before stopping are kept; press Undo AI changes to go back.	멈췄어요. 멈추기 전까지 바뀐 내용은 남아 있어요. 되돌리려면 「AI 변경 되돌리기」를 누르세요.	止めました。止める前までの変更は残っています。戻すには「AIの変更を元に戻す」を押してね。
+Claude Code is not logged in. Press Connect AI and log in.	Claude Code에 로그인돼 있지 않아요. 「AI 연결」을 눌러 로그인하세요.	Claude Code にログインしていません。「AIに接続」を押してログインしてね。
+Your Claude usage limit has been reached. Try again later.	Claude 사용 한도에 도달했어요. 잠시 후 다시 시도하세요.	Claude の使用上限に達しました。しばらくしてからもう一度試してね。
+Claude Code stopped without a result.	Claude Code가 결과 없이 끝났어요.	Claude Code が結果なしで終了しました。
+The AI could not finish.	AI가 작업을 끝내지 못했어요.	AIが作業を完了できませんでした。
+The AI is thinking. This can take a minute or two; it has not stopped.	AI가 생각하는 중이에요. 1~2분 걸릴 수 있어요. 멈춘 게 아니에요.	AIが考え中です。1〜2分かかることがあります。止まったわけではありません。
+Tokens: new input {0:N0} · cache write {1:N0} · cache read {2:N0} · output {3:N0} · {4} turns · API price about ${5:0.00}	토큰: 새 입력 {0:N0} · 캐시 쓰기 {1:N0} · 캐시 읽기 {2:N0} · 출력 {3:N0} · {4}턴 · API 요금 환산 약 ${5:0.00}	トークン：新規入力 {0:N0}・キャッシュ書き込み {1:N0}・キャッシュ読み込み {2:N0}・出力 {3:N0}・{4}ターン・API料金換算 約 ${5:0.00}
+Model	모델	モデル
+Takes a few minutes and uses your Claude usage. The prefab is saved and closed while the AI works, and opens again when it is done.	몇 분 걸리고 내 Claude 사용량을 써요. AI가 작업하는 동안 프리팹은 저장 후 닫히고, 끝나면 다시 열려요.	数分かかり、自分の Claude 使用量を使います。AIの作業中はプレハブを保存して閉じ、終わったらまた開きます。
+This model cannot be used with your Claude plan. Choose another model.	내 Claude 요금제에서는 이 모델을 쓸 수 없어요. 다른 모델을 고르세요.	このモデルは自分の Claude プランでは使えません。別のモデルを選んでね。
+Claude Code default	Claude Code 기본 설정	Claude Code の既定
+Sonnet (balanced, recommended)	Sonnet (균형, 추천)	Sonnet（バランス、おすすめ）
+Opus (smarter, uses more)	Opus (더 똑똑함, 더 많이 씀)	Opus（より賢い、多く使う）
+Haiku (fastest, uses least)	Haiku (가장 빠름, 가장 적게 씀)	Haiku（最速、最も少ない）
+Fable (smartest, uses the most)	Fable (가장 똑똑함, 가장 많이 씀)	Fable（最も賢い、最も多く使う）
+Low (fastest, uses least)	낮음 (가장 빠름, 가장 적게 씀)	低（最速、最も少ない）
+Medium (recommended)	보통 (추천)	中（おすすめ）
+High	높음	高
+Very high	매우 높음	とても高い
+Max (most careful, uses the most)	최대 (가장 꼼꼼함, 가장 많이 씀)	最大（最も丁寧、最も多く使う）
+Effort	노력	エフォート
+Smarter models and higher effort give better layouts but take longer and use more of your Claude usage.	똑똑한 모델과 높은 노력일수록 배치가 좋아지지만, 오래 걸리고 Claude 사용량도 더 써요.	賢いモデルや高いエフォートほど配置は良くなりますが、時間がかかり Claude の使用量も多く使います。
+Extra instructions (optional)	추가 지시 (선택)	追加の指示（任意）
+Clear	지우기	消す
+Leave it empty and the AI decides by itself. Example: "In landscape, put the menu buttons on the right. Hide the banner on the square screen."	비워 두면 AI가 알아서 정해요. 예: "가로 화면에서는 메뉴 버튼을 오른쪽에 두고, 정사각 화면에서는 배너를 숨겨 줘."	空のままなら AI が自分で決めます。例：「横画面ではメニューボタンを右に、正方形画面ではバナーを隠して」

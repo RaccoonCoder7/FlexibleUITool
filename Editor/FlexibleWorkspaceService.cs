@@ -282,7 +282,7 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
-        private static bool TryBuildState(RectTransform edited, RectTransform source, string profileId,
+        internal static bool TryBuildState(RectTransform edited, RectTransform source, string profileId,
             out FlexibleProfileState state, out LayoutGroup sourceGroup)
         {
             state = null;
@@ -326,7 +326,7 @@ namespace FlexibleUITool.EditorTools
         }
 
         // 손대지 않았으면 그리드 블록, 손댔어도 그리드 출신이면 원래 배치 결과를 남겨 둔다 (템플릿의 칸+보정 계산용)
-        private static void MarkGridPlacement(FlexibleProfileState state, FlexibleGridPlacement placement)
+        internal static void MarkGridPlacement(FlexibleProfileState state, FlexibleGridPlacement placement)
         {
             state.gridOrigin = placement != null;
             state.gridPlaced = placement != null && state.rect.Approximately(placement.result, Epsilon);
@@ -357,7 +357,7 @@ namespace FlexibleUITool.EditorTools
             return placement.target != null && FlexibleRectState.Capture(placement.target).Approximately(placement.result, Epsilon);
         }
 
-        private static bool IsDrivenByParentLayout(RectTransform rt)
+        internal static bool IsDrivenByParentLayout(RectTransform rt)
         {
             if (rt.parent == null)
                 return false;

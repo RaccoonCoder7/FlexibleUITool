@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.3]
+
+Reworked for people who use only the editor GUI.
+
+- One window, `Tools > FlexibleUITool > Flexible UI Window`, with `Edit` / `Preview` / `Check` tabs, replaces the Layout, Preview and Review windows.
+- Other screens are edited in place: open the prefab and press a screen button (Portrait / Landscape / Square) in Prefab Mode. The portrait layout stays on disk; work copies in `Assets/FlexibleUITool/Workspace/` are no longer made (a leftover one can still be applied or discarded from the Edit tab).
+- The Game view follows the screen being edited, and is set back if its shape does not match.
+- Built-in tutorial in the window: a basic tutorial (11 steps, including Preview and Check) and an advanced one (grid size, placing on cells, axis modes, fine-tuning, roles, templates). Any chapter can be run again from the tutorial menu. Shared settings changed by the tutorial are restored when it ends.
+- Auto-layout with AI: after `Connect AI`, `Auto-layout with AI` runs Claude Code on this PC (subscription login, no API key) to make the landscape and square layouts. You can choose the model and effort level and add extra instructions (kept per prefab). The prefab is backed up first and `Undo AI changes` restores it. Token usage is shown and logged to `Library/FlexibleUITool/ai-runs.log`. The AI run is isolated from personal Claude Code settings and may only run the tool's layout commands.
+
 ## [1.0.2]
 
 - The tutorial sample is imported into `Assets/FlexibleUITool/Samples/` with `Tools > FlexibleUITool > Import Tutorial Sample` (or the agent's `import-samples`), so everything the tool creates stays in `Assets/FlexibleUITool/`. The Package Manager sample entry is removed, because it always imports into `Assets/Samples/<package>/<version>/`.
