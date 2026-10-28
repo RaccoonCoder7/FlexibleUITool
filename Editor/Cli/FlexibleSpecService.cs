@@ -223,11 +223,12 @@ namespace FlexibleUITool.EditorTools
         // 가로축은 left/right, 세로축은 bottom/top 별칭도 받는다
         public static bool TryParseMode(string text, bool horizontal, out FlexibleAxisMode mode)
         {
-            mode = FlexibleAxisMode.Auto;
+            mode = FlexibleAxisMode.Stretch;
             switch ((text ?? string.Empty).Trim().ToLowerInvariant())
             {
-                case "": case "auto": mode = FlexibleAxisMode.Auto; return true;
-                case "stretch": mode = FlexibleAxisMode.Stretch; return true;
+                // 지정이 없으면 stretch. "auto"는 예전 버전이 내보낸 spec을 다시 적용할 때만 쓴다
+                case "": case "stretch": mode = FlexibleAxisMode.Stretch; return true;
+                case "auto": mode = FlexibleAxisMode.Auto; return true;
                 case "start": mode = FlexibleAxisMode.Start; return true;
                 case "end": mode = FlexibleAxisMode.End; return true;
                 case "center": mode = FlexibleAxisMode.Center; return true;

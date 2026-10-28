@@ -80,7 +80,7 @@ That is all. Good to know:
 | **Preview** | Shows the prefab at the window's own shape, live. Drag the window edge to make it wide or narrow and watch the layout switch. Device presets show the notch / home bar area. |
 | **Check** | Shows your prefabs on many phones and tablets at once and finds blocks that stick out of the screen, overlap, or sit under a notch. |
 
-**Grid (optional)**: open `Place on a grid`, select a block, then drag over the blue cells in the Scene view. The block snaps to the cells and follows other screen sizes nicely. `Horizontal` / `Vertical` choose how it follows (stretch, stick to an edge, or center). The red area is the notch / home bar of the device with the largest one.
+**Grid (optional)**: open `Place on a grid`, select a block, then drag over the blue cells in the Scene view. The block snaps to the cells and follows other screen sizes nicely. `Horizontal` / `Vertical` choose how it follows: stretch (the default), stick to an edge, or center. Changing `Column` / `Row` / `Width` / `Height` or a mode moves the selected block right away (no extra button); hand nudges on top of the cells are kept. Save the prefab as usual to keep the result. The red area is the notch / home bar of the device with the largest one.
 
 **Templates (optional)**: give blocks a role (Header, Main, ...), place them on the grid, then save the layout as a template and apply it to other prefabs with the same roles.
 
@@ -104,7 +104,7 @@ Open `Tools > FlexibleUITool > Tutorial` (or press `Tutorial` at the top of the 
 
 1. **Grid size**: columns, rows, margin and gutter.
 2. **Place on cells**: drag over the blue cells in the Scene view.
-3. **Following the screen size**: `Stretch`, `Stick left / right`, `Center`, `Auto`.
+3. **Following the screen size**: `Stretch` (default), `Stick left / right`, `Center`.
 4. **Fine-tuning by hand**: adjust a block after placing it; the adjustment is kept when the grid changes.
 5. **Roles**: name what each block is for.
 6. **Templates**: save the layout of roles and apply it again in one click.
@@ -185,7 +185,7 @@ Preview, Check, and the CLI report the same three issues:
 | Issue | CLI code | Meaning |
 |---|---|---|
 | Out of screen | `OUT_OF_SCREEN` | A block leaves the screen. |
-| Overlap | `OVERLAP` | Two blocks partly overlap. Full containment is ignored as intentional layering. |
+| Overlap | `OVERLAP` | Two blocks overlap. A block fully inside another is ignored only if it is also inside it on the portrait screen (intentional layering, like a title on a bar). |
 | Control outside SafeArea | `OUTSIDE_SAFE_AREA` | A button sits under a notch or home indicator. |
 
 `Screen edge ratios` also checks each screen at the narrowest and widest ratio where it can appear. Fixed-size blocks overflow there first.

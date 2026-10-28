@@ -172,11 +172,12 @@ The user reviews in Unity, where the thumbnails are easier to read than images i
 
   | Mode | Behavior |
   |---|---|
-  | `stretch` | Scales with the cell area. |
+  | `stretch` (default) | Scales with the cell area. |
   | `start` / `left` / `bottom` | Keeps its size and sticks to the left (x) or bottom (y) edge of the cells. |
   | `end` / `right` / `top` | Keeps its size and sticks to the right (x) or top (y) edge. |
   | `center` | Keeps its size and stays centered in the cells. |
-  | `auto` (default) | `stretch` if the cells touch both screen edges on that axis, the touching side if one, otherwise `center`. |
+
+  `auto` appears only in specs exported from layouts made by older versions; keep it when you re-apply such a spec, but do not choose it for new blocks.
 
 - **Adjustments** are added on top of the grid result, in canvas units:
   - `offset` [x, y]: **y is up** (Unity anchoredPosition).
@@ -236,7 +237,7 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
 | Code | Meaning |
 |---|---|
 | `OUT_OF_SCREEN` | The block leaves the screen. |
-| `OVERLAP` | Two blocks partially overlap. Full containment is ignored, because it is intentional layering. |
+| `OVERLAP` | Two blocks overlap. A block fully inside another is ignored only if it is also inside it in the portrait (base) layout, because that is intentional layering. |
 | `OUTSIDE_SAFE_AREA` | A button or other Selectable is under a notch or home indicator. |
 
 ## Spec format

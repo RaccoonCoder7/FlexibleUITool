@@ -13,8 +13,9 @@ namespace FlexibleUITool.EditorTools
     [System.Serializable]
     public class FlexibleEditPanel
     {
-        private static string[] ModeLabelsX => new[] { T("Auto"), T("Stretch"), T("Stick left"), T("Stick right"), T("Center") };
-        private static string[] ModeLabelsY => new[] { T("Auto"), T("Stretch"), T("Stick bottom"), T("Stick top"), T("Center") };
+        // 선택지는 FlexibleAxisMode.Stretch부터 (Auto는 고를 수 없다)
+        private static string[] ModeLabelsX => new[] { T("Stretch"), T("Stick left"), T("Stick right"), T("Center") };
+        private static string[] ModeLabelsY => new[] { T("Stretch"), T("Stick bottom"), T("Stick top"), T("Center") };
         private static readonly int DragHint = "FlexibleGridDrag".GetHashCode();
         private const string InsideSafeAreaKey = "FlexibleUITool.InsideSafeArea";
 
@@ -23,8 +24,8 @@ namespace FlexibleUITool.EditorTools
         [SerializeField] private bool showMore;
         [SerializeField] private bool dragPlacement = true;
         [SerializeField] private FlexibleCell cell = new FlexibleCell(0, 0, 1, 1);
-        [SerializeField] private FlexibleAxisMode modeX;
-        [SerializeField] private FlexibleAxisMode modeY;
+        [SerializeField] private FlexibleAxisMode modeX = FlexibleAxisMode.Stretch;
+        [SerializeField] private FlexibleAxisMode modeY = FlexibleAxisMode.Stretch;
         [SerializeField] private int templateIndex;
         [SerializeField] private string templateName = "";
         private bool insideSafeArea = true;
@@ -38,9 +39,6 @@ namespace FlexibleUITool.EditorTools
         // 템플릿 「적용」을 누른 횟수 (튜토리얼 확인용)
         public int TemplateApplyCount { get; private set; }
 
-        // 아직 적용하지 않은 따라가기 방식 (튜토리얼 강조 위치용)
-        public bool HasPendingMode => modeX != FlexibleAxisMode.Auto || modeY != FlexibleAxisMode.Auto;
-
         public void SetFoldouts(bool grid, bool templates)
         {
             showGrid = grid;
@@ -50,8 +48,8 @@ namespace FlexibleUITool.EditorTools
 
         public void ResetPlacementInput()
         {
-            modeX = FlexibleAxisMode.Auto;
-            modeY = FlexibleAxisMode.Auto;
+            modeX = FlexibleAxisMode.Stretch;
+            modeY = FlexibleAxisMode.Stretch;
         }
 
         public void SuggestTemplateName(string name)
@@ -451,35 +449,41 @@ namespace FlexibleUITool.EditorTools
 
             float labelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = FlexibleGui.FitLabels(T("Column"), T("Row"), T("Width (cells)"), T("Height (cells)"), T("Horizontal"), T("Vertical"));
+            // 값을 바꾸면 바로 선택 블록에 적용한다 (숫자는 입력을 마쳤을 때)
             EditorGUI.BeginChangeCheck();
             using (new EditorGUILayout.HorizontalScope())
             {
-                cell.column = EditorGUILayout.IntField(T("Column"), cell.column);
-                cell.row = EditorGUILayout.IntField(T("Row"), cell.row);
+                cell.column = EditorGUILayout.DelayedIntField(T("Column"), cell.column);
+                cell.row = EditorGUILayout.DelayedIntField(T("Row"), cell.row);
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                cell.width = EditorGUILayout.IntField(T("Width (cells)"), cell.width);
-                cell.height = EditorGUILayout.IntField(T("Height (cells)"), cell.height);
+                cell.width = EditorGUILayout.DelayedIntField(T("Width (cells)"), cell.width);
+                cell.height = EditorGUILayout.DelayedIntField(T("Height (cells)"), cell.height);
             }
             cell = cell.Clamped(grid);
+            // 예전 버전의 Auto는 지금 블록이 실제로 쓰는 모드로 보여 준다 (새 입력이면 Stretch)
+            if (modeX == FlexibleAxisMode.Auto)
+                modeX = placement != null ? FlexibleGridMath.ResolveX(modeX, cell, grid) : FlexibleAxisMode.Stretch;
+            if (modeY == FlexibleAxisMode.Auto)
+                modeY = placement != null ? FlexibleGridMath.ResolveY(modeY, cell, grid) : FlexibleAxisMode.Stretch;
             using (new EditorGUILayout.VerticalScope())
             {
-                modeX = (FlexibleAxisMode)EditorGUILayout.Popup(T("Horizontal"), (int)modeX, ModeLabelsX);
-                modeY = (FlexibleAxisMode)EditorGUILayout.Popup(T("Vertical"), (int)modeY, ModeLabelsY);
+                modeX = (FlexibleAxisMode)(EditorGUILayout.Popup(T("Horizontal"), (int)modeX - 1, ModeLabelsX) + 1);
+                modeY = (FlexibleAxisMode)(EditorGUILayout.Popup(T("Vertical"), (int)modeY - 1, ModeLabelsY) + 1);
             }
             FlexibleGui.Mark("grid:mode");
             if (EditorGUI.EndChangeCheck())
+            {
+                // 손으로 옮긴 보정은 새 칸·모드 위에 그대로 얹는다
+                FlexibleGridAdjustment adjustment = default;
+                if (placement != null)
+                    FlexibleGridPlacementService.TryGetAdjustment(placement, out adjustment);
+                FlexibleGridPlacementService.Apply(context, session, target, cell, modeX, modeY, insideSafeArea, adjustment);
                 SceneView.RepaintAll();
+            }
             EditorGUIUtility.labelWidth = labelWidth;
-
-            FlexibleAxisMode resolvedX = FlexibleGridMath.ResolveX(modeX, cell, grid);
-            FlexibleAxisMode resolvedY = FlexibleGridMath.ResolveY(modeY, cell, grid);
-            EditorGUILayout.LabelField(F("Mode to apply: horizontal {0} / vertical {1}", ModeLabelsX[(int)resolvedX], ModeLabelsY[(int)resolvedY]), EditorStyles.miniLabel);
-
-            if (GUILayout.Button(T("Apply to selected block"), GUILayout.Height(26)))
-                FlexibleGridPlacementService.Apply(context, session, target, cell, modeX, modeY, insideSafeArea);
-            FlexibleGui.Mark("grid:apply");
+            GUILayout.Label(T("Changes here move the selected block right away. Save keeps them."), EditorStyles.wordWrappedMiniLabel);
         }
 
         // ───────── 템플릿 ─────────

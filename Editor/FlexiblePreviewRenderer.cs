@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -48,6 +49,8 @@ namespace FlexibleUITool.EditorTools
         private GameObject instance;
         private FlexibleLayout layout;
         private RenderTexture texture;
+        private HashSet<string> baseNested;
+        private bool baseNestedReady;
 
         public bool Dirty { get; set; } = true;
         public RenderTexture Texture => texture;
@@ -171,9 +174,13 @@ namespace FlexibleUITool.EditorTools
                 Rect a = GetRectInRoot(root, blocks[i]);
                 Rect b = GetRectInRoot(root, blocks[j]);
 
-                // 바 위에 얹은 타이틀처럼 한쪽이 다른 쪽 안에 완전히 들어가면 의도된 겹침으로 본다
+                // 바 위에 얹은 타이틀처럼 한쪽이 다른 쪽 안에 완전히 들어가도, 세로 화면에서도 그랬을 때만 의도된 겹침으로 본다
                 if (Contains(a, b) || Contains(b, a))
-                    continue;
+                {
+                    HashSet<string> nested = GetBaseNested();
+                    if (nested == null || nested.Contains(PairKey(FlexiblePathUtility.GetPath(root, blocks[i]), FlexiblePathUtility.GetPath(root, blocks[j]))))
+                        continue;
+                }
 
                 float width = Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin);
                 float height = Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin);
@@ -213,6 +220,7 @@ namespace FlexibleUITool.EditorTools
                 UnityEngine.Object.DestroyImmediate(instance);
 
             template = source;
+            baseNestedReady = false;
             instance = UnityEngine.Object.Instantiate(source, canvasRect, false);
             instance.hideFlags = HideFlags.HideAndDontSave;
             var rt = (RectTransform)instance.transform;
@@ -267,6 +275,66 @@ namespace FlexibleUITool.EditorTools
         private static FlexibleIssue Issue(string code, RectTransform root, params RectTransform[] blocks)
         {
             return new FlexibleIssue { code = code, blocks = System.Array.ConvertAll(blocks, b => FlexiblePathUtility.GetPath(root, b)) };
+        }
+
+        // 세로(기준) 화면에서 한쪽이 다른 쪽 안에 들어 있던 블록 쌍. 기준 배치를 모르면 null (모든 포함을 허용)
+        private HashSet<string> GetBaseNested()
+        {
+            if (baseNestedReady)
+                return baseNested;
+            baseNestedReady = true;
+            baseNested = null;
+
+            // 프리팹 모드에서 다른 화면을 편집 중이면 열린 내용은 기준 배치가 아니므로 저장된 프리팹(= 기준)을 쓴다
+            GameObject baseSource = template;
+            PrefabStage stage = template != null ? PrefabStageUtility.GetPrefabStage(template) : null;
+            if (stage != null && !FlexibleScreenSession.IsBaseView(stage))
+                baseSource = AssetDatabase.LoadAssetAtPath<GameObject>(stage.assetPath);
+            if (baseSource == null || !(baseSource.transform is RectTransform))
+                return null;
+
+            FlexibleLayout sourceLayout = baseSource.GetComponent<FlexibleLayout>();
+            FlexibleProfileSettings settings = sourceLayout != null ? sourceLayout.Settings : null;
+            FlexibleProfile baseProfile = settings != null ? settings.Find(settings.BaseProfileId) : null;
+            Vector2 size = baseProfile != null && baseProfile.workResolution.x > 0f && baseProfile.workResolution.y > 0f
+                ? GetLogicalSize(baseProfile.workResolution.x / baseProfile.workResolution.y, settings.ReferenceShortSide)
+                : LogicalSize;
+
+            var probe = new GameObject("FlexibleBaseProbe", typeof(RectTransform)) { hideFlags = HideFlags.HideAndDontSave };
+            try
+            {
+                var probeRect = (RectTransform)probe.transform;
+                probeRect.SetParent(canvasRect, false);
+                probeRect.sizeDelta = size;
+                GameObject copy = UnityEngine.Object.Instantiate(baseSource, probeRect, false);
+                var root = (RectTransform)copy.transform;
+                root.anchorMin = Vector2.zero;
+                root.anchorMax = Vector2.one;
+                root.sizeDelta = Vector2.zero;
+                root.anchoredPosition = Vector2.zero;
+                Canvas.ForceUpdateCanvases();
+
+                baseNested = new HashSet<string>();
+                List<RectTransform> blocks = CollectBlocks(root);
+                for (int i = 0; i < blocks.Count; i++)
+                for (int j = i + 1; j < blocks.Count; j++)
+                {
+                    Rect a = GetRectInRoot(root, blocks[i]);
+                    Rect b = GetRectInRoot(root, blocks[j]);
+                    if (Contains(a, b) || Contains(b, a))
+                        baseNested.Add(PairKey(FlexiblePathUtility.GetPath(root, blocks[i]), FlexiblePathUtility.GetPath(root, blocks[j])));
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(probe);
+            }
+            return baseNested;
+        }
+
+        private static string PairKey(string a, string b)
+        {
+            return string.CompareOrdinal(a, b) < 0 ? a + "\n" + b : b + "\n" + a;
         }
 
         private static bool Contains(Rect outer, Rect inner)

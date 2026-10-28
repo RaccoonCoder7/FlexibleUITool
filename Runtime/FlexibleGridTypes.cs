@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace FlexibleUITool
 {
+    // Auto는 예전 버전이 저장한 배치를 읽기 위해서만 남긴다 (새로 고를 수 없음, 기본값은 Stretch)
     public enum FlexibleAxisMode
     {
         Auto,

@@ -15,7 +15,6 @@ Current screen	현재 화면	現在の画面
 Record data ({0})	기록 데이터 ({0})	記録データ ({0})
 Not fitted to the parent (offsets {0} / {1}, Z {2:0}). This usually happens when the prefab is dropped into a scene at the Scene view position.	부모에 딱 맞지 않습니다 (여백 {0} / {1}, Z {2:0}). 씬에 놓을 때 Scene 뷰 위치가 들어간 경우가 많습니다.	親にぴったり合っていません（余白 {0} / {1}、Z {2:0}）。シーンに置いたときに Scene ビューの位置が入った場合によく起こります。
 Fit to parent (offsets 0, Z 0)	부모에 맞추기 (여백 0, Z 0)	親に合わせる（余白 0、Z 0）
-Auto	자동	自動
 Stretch	늘이기(Stretch)	伸縮(Stretch)
 Stick left	왼쪽 고정	左に固定
 Stick right	오른쪽 고정	右に固定
@@ -44,8 +43,6 @@ Width (cells)	가로 칸수	横マス数
 Height (cells)	세로 칸수	縦マス数
 Horizontal	가로축	横軸
 Vertical	세로축	縦軸
-Mode to apply: horizontal {0} / vertical {1}	적용될 모드: 가로 {0} / 세로 {1}	適用されるモード: 横 {0} / 縦 {1}
-Apply to selected block	선택 블록에 적용	選択ブロックに適用
 {0} ({1} slots)	{0} ({1}칸)	{0}（{1} 枠）
 Apply	적용	適用
 Delete template	템플릿 삭제	テンプレートを削除
@@ -209,8 +206,6 @@ Now let's place blocks precisely.\nYou'll learn the grid (cells), how blocks fol
 Open <b>Place on a grid</b> (orange frame).\nBlue cells (the grid) appear in the Scene view. Each screen has its own grid.	<b>그리드에 맞춰 놓기</b>(주황 테두리)를 펼치세요.\nScene 뷰에 파란 칸(그리드)이 나타나요. 그리드는 화면마다 따로 있어요.	<b>グリッドに合わせて置く</b>（オレンジの枠）を開いてね。\nシーンビューに青いマス（グリッド）が出るよ。グリッドは画面ごとに別々だよ。
 <b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view. (I'll put the grid back when the tutorial ends.)	<b>열</b>과 <b>행</b>은 칸의 개수, <b>바깥 여백</b>은 화면 가장자리의 빈 공간, <b>칸 간격</b>은 칸 사이의 공간이에요.\n아무 숫자나 바꾸고 Scene 뷰를 보세요. (튜토리얼이 끝나면 그리드는 원래대로 돌려 놓을게요.)	<b>列数</b>と<b>行数</b>はマスの数、<b>外側の余白</b>は画面の端の空き、<b>マス間隔</b>はマスとマスの間の空きだよ。\n好きな数字を変えてシーンビューを見てね。（チュートリアルが終わったらグリッドは元に戻すよ。）
 Pick the block to place. Click <b>Main</b> in the Hierarchy or the Scene view.	칸에 놓을 블록을 고르세요. Hierarchy나 Scene 뷰에서 <b>Main</b>을 클릭하세요.	マスに置くブロックを選ぼう。ヒエラルキーかシーンビューで<b>Main</b>をクリックしてね。
-Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height and press <b>Apply to selected block</b>.)	Scene 뷰의 파란 칸 위를 끌어 보세요. 손을 떼면 Main이 끈 칸에 딱 맞춰져요.\n(열·행·폭·높이 숫자를 넣고 <b>선택 블록에 적용</b>을 눌러도 돼요.)	シーンビューの青いマスの上をドラッグしてみよう。手を離すと Main がそのマスにぴったり合うよ。\n（列・行・幅・高さの数字を入れて<b>選択ブロックに適用</b>を押してもいいよ。）
-Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle. <b>Auto</b>: decided by which screen edges the cells touch.\nSet <b>Horizontal</b> to something other than Auto, then press <b>Apply to selected block</b>.	블록이 화면 크기를 따라가는 방식을 정해요.\n<b>늘이기</b>: 화면과 함께 커져요. <b>왼쪽·오른쪽 고정</b>: 크기는 그대로, 그쪽에 붙어요. <b>가운데 고정</b>: 크기는 그대로, 가운데에 있어요. <b>자동</b>: 칸이 화면 어느 가장자리에 닿는지로 정해져요.\n<b>가로축</b>을 자동이 아닌 것으로 바꾸고 <b>선택 블록에 적용</b>을 누르세요.	ブロックが画面サイズにどう追従するかを決めるよ。\n<b>伸縮</b>：画面と一緒に大きくなる。<b>左・右に固定</b>：サイズはそのままでその側にくっつく。<b>中央に固定</b>：サイズはそのままで真ん中。<b>自動</b>：マスが画面のどの端に触れているかで決まる。\n<b>横軸</b>を自動以外にして、<b>選択ブロックに適用</b>を押してね。
 Open the <b>Preview</b> tab and make the window wider and narrower.\nStretched blocks grow with it; stuck blocks keep their size. Press <b>Got it</b> when you've seen it.	<b>미리보기</b> 탭을 열고 창을 넓혔다 좁혔다 해 보세요.\n늘이기 블록은 함께 커지고, 고정 블록은 크기를 지켜요. 확인했으면 <b>확인했어요</b>를 누르세요.	<b>プレビュー</b>タブを開いて、ウィンドウを広げたり狭めたりしてみよう。\n伸縮のブロックは一緒に大きくなって、固定のブロックはサイズを保つよ。見たら<b>わかった</b>を押してね。
 After placing on cells you can still adjust by hand.\nChange <b>Pos X</b> or <b>Width</b> of Main in the Inspector. (To drag it in the Scene view, close <b>Place on a grid</b> first.)\nThe adjustment is kept even when the grid changes.	칸에 놓은 뒤에도 손으로 조정할 수 있어요.\nInspector에서 Main의 <b>Pos X</b>나 <b>Width</b>를 바꿔 보세요. (Scene 뷰에서 끌려면 먼저 <b>그리드에 맞춰 놓기</b>를 접으세요.)\n이 보정은 그리드가 바뀌어도 유지돼요.	マスに置いた後でも手で調整できるよ。\nインスペクターで Main の <b>Pos X</b> か <b>Width</b> を変えてみよう。（シーンビューでドラッグするなら、先に<b>グリッドに合わせて置く</b>を閉じてね。）\nこの補正はグリッドが変わっても残るよ。
 A <b>role</b> (Header, Main, ...) says what a block is for. Blocks with roles can be laid out in one go with a template.\nSelect Main and set <b>Role</b> to Main.	<b>역할</b>(Header, Main 등)은 블록이 무슨 용도인지 알려 줘요. 역할이 있는 블록은 템플릿으로 한 번에 배치할 수 있어요.\nMain을 고르고 <b>역할</b>을 Main으로 정하세요.	<b>役割</b>（Header、Main など）はブロックが何のためのものかを表すよ。役割のあるブロックはテンプレートで一度に配置できるよ。\nMain を選んで<b>役割</b>を Main にしてね。
@@ -302,3 +297,6 @@ Smarter models and higher effort give better layouts but take longer and use mor
 Extra instructions (optional)	추가 지시 (선택)	追加の指示（任意）
 Clear	지우기	消す
 Leave it empty and the AI decides by itself. Example: "In landscape, put the menu buttons on the right. Hide the banner on the square screen."	비워 두면 AI가 알아서 정해요. 예: "가로 화면에서는 메뉴 버튼을 오른쪽에 두고, 정사각 화면에서는 배너를 숨겨 줘."	空のままなら AI が自分で決めます。例：「横画面ではメニューボタンを右に、正方形画面ではバナーを隠して」
+Changes here move the selected block right away. Save keeps them.	여기서 바꾸면 선택한 블록이 바로 움직여요. 저장하면 그대로 남아요.	ここで変えると選んだブロックがすぐ動きます。保存するとそのまま残ります。
+Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height. The block moves as soon as you finish typing.)	Scene 뷰의 파란 칸 위를 끌어 보세요. 손을 떼면 Main이 끈 칸에 딱 맞춰져요.\n(열·행·폭·높이 숫자를 넣어도 돼요. 입력을 마치면 블록이 바로 움직여요.)	シーンビューの青いマスの上をドラッグしてみよう。手を離すと Main がそのマスにぴったり合うよ。\n（列・行・幅・高さの数字を入れてもいいよ。入力し終えるとブロックがすぐ動くよ。）
+Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle.\nChange <b>Horizontal</b> from Stretch to another mode. The block changes right away.	블록이 화면 크기를 따라가는 방식을 정해요.\n<b>늘이기</b>: 화면과 함께 커져요. <b>왼쪽·오른쪽 고정</b>: 크기는 그대로, 그쪽에 붙어요. <b>가운데 고정</b>: 크기는 그대로, 가운데에 있어요.\n<b>가로축</b>을 늘이기에서 다른 방식으로 바꿔 보세요. 블록에 바로 적용돼요.	ブロックが画面サイズにどう追従するかを決めるよ。\n<b>伸縮</b>：画面と一緒に大きくなる。<b>左・右に固定</b>：サイズはそのままでその側にくっつく。<b>中央に固定</b>：サイズはそのままで真ん中。\n<b>横軸</b>を伸縮からほかの方式に変えてみよう。ブロックにすぐ反映されるよ。

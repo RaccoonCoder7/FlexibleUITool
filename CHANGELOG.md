@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.4]
+
+- Grid placement in the Edit tab applies right away: changing `Column` / `Row` / `Width` / `Height` (when you finish typing) or `Horizontal` / `Vertical` moves the selected block at once. The `Apply to selected block` button is removed. Hand nudges on top of the cells are kept.
+- The `Auto` axis mode is removed. New blocks use `Stretch` by default, also in specs without `modeX` / `modeY` (AI auto-layout and agents). Blocks placed with `Auto` by older versions keep their layout and show their actual mode.
+- Fixed: the overlap check ignored any block fully inside another, even blocks that were apart on the portrait screen. Full containment is now ignored only if the two blocks are also nested on the portrait screen (for example a title on a bar). The Edit / Preview / Check tabs, `check` and the AI auto-layout use the new rule.
+
 ## [1.0.3]
 
 Reworked for people who use only the editor GUI.

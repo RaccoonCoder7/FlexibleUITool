@@ -545,7 +545,7 @@ Portrait image (`render -Preset portrait`); open its `path` once to see the desi
 - Each screen has a grid (`columns` x `rows`, `margin`, `gutter`). A cell is `[column, row, width, height]`; `[0,0]` is the top-left cell.
 - `safeArea: true` (default) keeps the cells inside the notch / home-indicator insets. Use `false` only for bars that should touch the screen edge (backgrounds, header bars).
 - Axis modes (`modeX`, `modeY`) decide how a block follows other sizes of the same screen:
-  `stretch` grows with the cells; `left`/`right` (x) and `bottom`/`top` (y) keep the size and stick to that side; `center` keeps the size in the middle; `auto` (default) = stretch if the cells touch both screen edges on that axis, the touching side if one, else center.
+  `stretch` (default) grows with the cells; `left`/`right` (x) and `bottom`/`top` (y) keep the size and stick to that side; `center` keeps the size in the middle.
 - Adjustments on top of the cells: `offset` [x, y] (y is up), `sizeOffset` [w, h], `scale` [s].
 - `visible`: `hide` or `show`. `reset: true` removes the override (the block follows portrait).
 - Canvas units: the short screen side is always 1080 (landscape 16:9 = 1920 x 1080).
@@ -555,7 +555,7 @@ Portrait image (`render -Preset portrait`); open its `path` once to see the desi
 - Keep top and bottom bars as full-width bars. Bars touching the edge use `safeArea: false`.
 - Turn a vertical stack into columns: primary content left and large, secondary content right.
 - Keep the reading order. Use `stretch` for content areas; fixed modes for icons and buttons.
-- Keep buttons inside the safe area. Avoid partial overlaps (full containment is fine for intended layering).
+- Keep buttons inside the safe area. Do not let blocks overlap. A block may sit fully inside another only if it already does in portrait (like a title on a bar); `check` reports any other overlap.
 - Square screens are between portrait and landscape: fewer columns, secondary content can go below or beside.
 {noteSection}
 ## Spec format (one file for all screens)

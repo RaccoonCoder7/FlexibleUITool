@@ -133,7 +133,7 @@ namespace FlexibleUITool.EditorTools
 
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             var context = new FlexibleGridContext(root, settings.Profiles[index].grid, settings.GetSafeInsets(index));
-            FlexibleGridPlacementService.Apply(context, session, target, cellOf(context.grid), FlexibleAxisMode.Auto, FlexibleAxisMode.Auto, true);
+            FlexibleGridPlacementService.Apply(context, session, target, cellOf(context.grid), FlexibleAxisMode.Stretch, FlexibleAxisMode.Stretch, true);
         }
 
         private static void EnterAdvanced(Step step, FlexibleWindow window)
@@ -182,9 +182,9 @@ namespace FlexibleUITool.EditorTools
                 case Step.SelectBlock:
                     return T("Pick the block to place. Click <b>Main</b> in the Hierarchy or the Scene view.");
                 case Step.DragCells:
-                    return T("Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height and press <b>Apply to selected block</b>.)");
+                    return T("Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height. The block moves as soon as you finish typing.)");
                 case Step.SetMode:
-                    return T("Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle. <b>Auto</b>: decided by which screen edges the cells touch.\nSet <b>Horizontal</b> to something other than Auto, then press <b>Apply to selected block</b>.");
+                    return T("Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle.\nChange <b>Horizontal</b> from Stretch to another mode. The block changes right away.");
                 case Step.SeeMode:
                     return T("Open the <b>Preview</b> tab and make the window wider and narrower.\nStretched blocks grow with it; stuck blocks keep their size. Press <b>Got it</b> when you've seen it.");
                 case Step.Nudge:
@@ -263,7 +263,7 @@ namespace FlexibleUITool.EditorTools
                 case Step.SetMode:
                     if (!edit.GridOpen)
                         return "grid";
-                    return edit.HasPendingMode ? "grid:apply" : "grid:mode";
+                    return "grid:mode";
                 case Step.SeeMode:
                     return window.CurrentTab == FlexibleWindow.Tab.Preview ? null : "tab:" + (int)FlexibleWindow.Tab.Preview;
                 case Step.SaveAdjust:
@@ -302,7 +302,7 @@ namespace FlexibleUITool.EditorTools
                     return placement != null && FlexibleGridPlacementService.ApplyCount > Mark;
                 case Step.SetMode:
                     return placement != null && FlexibleGridPlacementService.ApplyCount > Mark
-                        && (placement.modeX != FlexibleAxisMode.Auto || placement.modeY != FlexibleAxisMode.Auto);
+                        && (placement.modeX != FlexibleAxisMode.Stretch || placement.modeY != FlexibleAxisMode.Stretch);
                 case Step.Nudge:
                     return placement != null && !FlexibleWorkspaceService.IsUntouchedPlacement(placement);
                 case Step.SaveAdjust:
