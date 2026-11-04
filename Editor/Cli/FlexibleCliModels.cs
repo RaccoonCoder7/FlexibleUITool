@@ -18,6 +18,9 @@ namespace FlexibleUITool.EditorTools
         public string path;
         public string scene;
         public string role;
+        // 그리기·검사 때만 끄거나 켤 블록 경로 (프리팹은 바꾸지 않는다)
+        public string[] hide;
+        public string[] show;
         public bool dryRun;
         public bool all;
     }
@@ -47,6 +50,16 @@ namespace FlexibleUITool.EditorTools
         public string modeX;
         public string modeY;
         public bool safeArea = true;
+        // 크기를 지키는 축에서 칸 크기 대신 세로(기준) 화면에서의 크기를 쓴다
+        public bool keepSize;
+        // 안전 영역의 모서리·가장자리·가운데에 세로 화면과 같은 거리·크기로 붙인다 (top-left, top, ..., center)
+        public string pin;
+        // 칸(또는 pin이면 안전 영역)에 다 들어가도록 화면 크기에 따라 배율을 줄인다 (최대 = 원래 배율 또는 scale/scaleBy)
+        public bool fit;
+        // 원래(세로) 배율에 곱할 값 (scale은 최종 배율로 덮어쓴다)
+        public float scaleBy;
+        // 같은 부모 아래의 이 블록(카드 배경 등)과 세로 화면에서의 거리 관계를 지킨다
+        public string follow;
         public float[] offset;
         public float[] sizeOffset;
         public float[] scale;
@@ -56,6 +69,8 @@ namespace FlexibleUITool.EditorTools
 
         public bool HasCell => cell != null && cell.Length == 4;
         public bool HasRect => rect != null && rect.IsValid;
+        public bool HasPin => !string.IsNullOrEmpty(pin);
+        public bool HasFollow => !string.IsNullOrEmpty(follow);
         public string Label => !string.IsNullOrEmpty(path) ? path : $"role:{role}";
     }
 

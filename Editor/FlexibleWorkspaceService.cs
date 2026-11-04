@@ -182,16 +182,9 @@ namespace FlexibleUITool.EditorTools
                         if (state.gridOrigin || state.gridPlaced)
                         {
                             FlexibleRectState result = state.gridOrigin ? state.gridResult : state.rect;
-                            result.localScale = baseScale;
-                            workspace.placements.Add(new FlexibleGridPlacement
-                            {
-                                target = entry.target,
-                                cell = state.gridCell,
-                                modeX = state.gridModeX,
-                                modeY = state.gridModeY,
-                                insideSafeArea = state.gridInsideSafeArea,
-                                result = result,
-                            });
+                            if (!state.fit)
+                                result.localScale = baseScale;
+                            workspace.placements.Add(FromState(entry.target, state, result));
                         }
                     }
                     layout.enabled = false;
@@ -338,6 +331,28 @@ namespace FlexibleUITool.EditorTools
             state.gridModeX = placement.modeX;
             state.gridModeY = placement.modeY;
             state.gridInsideSafeArea = placement.insideSafeArea;
+            state.fit = placement.fit;
+            state.fitAnchorMin = placement.fitAnchorMin;
+            state.fitAnchorMax = placement.fitAnchorMax;
+            state.fitMaxScale = placement.fitMaxScale;
+        }
+
+        // 기록된 화면 상태에서 그리드 배치 기록을 되살린다
+        internal static FlexibleGridPlacement FromState(RectTransform target, FlexibleProfileState state, FlexibleRectState result)
+        {
+            return new FlexibleGridPlacement
+            {
+                target = target,
+                cell = state.gridCell,
+                modeX = state.gridModeX,
+                modeY = state.gridModeY,
+                insideSafeArea = state.gridInsideSafeArea,
+                result = result,
+                fit = state.fit,
+                fitAnchorMin = state.fitAnchorMin,
+                fitAnchorMax = state.fitAnchorMax,
+                fitMaxScale = state.fitMaxScale,
+            };
         }
 
         private static void AddChange(FlexibleCommitReport report, FlexibleLayout layout, string path, RectTransform target, string kind)
@@ -349,7 +364,8 @@ namespace FlexibleUITool.EditorTools
         {
             return a.rect.Approximately(b.rect, Epsilon)
                 && a.controlActive == b.controlActive && (!a.controlActive || a.active == b.active)
-                && a.controlLayoutGroup == b.controlLayoutGroup && (!a.controlLayoutGroup || a.layoutGroup.Approximately(b.layoutGroup, Epsilon));
+                && a.controlLayoutGroup == b.controlLayoutGroup && (!a.controlLayoutGroup || a.layoutGroup.Approximately(b.layoutGroup, Epsilon))
+                && a.fit == b.fit;
         }
 
         public static bool IsUntouchedPlacement(FlexibleGridPlacement placement)

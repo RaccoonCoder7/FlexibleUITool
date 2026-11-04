@@ -52,10 +52,16 @@ namespace FlexibleUITool.EditorTools
         public static int ApplyCount { get; private set; }
 
         public static bool Apply(FlexibleGridContext context, FlexibleWorkspace workspace, RectTransform target,
-            FlexibleCell cell, FlexibleAxisMode modeX, FlexibleAxisMode modeY, bool insideSafeArea, FlexibleGridAdjustment adjustment)
+            FlexibleCell cell, FlexibleAxisMode modeX, FlexibleAxisMode modeY, bool insideSafeArea, FlexibleGridAdjustment adjustment, bool fit = false)
         {
             ApplyCount++;
             FlexibleCell clamped = cell.Clamped(context.grid);
+            // 칸에 맞춰 줄이는 블록은 크기를 지키는 축이어야 한다 (늘어나는 축은 가운데로)
+            if (fit)
+            {
+                modeX = FlexibleGridMath.ResolveX(modeX, clamped, context.grid) == FlexibleAxisMode.Stretch ? FlexibleAxisMode.Center : modeX;
+                modeY = FlexibleGridMath.ResolveY(modeY, clamped, context.grid) == FlexibleAxisMode.Stretch ? FlexibleAxisMode.Center : modeY;
+            }
             if (!FlexibleGridMath.TryComputePlacement(target, context, clamped, modeX, modeY, insideSafeArea, out FlexibleRectState state))
                 return false;
 
@@ -67,6 +73,22 @@ namespace FlexibleUITool.EditorTools
             adjusted.anchoredPosition += adjustment.position;
             adjusted.sizeDelta += adjustment.size;
             adjusted.localScale = adjustment.overrideScale ? adjustment.scale : currentScale;
+
+            // 칸 영역(늘어나는 앵커)과 최대 배율을 기록하고, 지금 크기에 맞는 배율을 결과와 실제 값 모두에 쓴다
+            var area = new FlexibleRectState();
+            float maxScale = adjustment.overrideScale ? adjustment.scale.x : state.localScale.x;
+            if (fit && FlexibleGridMath.TryComputePlacement(target, context, clamped, FlexibleAxisMode.Stretch, FlexibleAxisMode.Stretch, insideSafeArea, out area)
+                && target.parent is RectTransform parent)
+            {
+                Vector2 room = Vector2.Scale(parent.rect.size, area.anchorMax - area.anchorMin);
+                Vector2 size = adjusted.sizeDelta;
+                float scale = Mathf.Min(maxScale, room.x / Mathf.Max(1f, size.x), room.y / Mathf.Max(1f, size.y));
+                state.localScale = adjusted.localScale = new Vector3(scale, scale, adjusted.localScale.z);
+            }
+            else
+            {
+                fit = false;
+            }
 
             Undo.RecordObjects(new Object[] { target, workspace }, "Flexible Grid Placement");
             adjusted.ApplyTo(target);
@@ -81,6 +103,10 @@ namespace FlexibleUITool.EditorTools
                 modeY = modeY,
                 insideSafeArea = insideSafeArea,
                 result = state,
+                fit = fit,
+                fitAnchorMin = area.anchorMin,
+                fitAnchorMax = area.anchorMax,
+                fitMaxScale = maxScale,
             });
             EditorUtility.SetDirty(workspace);
             return true;
@@ -93,6 +119,9 @@ namespace FlexibleUITool.EditorTools
             if (placement.target == null)
                 return false;
 
+            // 칸에 맞춰 줄이는 블록은 맞춘 배율이 결과의 일부다
+            if (placement.fit)
+                return TryGetAdjustment(FlexibleRectState.Capture(placement.target), placement.result, out adjustment);
             var workspace = placement.target.GetComponentInParent<FlexibleWorkspace>(true);
             return TryGetAdjustment(FlexibleRectState.Capture(placement.target), placement.result, GetBaseScale(workspace, placement.target), out adjustment);
         }

@@ -43,11 +43,22 @@ namespace FlexibleUITool.EditorTools
 
         // ───────── 편집 탭: 연결·시작 ─────────
 
+        private const string OpenKey = "FlexibleUITool.AiOpen";
+
+        // 접어 둘 수 있다 (기본은 접힘, 펼침 상태는 사용자별로 기억)
         public static void DrawLauncher(PrefabStage stage, FlexibleLayout layout)
         {
+            EditorGUILayout.Space(4f);
+            bool open = EditorPrefs.GetBool(OpenKey, false) || FlexibleAiRun.Current == FlexibleAiRun.State.Running;
+            EditorGUI.BeginChangeCheck();
+            open = EditorGUILayout.Foldout(open, T("Auto-layout with AI (Claude Code)"), true, EditorStyles.foldoutHeader);
+            if (EditorGUI.EndChangeCheck())
+                EditorPrefs.SetBool(OpenKey, open);
+            FlexibleGui.Mark("ai");
+            if (!open)
+                return;
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUILayout.Label(T("Auto-layout with AI (Claude Code)"), EditorStyles.boldLabel);
                 if (FlexibleAiRun.Current == FlexibleAiRun.State.Running)
                 {
                     GUILayout.Label(T("The AI is working. See the box at the top of this window."), EditorStyles.wordWrappedMiniLabel);
@@ -211,6 +222,7 @@ namespace FlexibleUITool.EditorTools
                     }
                 }
             }
+            GUILayout.Space(4f);
             noteScroll = EditorGUILayout.BeginScrollView(noteScroll, GUILayout.Height(54f));
             note = EditorGUILayout.TextArea(note, FlexibleGui.WrapTextArea, GUILayout.ExpandHeight(true));
             EditorGUILayout.EndScrollView();

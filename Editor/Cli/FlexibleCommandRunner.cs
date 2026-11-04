@@ -11,6 +11,40 @@ namespace FlexibleUITool.EditorTools
     // CLI 명령 처리 (에디터 브리지가 호출). 결과는 항상 JSON 한 덩어리: ok / error{code,message} / warnings
     public static class FlexibleCommandRunner
     {
+        private static string viewPrefab;
+        private static Dictionary<string, bool> view;
+
+        // AI 실행 중에는 프리팹을 닫으므로, 사용자가 켜고 끈 편집용 보기를 넘겨 받아 그림·블록 목록에 똑같이 쓴다
+        public static void SetView(string prefabPath, Dictionary<string, bool> editingView)
+        {
+            viewPrefab = editingView != null && editingView.Count > 0 ? prefabPath : null;
+            view = viewPrefab != null ? new Dictionary<string, bool>(editingView) : null;
+        }
+
+        // 이번 명령의 -Hide / -Show (게임이 코드로 여닫는 패널을 켜거나 끄고 그리기·검사)
+        private static Dictionary<string, bool> commandView;
+
+        public static Dictionary<string, bool> GetView(string prefabPath)
+        {
+            Dictionary<string, bool> editing = prefabPath == viewPrefab ? view : null;
+            if (commandView == null || commandView.Count == 0)
+                return editing;
+            var merged = editing != null ? new Dictionary<string, bool>(editing) : new Dictionary<string, bool>();
+            foreach (KeyValuePair<string, bool> pair in commandView)
+                merged[pair.Key] = pair.Value;
+            return merged;
+        }
+
+        private static Dictionary<string, bool> BuildCommandView(FlexibleCommand command)
+        {
+            var result = new Dictionary<string, bool>();
+            foreach (string path in command.hide ?? new string[0])
+                result[path] = false;
+            foreach (string path in command.show ?? new string[0])
+                result[path] = true;
+            return result;
+        }
+
         private delegate void Handler(FlexibleCommand command, FlexibleJson json, List<string> warnings, bool inEditor);
 
         private static readonly Dictionary<string, Handler> Handlers = new Dictionary<string, Handler>
@@ -79,6 +113,7 @@ namespace FlexibleUITool.EditorTools
                 .Value("id", command.id)
                 .Value("command", command.command)
                 .Value("ok", true);
+            commandView = BuildCommandView(command);
             try
             {
                 // CLI 결과는 툴 UI 언어와 무관하게 영어
@@ -93,6 +128,10 @@ namespace FlexibleUITool.EditorTools
             {
                 Debug.LogException(e);
                 return Error(command.id, command.command, "INTERNAL", e.GetType().Name + ": " + e.Message);
+            }
+            finally
+            {
+                commandView = null;
             }
 
             ok = true;
@@ -212,12 +251,13 @@ namespace FlexibleUITool.EditorTools
                 warnings.Add("Prefab has no FlexibleLayout; only the base layout exists.");
 
             json.Value("prefab", prefabPath).BeginArray("profiles");
+            Dictionary<string, string> inside = FindFrames(asset, settings, prefabPath, command.all);
             using (var renderer = new FlexiblePreviewRenderer())
             {
                 foreach (FlexibleProfile profile in SelectProfiles(settings, command.profile))
                 {
                     Vector2 size = FlexibleSpecService.GetWorkSize(profile, settings);
-                    renderer.Prepare(asset, profile.id, size, new Rect(0f, 0f, 1f, 1f));
+                    renderer.Prepare(asset, profile.id, size, new Rect(0f, 0f, 1f, 1f), null, GetView(prefabPath));
                     var root = (RectTransform)renderer.Instance.transform;
                     int index = settings.IndexOf(profile.id);
                     Vector4 insets = settings.GetSafeInsets(index);
@@ -232,17 +272,65 @@ namespace FlexibleUITool.EditorTools
                         .Numbers("safeInsets", insets.x, insets.y, insets.z, insets.w).EndObject()
                         .BeginArray("blocks");
                     foreach (RectTransform block in SelectBlocks(root, command.all))
-                        WriteBlockInfo(json, root, block, layout, (RectTransform)asset.transform, profile, settings);
+                        WriteBlockInfo(json, root, block, layout, (RectTransform)asset.transform, profile, settings, inside);
                     json.EndArray();
-                    WriteIssues(json, renderer.CollectIssueList(new Rect(0f, 0f, 1f, 1f)));
+                    // 다른 프리팹이 이 화면 위에 차지하는 자리 (메뉴 바 등, 좌상단 기준)
+                    json.BeginArray("reserved");
+                    Rect screen = root.rect;
+                    foreach ((FlexibleReservedArea area, Rect r) in FlexibleReservedAreas.ForScreen(settings, AssetDatabase.AssetPathToGUID(prefabPath), profile.id, screen))
+                    {
+                        json.BeginObject().Value("name", FlexibleReservedAreas.Label(area))
+                            .Numbers("rect", Round(r.xMin - screen.xMin), Round(screen.yMax - r.yMax), Round(r.width), Round(r.height))
+                            .EndObject();
+                    }
+                    json.EndArray();
+                    WriteIssues(json, renderer.CollectIssueList(new Rect(0f, 0f, 1f, 1f)), root);
                     json.EndObject();
                 }
             }
             json.EndArray();
         }
 
+        // 세로 화면에서 각 블록을 감싸는 가장 작은 다른 블록 (부모·자식 관계가 아닌 것). 카드 배경 위에 형제로 놓인 제목·목록처럼
+        // 경로만으로는 보이지 않는 관계를 알려 준다
+        private static Dictionary<string, string> FindFrames(GameObject asset, FlexibleProfileSettings settings, string prefabPath, bool all)
+        {
+            var frames = new Dictionary<string, string>();
+            FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
+            if (baseProfile == null)
+                return frames;
+            using (var renderer = new FlexiblePreviewRenderer())
+            {
+                renderer.Prepare(asset, baseProfile.id, FlexibleSpecService.GetWorkSize(baseProfile, settings), new Rect(0f, 0f, 1f, 1f), null, GetView(prefabPath));
+                var root = (RectTransform)renderer.Instance.transform;
+                List<RectTransform> blocks = SelectBlocks(root, all).Where(b => b.gameObject.activeInHierarchy).ToList();
+                foreach (RectTransform block in blocks)
+                {
+                    Rect r = FlexiblePreviewRenderer.GetRectInRoot(root, block);
+                    RectTransform best = null;
+                    float bestArea = float.MaxValue;
+                    foreach (RectTransform other in blocks)
+                    {
+                        if (other == block || block.IsChildOf(other) || other.IsChildOf(block))
+                            continue;
+                        Rect o = FlexiblePreviewRenderer.GetRectInRoot(root, other);
+                        float area = o.width * o.height;
+                        if (o.xMin <= r.xMin + 1f && o.xMax >= r.xMax - 1f && o.yMin <= r.yMin + 1f && o.yMax >= r.yMax - 1f
+                            && area < bestArea && area < root.rect.width * root.rect.height * 0.95f)
+                        {
+                            best = other;
+                            bestArea = area;
+                        }
+                    }
+                    if (best != null)
+                        frames[FlexiblePathUtility.GetPath(root, block)] = FlexiblePathUtility.GetPath(root, best);
+                }
+            }
+            return frames;
+        }
+
         private static void WriteBlockInfo(FlexibleJson json, RectTransform root, RectTransform block, FlexibleLayout layout,
-            RectTransform assetRoot, FlexibleProfile profile, FlexibleProfileSettings settings)
+            RectTransform assetRoot, FlexibleProfile profile, FlexibleProfileSettings settings, Dictionary<string, string> inside)
         {
             string path = FlexiblePathUtility.GetPath(root, block);
             Rect rootRect = root.rect;
@@ -251,6 +339,13 @@ namespace FlexibleUITool.EditorTools
             float top = rootRect.yMax - r.yMax;
 
             json.BeginObject().Value("path", path);
+            // 세로 화면에서 이 블록을 감싸던 블록 (카드 배경 등). 함께 옮기려면 follow로 그 블록을 따른다
+            if (inside != null && inside.TryGetValue(path, out string frame))
+                json.Value("inside", frame);
+            // 레이아웃 그룹이 위치를 정하는 블록: 직접 배치할 수 없고 이 블록을 옮긴다
+            RectTransform group = FlexiblePathUtility.GetPlaceInstead(block);
+            if (group != null)
+                json.Value("layoutGroup", FlexiblePathUtility.GetPath(root, group));
             FlexibleLayoutEntry entry = null;
             if (layout != null)
             {
@@ -309,13 +404,13 @@ namespace FlexibleUITool.EditorTools
                     Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(target.aspect, settings.ReferenceShortSide);
                     float scale = 1280f / Mathf.Max(logical.x, logical.y);
                     var pixel = new Vector2Int(Mathf.RoundToInt(logical.x * scale), Mathf.RoundToInt(logical.y * scale));
-                    renderer.Render(asset, settings.Profiles[profileIndex].id, logical, pixel, target.safeArea);
+                    renderer.Render(asset, settings.Profiles[profileIndex].id, logical, pixel, target.safeArea, null, GetView(prefabPath));
 
                     string file = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(prefabPath)}__{Sanitize(target.name)}.png");
                     renderer.SavePng(file);
                     json.BeginObject().Value("target", target.name).Value("profile", settings.Profiles[profileIndex].id)
                         .Value("path", file).Numbers("size", pixel.x, pixel.y);
-                    WriteIssues(json, renderer.CollectIssueList(target.safeArea));
+                    WriteIssues(json, renderer.CollectIssueList(target.safeArea), (RectTransform)renderer.Instance.transform);
                     json.EndObject();
                 }
             }
@@ -340,11 +435,11 @@ namespace FlexibleUITool.EditorTools
                     foreach (ScreenTarget target in ResolveTargets(settings, command, defaultToPresets: true))
                     {
                         string profileId = settings.Profiles[target.ProfileIndex(settings)].id;
-                        renderer.Prepare(asset, profileId, FlexiblePreviewRenderer.GetLogicalSize(target.aspect, settings.ReferenceShortSide), target.safeArea);
+                        renderer.Prepare(asset, profileId, FlexiblePreviewRenderer.GetLogicalSize(target.aspect, settings.ReferenceShortSide), target.safeArea, null, GetView(prefabPath));
                         List<FlexibleIssue> issues = renderer.CollectIssueList(target.safeArea);
                         total += issues.Count;
                         json.BeginObject().Value("prefab", prefabPath).Value("target", target.name).Value("profile", profileId);
-                        WriteIssues(json, issues);
+                        WriteIssues(json, issues, (RectTransform)renderer.Instance.transform);
                         json.EndObject();
                     }
                 }
@@ -777,11 +872,29 @@ namespace FlexibleUITool.EditorTools
 
         // ───────── 공통 ─────────
 
-        private static void WriteIssues(FlexibleJson json, List<FlexibleIssue> issues)
+        // root를 주면, 레이아웃 그룹 안 블록의 문제에 대신 옮길 블록(placeInstead)을 붙인다
+        private static void WriteIssues(FlexibleJson json, List<FlexibleIssue> issues, RectTransform root = null)
         {
             json.BeginArray("issues");
             foreach (FlexibleIssue issue in issues)
-                json.BeginObject().Value("code", issue.code).Strings("blocks", issue.blocks).EndObject();
+            {
+                json.BeginObject().Value("code", issue.code).Strings("blocks", issue.blocks);
+                if (!string.IsNullOrEmpty(issue.detail))
+                    json.Value("detail", issue.detail);
+                if (root != null)
+                {
+                    var instead = new List<string>();
+                    foreach (string path in issue.blocks)
+                    {
+                        RectTransform group = FlexiblePathUtility.GetPlaceInstead(FlexiblePathUtility.FindByPath(root, path));
+                        if (group != null)
+                            instead.Add(FlexiblePathUtility.GetPath(root, group));
+                    }
+                    if (instead.Count > 0)
+                        json.Strings("placeInstead", instead.Distinct().ToArray());
+                }
+                json.EndObject();
+            }
             json.EndArray();
         }
 
@@ -888,18 +1001,14 @@ namespace FlexibleUITool.EditorTools
             return new[] { profile };
         }
 
-        // 기본: 루트 직속 + 역할 블록 + 프로필 기록이 있는 블록. all이면 하위 전부
+        // 기본: 루트 직속 + 화면을 덮는 컨테이너 안쪽 + 역할 블록 + 프로필 기록이 있는 블록. all이면 하위 전부
         private static List<RectTransform> SelectBlocks(RectTransform root, bool all)
         {
             if (all)
                 return FlexiblePathUtility.CollectTargets(root);
 
             var blocks = new List<RectTransform>();
-            foreach (Transform child in root)
-            {
-                if (child is RectTransform rt)
-                    blocks.Add(rt);
-            }
+            AddScreenBlocks(root, root, 0, blocks);
 
             var layout = root.GetComponent<FlexibleLayout>();
             if (layout != null)
@@ -908,6 +1017,35 @@ namespace FlexibleUITool.EditorTools
                 blocks.AddRange(layout.Entries.Where(e => e.target != null).Select(e => e.target));
             }
             return blocks.Distinct().ToList();
+        }
+
+        private const int ContainerDepth = 3;
+
+        // 화면을 꽉 채우는 컨테이너(MainUI 같은 묶음)는 그 자체로는 옮길 게 없으므로 안쪽 블록도 넘긴다.
+        // 켜져 있고 보이는 것만, 안쪽 Flexible 프리팹(자기 배치를 가짐)과 마스크(스크롤 목록) 안은 들어가지 않는다
+        private static void AddScreenBlocks(RectTransform root, Transform parent, int depth, List<RectTransform> blocks)
+        {
+            foreach (Transform child in parent)
+            {
+                if (!(child is RectTransform rt))
+                    continue;
+                blocks.Add(rt);
+                if (depth < ContainerDepth && IsScreenContainer(root, rt))
+                    AddScreenBlocks(root, rt, depth + 1, blocks);
+            }
+        }
+
+        private static bool IsScreenContainer(RectTransform root, RectTransform rt)
+        {
+            if (!rt.gameObject.activeInHierarchy || rt.GetComponent<FlexibleLayout>() != null
+                || rt.GetComponent<UnityEngine.UI.Mask>() != null || rt.GetComponent<UnityEngine.UI.RectMask2D>() != null)
+                return false;
+            var canvas = rt.GetComponent<Canvas>();
+            if (canvas != null && !canvas.enabled)
+                return false;
+            Rect r = FlexiblePreviewRenderer.GetRectInRoot(root, rt);
+            Rect screen = root.rect;
+            return r.width >= screen.width * 0.98f && r.height >= screen.height * 0.98f;
         }
 
         private static FlexibleProfileSettings GetSettings(GameObject asset)

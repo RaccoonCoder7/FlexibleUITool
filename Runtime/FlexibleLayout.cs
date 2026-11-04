@@ -19,9 +19,14 @@ namespace FlexibleUITool
         [SerializeField] private bool useOwnGrid;
         [SerializeField] private List<FlexibleProfileGrid> ownGrids = new List<FlexibleProfileGrid>();
 
+        // 화면(세로·정사각·가로)을 무엇의 가로세로 비율로 고를지. 기본은 화면, 패널처럼 자기 모양을 따르려면 OwnSize
+        [SerializeField] private FlexibleProfileSource profileSource = FlexibleProfileSource.Screen;
+
         private FlexibleProfileState[] baseStates;
         private int currentIndex = -1;
         private bool pending;
+        private Canvas rootCanvas;
+        private Vector2 lastSelectionSize;
 
         public FlexibleProfileSettings Settings
         {
@@ -31,6 +36,12 @@ namespace FlexibleUITool
 
         public List<FlexibleLayoutEntry> Entries => entries;
         public List<FlexibleRoleTag> Roles => roles;
+
+        public FlexibleProfileSource ProfileSource
+        {
+            get => profileSource;
+            set => profileSource = value;
+        }
 
         public bool UseOwnGrid
         {
@@ -62,10 +73,64 @@ namespace FlexibleUITool
             Refresh();
         }
 
+        protected override void OnTransformParentChanged()
+        {
+            base.OnTransformParentChanged();
+            rootCanvas = null;
+            Refresh();
+        }
+
+        protected override void OnCanvasHierarchyChanged()
+        {
+            base.OnCanvasHierarchyChanged();
+            rootCanvas = null;
+        }
+
+        // 화면을 따르면 자기 크기가 그대로여도(화면을 채우지 않는 패널) 화면이 바뀔 때 다시 고른다
         private void LateUpdate()
         {
-            if (pending)
+            if (pending || (profileSource == FlexibleProfileSource.Screen && TryGetSelectionSize(out Vector2 size) && size != lastSelectionSize))
                 Refresh();
+        }
+
+        // 화면을 고를 때 보는 크기: 기본은 이 UI가 놓인 화면(최상위 캔버스), OwnSize면 자기 크기
+        public bool TryGetSelectionSize(out Vector2 size)
+        {
+            var target = (RectTransform)transform;
+            if (profileSource == FlexibleProfileSource.Screen)
+            {
+                // 에디터에서는 부모 바뀜 알림이 오지 않으므로 매번 찾는다
+                if (rootCanvas == null || !Application.isPlaying)
+                {
+                    Canvas canvas = GetComponentInParent<Canvas>(true);
+                    rootCanvas = canvas != null ? canvas.rootCanvas : null;
+                }
+                if (rootCanvas != null)
+                    target = (RectTransform)rootCanvas.transform;
+            }
+            size = target.rect.size;
+            return size.x > 0f && size.y > 0f;
+        }
+
+        // 에디터용: 지금 값을 기준 배치로 다시 기억한다 (기준 화면 편집 뒤 다른 화면을 보여 주기 전에 부른다)
+        public void RecaptureBase()
+        {
+            CaptureBase();
+        }
+
+        // 에디터 화면 전환·미리보기용: 화면 screenProfileId를 보여 줄 때 이 레이아웃이 쓸 배치를 적용한다
+        public void ApplyForScreen(string screenProfileId)
+        {
+            if (settings == null || settings.Profiles.Count == 0)
+                return;
+            string id = screenProfileId;
+            if (profileSource == FlexibleProfileSource.OwnSize)
+            {
+                Rect rect = ((RectTransform)transform).rect;
+                if (rect.width > 0f && rect.height > 0f)
+                    id = settings.Profiles[settings.SelectProfile(rect.width / rect.height, -1)].id;
+            }
+            ApplyProfile(id);
         }
 
         public void Refresh()
@@ -81,13 +146,19 @@ namespace FlexibleUITool
             }
 
             pending = false;
-            Rect rect = ((RectTransform)transform).rect;
-            if (rect.width <= 0f || rect.height <= 0f)
+            if (!TryGetSelectionSize(out Vector2 size))
                 return;
+            bool resized = size != lastSelectionSize;
+            lastSelectionSize = size;
 
-            int next = settings.SelectProfile(rect.width / rect.height, currentIndex);
+            int next = settings.SelectProfile(size.x / size.y, currentIndex);
             if (next == currentIndex)
+            {
+                // 같은 화면 안에서 크기만 바뀌면 칸에 맞춰 줄이는 블록만 다시 맞춘다
+                if (resized)
+                    Refit();
                 return;
+            }
 
             currentIndex = next;
             ApplyProfile(settings.Profiles[next].id);
@@ -109,6 +180,19 @@ namespace FlexibleUITool
                 FlexibleProfileState baseState = baseStates[i];
                 FlexibleProfileState state = entry.Find(profileId) ?? baseState;
                 state.ApplyTo(entry, baseState);
+            }
+        }
+
+        private void Refit()
+        {
+            FlexibleProfile profile = CurrentProfile;
+            if (profile == null)
+                return;
+            foreach (FlexibleLayoutEntry entry in entries)
+            {
+                FlexibleProfileState state = entry.target != null ? entry.Find(profile.id) : null;
+                if (state != null && state.fit)
+                    state.ApplyFit(entry.target);
             }
         }
 
@@ -171,6 +255,12 @@ namespace FlexibleUITool
                 baseStates[i] = FlexibleProfileState.Capture(entry, null, entry.ControlsActive, entry.ControlsLayoutGroup);
             }
         }
+    }
+
+    public enum FlexibleProfileSource
+    {
+        Screen,
+        OwnSize,
     }
 
     // 프리팹 전용 그리드 (화면 하나분)

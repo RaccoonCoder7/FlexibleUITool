@@ -1,6 +1,8 @@
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using static FlexibleUITool.EditorTools.FlexibleText;
 namespace FlexibleUITool.EditorTools
@@ -116,6 +118,9 @@ namespace FlexibleUITool.EditorTools
         private static void Enter(Step step, FlexibleWindow window)
         {
             Current = (int)step;
+            // 창 크기를 바꿔 보는 단계는 미리보기를 창 크기 모드로
+            if (step == Step.Preview || step == Step.SeeMode)
+                window.PreviewUseWindowSize();
             switch (step)
             {
                 case Step.Check:
@@ -274,6 +279,7 @@ namespace FlexibleUITool.EditorTools
             if (GUILayout.Button(T("Delete it and finish"), GUILayout.Height(26f)))
             {
                 DeletePractice();
+                DeleteSamples();
                 Stop();
                 window.ShowTab(FlexibleWindow.Tab.Edit);
                 GUIUtility.ExitGUI();
@@ -415,25 +421,10 @@ namespace FlexibleUITool.EditorTools
                 return;
             Selection.activeTransform = main;
             EditorGUIUtility.PingObject(main);
-            FrameWholePrefab(main);
+            FlexibleScreenSession.FrameStage(PrefabStageUtility.GetCurrentPrefabStage());
         }
 
         // 고른 블록만 크게 비추면 화면 전체가 안 보이므로 프리팹 전체가 들어오게 비춘다
-        private static void FrameWholePrefab(RectTransform block)
-        {
-            SceneView view = SceneView.lastActiveSceneView;
-            var root = block.root as RectTransform;
-            if (view == null || root == null)
-                return;
-
-            var corners = new Vector3[4];
-            root.GetWorldCorners(corners);
-            var bounds = new Bounds(corners[0], Vector3.zero);
-            foreach (Vector3 corner in corners)
-                bounds.Encapsulate(corner);
-            view.Frame(bounds, false);
-        }
-
         private static bool SavedMainHasLandscape()
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(PracticePath);
@@ -512,6 +503,41 @@ namespace FlexibleUITool.EditorTools
             }
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PracticePath) != null)
                 AssetDatabase.MoveAssetToTrash(PracticePath);
+        }
+
+        // 튜토리얼이 패키지에서 가져온 샘플(FlexibleSample, SampleScene)도 지운다. 다음 튜토리얼 때 다시 가져온다.
+        // 사용자가 넣은 파일·설정 애셋·열려 있는 씬은 남기고, 폴더는 비었을 때만 지운다
+        private static void DeleteSamples()
+        {
+            // 툴을 Assets에 직접 넣은 경우엔 샘플을 다시 가져올 원본이 없으니 남긴다
+            if (!FlexibleSettingsUtility.IsPackage)
+                return;
+            string folder = FlexibleSettingsUtility.SampleTargetFolder;
+            string source = Path.Combine(FlexibleSettingsUtility.ToolFullPath, "Samples~", "Tutorial");
+            if (!AssetDatabase.IsValidFolder(folder) || !Directory.Exists(source))
+                return;
+
+            foreach (string file in Directory.GetFiles(source))
+            {
+                if (file.EndsWith(".meta"))
+                    continue;
+                string path = folder + "/" + Path.GetFileName(file);
+                if (AssetDatabase.LoadMainAssetAtPath(path) == null || AssetDatabase.LoadAssetAtPath<FlexibleProfileSettings>(path) != null || IsSceneOpen(path))
+                    continue;
+                AssetDatabase.MoveAssetToTrash(path);
+            }
+            if (AssetDatabase.FindAssets("", new[] { folder }).Length == 0)
+                AssetDatabase.MoveAssetToTrash(folder);
+        }
+
+        private static bool IsSceneOpen(string path)
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                if (SceneManager.GetSceneAt(i).path == path)
+                    return true;
+            }
+            return false;
         }
     }
 }

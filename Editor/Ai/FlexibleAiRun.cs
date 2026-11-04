@@ -101,6 +101,7 @@ namespace FlexibleUITool.EditorTools
         public static bool CanRevert => Current != State.Running && !string.IsNullOrEmpty(backupPath) && File.Exists(backupPath);
 
         public static event Action Changed;
+        private static Dictionary<string, bool> editingView;
 
         private static string ProjectRoot => Directory.GetParent(Application.dataPath).FullName;
         private static string WorkFolder => FlexibleCommandBridge.WorkFolder;
@@ -145,6 +146,9 @@ namespace FlexibleUITool.EditorTools
             if (!FlexibleScreenSession.Save(stage))
                 return false;
             PrefabPath = stage.assetPath;
+            // 편집용 보기(사용자가 숨긴 팝업 등)는 닫으면 사라지므로, AI가 보는 그림·블록 목록에 쓰도록 넘기고 끝나면 되살린다
+            editingView = FlexibleScreenSession.GetViewByPath(stage);
+            FlexibleCommandRunner.SetView(PrefabPath, editingView);
             targetProfiles = profiles.ToList();
             model = modelAlias;
             effort = effortLevel;
@@ -195,7 +199,7 @@ namespace FlexibleUITool.EditorTools
                 Current = State.Failed;
                 Summary = T("Could not start Claude Code.") + "\n" + e.Message;
                 FinishedAt = EditorApplication.timeSinceStartup;
-                PrefabStageUtility.OpenPrefab(PrefabPath);
+                ReopenPrefab(false);
                 Changed?.Invoke();
                 return false;
             }
@@ -413,19 +417,24 @@ namespace FlexibleUITool.EditorTools
             return T("The AI could not finish.") + "\n" + reason;
         }
 
-        private static void ReopenPrefab()
+        // showTarget: AI가 만든 화면(첫 대상)을 보여 준다
+        private static void ReopenPrefab(bool showTarget = true)
         {
             if (string.IsNullOrEmpty(PrefabPath) || AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null)
                 return;
             PrefabStageUtility.OpenPrefab(PrefabPath);
-            string show = targetProfiles.FirstOrDefault();
-            if (string.IsNullOrEmpty(show))
-                return;
+            FlexibleCommandRunner.SetView(null, null);
+            Dictionary<string, bool> restoreView = editingView;
+            editingView = null;
+            string show = showTarget ? targetProfiles.FirstOrDefault() : null;
             EditorApplication.delayCall += () =>
             {
                 PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
-                if (stage != null && stage.assetPath == PrefabPath)
+                if (stage == null || stage.assetPath != PrefabPath)
+                    return;
+                if (!string.IsNullOrEmpty(show))
                     FlexibleScreenSession.ShowProfile(stage, show);
+                FlexibleScreenSession.RestoreViewByPath(stage, restoreView);
             };
         }
 
@@ -542,11 +551,20 @@ Portrait image (`render -Preset portrait`); open its `path` once to see the desi
 
 - Each non-portrait screen stores per-block overrides. Blocks not listed in a spec keep their state.
 - Blocks are named by `path` from the prefab root (e.g. `Main`, `Main/Title`).
+- The block list goes inside containers that cover the whole screen (e.g. `MainUI/HomeUI/...`). Such a container has nothing to move by itself; place the parts inside it.
+- A block with `layoutGroup` is placed by the layout group (a row, column or grid) on that block. You cannot give it a cell; place that `layoutGroup` block instead. An issue with `placeInstead` is fixed by moving the block(s) it names.
+- Panels the user hid while editing (popups the game opens by code) are hidden in the images and the list too. If a full-screen panel still covers the main screen in the portrait image, it is a popup: lay out the popup's parts and the screen behind it separately; both are in the list.
 - Each screen has a grid (`columns` x `rows`, `margin`, `gutter`). A cell is `[column, row, width, height]`; `[0,0]` is the top-left cell.
 - `safeArea: true` (default) keeps the cells inside the notch / home-indicator insets. Use `false` only for bars that should touch the screen edge (backgrounds, header bars).
 - Axis modes (`modeX`, `modeY`) decide how a block follows other sizes of the same screen:
   `stretch` (default) grows with the cells; `left`/`right` (x) and `bottom`/`top` (y) keep the size and stick to that side; `center` keeps the size in the middle.
-- Adjustments on top of the cells: `offset` [x, y] (y is up), `sizeOffset` [w, h], `scale` [s].
+- Adjustments on top of the cells: `offset` [x, y] (y is up), `sizeOffset` [w, h], `scale` [s] (the final scale, not a multiplier).
+- Fixed modes keep the size of the cells at the work resolution, not the block's own size. Add `keepSize: true` to keep the portrait size (buttons, icons, popups).
+- `pin` (`top-left`, `top`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`, `bottom-right`) instead of `cell` keeps the portrait distance from that corner of the safe area and the portrait size. Use it for top bars, corner buttons and centered popups.
+- `fit: true` (with `cell` or `pin`) scales a block down to fit its cells on every screen size (big pictures, popups taller than the screen, button rows). Prefer it to a fixed `scale`. `scaleBy` multiplies the portrait scale.
+- `modeX` / `modeY` `keep` leaves that axis as in portrait (panels the game slides in on that axis).
+- `follow: ""<path>""` keeps the portrait relation to a sibling block; use it for titles, lists and buttons that sit on a card background (`inside` in `describe`).
+- Blocks inside a container keep the container's portrait margins. When those margins no longer fit (the container got shorter), place the inner blocks on cells too; any path works, at any depth.
 - `visible`: `hide` or `show`. `reset: true` removes the override (the block follows portrait).
 - Canvas units: the short screen side is always 1080 (landscape 16:9 = 1920 x 1080).
 
@@ -556,6 +574,8 @@ Portrait image (`render -Preset portrait`); open its `path` once to see the desi
 - Turn a vertical stack into columns: primary content left and large, secondary content right.
 - Keep the reading order. Use `stretch` for content areas; fixed modes for icons and buttons.
 - Keep buttons inside the safe area. Do not let blocks overlap. A block may sit fully inside another only if it already does in portrait (like a title on a bar); `check` reports any other overlap.
+- `reserved` in `describe` lists places another prefab draws on top of this one on that screen (for example a menu bar). Keep buttons and main content out of them (`UNDER_RESERVED`), and do not let a panel half cover them (`COVERS_RESERVED`).
+- `check` also looks at panels the game opens later (`HIDDEN_OUT_OF_SCREEN`), blocks whose fixed margins no longer fit and became negative (`COLLAPSED`), and lists whose items are cut off across the scroll direction (`CLIPPED_IN_LIST`). Fix them by placing that block or its parent panel too.
 - Square screens are between portrait and landscape: fewer columns, secondary content can go below or beside.
 {noteSection}
 ## Spec format (one file for all screens)

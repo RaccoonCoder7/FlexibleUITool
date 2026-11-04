@@ -88,17 +88,6 @@ namespace FlexibleUITool.EditorTools
                 .FirstOrDefault();
         }
 
-        [MenuItem("Tools/FlexibleUITool/Import Tutorial Sample", false, 50)]
-        private static void ImportTutorialSampleMenu()
-        {
-            string folder = ImportTutorialSample(out _);
-            if (folder == null)
-                return;
-            Object prefab = AssetDatabase.LoadAssetAtPath<GameObject>(folder + "/" + SamplePrefabName + ".prefab");
-            Selection.activeObject = prefab;
-            EditorGUIUtility.PingObject(prefab);
-        }
-
         // 튜토리얼 샘플을 Assets/FlexibleUITool/Samples 로 가져온다 (Package Manager의 샘플 Import는 Assets/Samples/<이름>/<버전>/ 에 넣어서 쓰지 않는다).
         // 예전 방식으로 Assets/Samples 에 들어온 샘플은 이 폴더로 옮긴다. 샘플 폴더를 돌려주고, 툴이 Assets 안에 있는데 샘플이 없으면 null
         public static string ImportTutorialSample(out bool imported)

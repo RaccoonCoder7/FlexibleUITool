@@ -182,7 +182,13 @@ The user reviews in Unity, where the thumbnails are easier to read than images i
 - **Adjustments** are added on top of the grid result, in canvas units:
   - `offset` [x, y]: **y is up** (Unity anchoredPosition).
   - `sizeOffset` [w, h]
-  - `scale` [s] or [x, y, z]
+  - `scale` [s] or [x, y, z]: the block's final scale, not a multiplier. A block saved at scale 0.6 that should be 10% smaller needs `[0.54]`.
+- **Keeping the size**: `left` / `right` / `top` / `bottom` / `center` keep the size **of the cells at the work resolution**, not the block's own size. Add `keepSize: true` to keep the block's portrait size on those axes instead (buttons, icons, popups).
+- **Pins**: `pin` (`top-left`, `top`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`, `bottom-right`) puts a block at the same distance from that corner or edge of the safe area as in portrait, with its portrait size. Use it for bars, corner buttons and centered popups instead of computing offsets. `scale` and `offset` still apply on top.
+- **Fit**: `fit: true` (with `cell` or `pin`) keeps the portrait size and shape and scales the block down so it fits the cells (the whole safe area for `pin`). The scale is recalculated for every screen size at runtime, so a picture is large on a wide phone and smaller on a 4:3 tablet. The largest scale is the portrait scale, or `scale` / `scaleBy` when given. Use it instead of computing scales for big pictures, popups and button rows.
+- **scaleBy** [k] multiplies the portrait scale (a block saved at 0.6 with `scaleBy: 0.9` ends at 0.54). `scale` replaces it.
+- **Axis mode `keep`** (`modeX` or `modeY`, with `cell`): that axis keeps its portrait anchors, pivot, position and size. Use it for panels the game's code moves on that axis (for example a menu that slides in from the left edge to x 0), and place only the other axis.
+- **Follow**: `follow: "<path>"` (a block with the same parent) keeps the portrait relation to that block. On each axis the block stretches with the same margins when it covered at least 60% of that block, otherwise it keeps its size and its distance from the nearest edge (or the center). Use it for titles, lists and buttons placed as siblings on top of a card background (`inside` in `describe` tells you which block frames them). Follow blocks are placed after the others in the same spec.
 - **Canvas units**: the short screen side is always 1080, e.g. landscape 16:9 = 1920×1080.
 
 ## Running
@@ -196,7 +202,7 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
   - If the editor is closed, you get `EDITOR_NOT_RUNNING`. Ask the user to open it.
   - If the editor is in Play Mode, you get `EDITOR_PLAYING`. Ask the user to exit Play Mode. Only `ping` and `game-view` work during Play Mode.
   - While the editor is compiling, the script waits.
-- Options: `-Prefab <name or Assets/...prefab>`, `-Profile <id>`, `-Preset <index|name|profile id|edges>` (several: comma-separated, e.g. `-Preset 1,portrait`; `edges` = each profile's edge ratios), `-Aspect <width/height>` (any ratio, e.g. `-Aspect 1.3`; several: comma-separated), `-Spec <file>`, `-Out <file or folder>`, `-Folder <Assets/...>`, `-Path <block path>`, `-Role <role>`, `-Scene <Assets/...unity>`, `-DryRun`, `-All`, `-Timeout <sec>`, `-Project <path>` (only if not run from the project folder).
+- Options: `-Prefab <name or Assets/...prefab>`, `-Profile <id>`, `-Preset <index|name|profile id|edges>` (several: comma-separated, e.g. `-Preset 1,portrait`; `edges` = each profile's edge ratios), `-Aspect <width/height>` (any ratio, e.g. `-Aspect 1.3`; several: comma-separated), `-Spec <file>`, `-Out <file or folder>`, `-Folder <Assets/...>`, `-Path <block path>`, `-Role <role>`, `-Scene <Assets/...unity>`, `-Hide <paths>` / `-Show <paths>` (comma-separated block paths turned off / on only for `describe`, `render` and `check`, e.g. popups the game opens by code that cover the screen; the prefab is not changed), `-DryRun`, `-All`, `-Timeout <sec>`, `-Project <path>` (only if not run from the project folder).
 
 ## Commands
 
@@ -231,14 +237,25 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
 | `normalized` [x0, y0, x1, y1] | 0..1, top-left origin. |
 | `layout` | `base`: no override in this profile.<br>`grid`: placed on cells.<br>`adjusted`: cells + `offset` / `sizeOffset` / `scale`.<br>`manual`: free RectTransform values. |
 | `cell`, `modeX`, `modeY`, `safeArea` | Present for `grid` and `adjusted`. |
+| `layoutGroup` | Present when a layout group (row, column, grid) places this block. The value is the block to place instead; `apply-spec` refuses a `cell` or `rect` for this block. |
+| `inside` | On the portrait screen this block sits inside that other block, which is not its parent (for example a title on a card background). Place the frame, then `follow` it. |
 
-`issues[]` contains `{code, blocks}` objects:
+`profiles[].reserved[]` lists places other prefabs take on that screen (`name`, `rect` [x, y, w, h], top-left origin). Keep buttons and main content out of them. A place the game hides while this prefab is open is not listed (the user marks that in the Edit tab).
+
+Without `-All`, the list has the root's direct children, plus the blocks inside containers that cover the whole screen (up to 3 levels, not inside scroll lists or nested Flexible prefabs), plus blocks with a role or an override.
+
+`issues[]` contains `{code, blocks}` objects. `placeInstead` is added when a block in the issue sits in a layout group: fix the issue by moving the named block.
 
 | Code | Meaning |
 |---|---|
 | `OUT_OF_SCREEN` | The block leaves the screen. |
 | `OVERLAP` | Two blocks overlap. A block fully inside another is ignored only if it is also inside it in the portrait (base) layout, because that is intentional layering. |
-| `OUTSIDE_SAFE_AREA` | A button or other Selectable is under a notch or home indicator. |
+| `OUTSIDE_SAFE_AREA` | A button or other Selectable is under a notch or home indicator. A backdrop button covering the whole screen is ignored. |
+| `HIDDEN_OUT_OF_SCREEN` | Something inside a hidden panel (Canvas off, or a large object saved turned off) leaves the screen once the game shows it. Place that block or its panel. |
+| `COLLAPSED` | A stretched block got a negative size: its fixed margins are larger than this screen. Place it (or its parent) on cells. |
+| `CLIPPED_IN_LIST` | A list that scrolls one way cuts its items off the other way. Make the list wider/taller. |
+| `UNDER_RESERVED` | A button sits under a place another prefab takes (`reserved`, e.g. a menu bar) and is drawn below it. If the game hides that bar while this prefab is open, ask the user to turn off `... is shown over this prefab` in the Edit tab. |
+| `COVERS_RESERVED` | A block drawn above such a place covers part of it. |
 
 ## Spec format
 
@@ -253,6 +270,12 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
         { "path": "Footer","cell": [2,7,4,1], "offset": [0,30], "sizeOffset": [40,0] },
         { "path": "Banner","cell": [0,0,10,1], "safeArea": false },
         { "path": "Promo", "visible": "hide" },
+        { "path": "Coins", "pin": "top-left" },
+        { "path": "Popup", "pin": "center", "scale": [0.7] },
+        { "path": "Close", "cell": [7,0,1,1], "modeX": "right", "modeY": "top", "keepSize": true },
+        { "path": "Banner", "cell": [0,1,4,3], "fit": true },
+        { "path": "SideMenu", "cell": [0,0,8,5], "modeX": "keep", "modeY": "stretch" },
+        { "path": "CardTitle", "follow": "CardBackground" },
         { "path": "Title", "reset": true },
         { "path": "Badge", "rect": { "anchorMin":[1,1], "anchorMax":[1,1], "pivot":[1,1], "position":[-20,-20], "size":[120,120] } }
       ] }
@@ -261,7 +284,8 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
 ```
 
 - Each block needs `path` or `role`. If both are given, `path` wins.
-- Each block needs at least one of `cell`, `rect`, `visible` or `reset`. Do not use `cell` and `rect` together.
+- Each block needs at least one of `cell`, `rect`, `pin`, `follow`, `visible` or `reset`. Use only one of `cell`, `rect`, `pin` and `follow`.
+- A block placed by a layout group (`layoutGroup` in `describe`) cannot get a `cell` or `rect`; place its group instead. `visible` is fine.
 - **Merge semantics**: blocks not listed keep their current state in that profile. `reset: true` removes the override, so the block falls back to the base layout.
 - The spec is validated as a whole. On `SPEC_INVALID` nothing was changed, and the message lists every problem.
 - `export-spec` output is a valid spec. Re-applying it changes nothing, also on a copy of the prefab or after `clear-profile` (adjustments such as `scale` are kept).

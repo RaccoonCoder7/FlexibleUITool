@@ -28,8 +28,10 @@ namespace FlexibleUITool
             new FlexiblePreviewPreset("Tablet landscape (4:3)", new Vector2(2360, 1640), 0f, 0f, 0.015f, 0.024f),
             new FlexiblePreviewPreset("Tablet split (half)", new Vector2(1180, 1640), 0f, 0f, 0.015f, 0.024f),
         };
+        [SerializeField] private List<FlexibleReservedArea> reservedAreas = new List<FlexibleReservedArea>();
 
         public string BaseProfileId => baseProfileId;
+        public List<FlexibleReservedArea> ReservedAreas => reservedAreas;
         public float Hysteresis => hysteresis;
         public IReadOnlyList<FlexibleProfile> Profiles => profiles;
         public IReadOnlyList<string> Roles => roles;
@@ -208,6 +210,34 @@ namespace FlexibleUITool
         {
             return new FlexiblePreviewPreset(name + " (rotated)", new Vector2(resolution.y, resolution.x), safeTop, safeBottom, safeRight, safeLeft);
         }
+    }
+
+    // 다른 프리팹이 화면 위에 차지하는 자리 (예: 메뉴 바). 다른 프리팹을 편집·검수할 때 피해야 할 곳으로 쓴다
+    [Serializable]
+    public class FlexibleReservedArea
+    {
+        public string name;
+        public string prefabGuid;
+        public string path;
+        // 이 자리를 그리는 캔버스 순서. 이보다 낮거나 같은 순서로 그려지는 버튼은 그 밑에 깔린다
+        public int sortingOrder;
+        public List<FlexibleReservedRect> rects = new List<FlexibleReservedRect>();
+        // 이 프리팹들이 열려 있을 때는 게임이 이 자리를 숨긴다 (타이틀·대화 화면 등). 이 프리팹들은 피하지 않아도 된다
+        public List<string> hiddenFor = new List<string>();
+
+        // 화면별 자리 (아래 기준 정규화 좌표). 그 화면에서 보이지 않으면 null
+        public Rect? Find(string profileId)
+        {
+            FlexibleReservedRect found = rects.Find(r => r.profileId == profileId);
+            return found != null ? found.rect : (Rect?)null;
+        }
+    }
+
+    [Serializable]
+    public class FlexibleReservedRect
+    {
+        public string profileId;
+        public Rect rect;
     }
 
     // 배치 보조용 칸 정의 (단위 = 캔버스 논리 단위)

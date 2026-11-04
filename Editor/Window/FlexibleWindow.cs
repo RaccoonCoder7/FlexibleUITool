@@ -34,6 +34,8 @@ namespace FlexibleUITool.EditorTools
         // 미리보기 탭에서 서로 다른 화면을 두 개 이상 본 적이 있는지 (튜토리얼 확인용)
         public bool PreviewSawTwoScreens => preview.SeenProfiles.Count >= 2;
 
+        public void PreviewUseWindowSize() => preview.UseWindowSize();
+
         // 검수를 돌린 횟수 (튜토리얼 확인용)
         public int CheckRunCount => review.RunCount;
 

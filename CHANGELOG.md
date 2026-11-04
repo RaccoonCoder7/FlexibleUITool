@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.7]
+
+- Scene setup: with no prefab open, the Edit tab lists what in the open scene is not ready (canvases without `Flexible Canvas Scaler`, full-screen prefabs that are not Flexible UI, UI placed straight in the scene) and `Make the scene's UI Flexible UI` fixes them; loose UI groups are saved as new prefabs.
+- View while editing: show or hide blocks only while you edit (panels the game opens by code, also panels hidden by turning their Canvas off and prefabs saved turned off). Nothing is saved; Preview, Check and the AI use the same view.
+- While the editor is stopped, scene UI shows the layout of the Game view's shape (landscape / square) without changing the scene (`Tools > FlexibleUITool > Show Screen Layouts While Stopped`).
+- Opening an inner prefab (or going back to the outer one) keeps the screen you were on.
+- The Edit tab warns about blocks that stick out of the screen (`Fit them all into the screen`, `Fit into the screen`), lists blocks with their own layout on the screen, and edits position / size / scale of the selected blocks directly.
+- `Choose the screen by` in the Flexible Layout inspector: the whole screen, or the prefab's own size (for panels).
+- New checks (Edit tab, Check tab, CLI): panels the game opens later (`HIDDEN_OUT_OF_SCREEN`), blocks squashed to a negative size (`COLLAPSED`), list items cut off across the scroll direction (`CLIPPED_IN_LIST`), and buttons under or blocks covering a place another prefab takes (`UNDER_RESERVED`, `COVERS_RESERVED`). The Edit tab lists them under `problems you cannot see right now`, without the ones the portrait screen already has, with `Show` for hidden panels.
+- Places other prefabs take: `Other prefabs keep clear of this` on a block (such as a menu bar) draws its place in the Scene view of other prefabs and feeds the check and the AI. `... is shown over this prefab` turns it off for prefabs the game shows without the bar.
+- Grid placement: `Use its own size` (sticking to an edge or centering keeps the cells' size), `Shrink to fit the cells` (keeps the portrait size and scales the block down to fit on every screen size, recalculated at runtime), and `Pin to` (same distance from a corner of the safe area as on portrait).
+- CLI / specs: `keepSize`, `pin`, `fit`, `scaleBy`, axis mode `keep`, `follow` (keep the portrait relation to a sibling such as a card background), `-Hide` / `-Show` for `describe` / `render` / `check`, `reserved` and `inside` in `describe`, `detail` on issues.
+- Fixed: the Check tab and `check` did not look inside full-screen containers for out-of-screen and overlapping blocks; prefabs whose root Canvas is saved turned off rendered empty in the CLI; a backdrop button covering the whole screen was reported under the notch.
+- The AI auto-layout section can be folded.
+
 ## [1.0.6]
 
 - Prefab grids: turn on `Use a grid only for this prefab` in the Edit tab to give a prefab its own grids (one per screen, starting as a copy of the project grids). With it off, the Edit tab shows the project grid read-only. The Scene view, grid placement, templates, AI auto-layout and `apply-spec` / `describe` use the grid the prefab uses (`describe` reports `ownGrid`).

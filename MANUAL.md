@@ -61,12 +61,29 @@ That is all. Good to know:
 
 ## 2. Setup (programmers)
 
-1. Replace the screen canvas's `Canvas Scaler` with `Flexible Canvas Scaler`. It always scales by the short side (1080), so UI has the same real size in portrait and landscape.
-2. Make the UI prefab's root **full-stretch** (anchors 0..1, offsets 0). The root's aspect must follow the screen for screens to switch. (`Set up this prefab` in the window does this.)
+1. Replace the `Canvas Scaler` of every top-level canvas with `Flexible Canvas Scaler`. It always scales by the short side (1080), so UI has the same real size in portrait and landscape, and every canvas follows the same rule. With no prefab open, the Edit tab shows what in the open scene is not ready yet; press `Make the scene's UI Flexible UI`. It replaces the Canvas Scaler of every top-level canvas and, if you choose `Do all`, makes every full-screen UI prefab in the scene (nested ones too) Flexible UI. UI placed straight under a canvas without being a prefab (for example a title logo and a start button) cannot have its own screen layouts, because Flexible UI is edited per prefab: `Do all` saves each checked group as a new prefab in a folder you pick, makes it Flexible UI and puts it back in the scene looking the same. `Show the list` lists these groups with check boxes. Canvases and prefabs are changed in the prefab files, and the scene is saved if it had no other unsaved changes.
+2. Make a full-screen UI prefab's root **full-stretch** (anchors 0..1, offsets 0), or make the prefab's root the canvas itself. (`Set up this prefab` in the window does this.)
    - Dropping a prefab into a scene can put the Scene-view position into the root's offsets and Pos Z. Use `Fit to parent (offsets 0, Z 0)` in the Flexible Layout inspector.
 3. Put elements that must avoid notches and home indicators under a full-stretch container with `Flexible Safe Area`.
 4. Screen ranges, work resolutions, grids, the role list and preview devices live in `Assets/FlexibleUITool/Settings/FlexibleProfileSettings.asset`. It is shared by the whole project.
 5. Code can listen to `FlexibleLayout.ProfileChanged` to adapt non-UI things (cameras, etc.).
+6. Landscape only appears if the app may rotate: set `Player Settings > Resolution and Presentation > Default Orientation` to `Auto Rotation`. A portrait-only app still gets the square screen on foldables and tablets.
+
+### Bringing in an existing project
+
+You do not need new prefabs. The existing prefab becomes the portrait (base) layout.
+
+1. Fastest: open the scene, open `Tools > FlexibleUITool > Flexible UI Window`, and press `Make the scene's UI Flexible UI` in the Edit tab (no prefab open). Or open one prefab and press `Set up this prefab`; it also offers to set up the full-screen prefabs inside it.
+   - A prefab whose root is a canvas: it already fills the screen; its `Canvas Scaler` is replaced with `Flexible Canvas Scaler` (same reference resolution).
+   - A prefab that does not fill the screen: you are asked whether it is full screen (stretched) or a panel (kept as it is).
+2. Make the landscape and square layouts with the screen buttons or `Auto-layout with AI`.
+3. **Nested prefabs** (a prefab inside another prefab):
+   - Set up the inner prefab only if its inside should change per screen (for example a full-screen diary or shop). Small parts such as buttons need nothing; the outer prefab places them.
+   - Set up inner prefabs first, then the outer one.
+   - The outer prefab records where the inner prefab sits; the inner prefab records its own inside. They never overwrite each other.
+   - While you edit the outer prefab on another screen, the inner prefabs show their own layout for that screen too (view only), and so do the Preview and Check tabs.
+   - An inner prefab follows the whole screen even if it is a small panel. To follow its own width and height instead, set `Choose the screen by` to `Its own size (for panels)` in its Flexible Layout inspector.
+4. **Several canvases in a scene** work independently; each Flexible Layout decides on its own. Give every top-level canvas a `Flexible Canvas Scaler` so sizes match.
 
 ---
 
@@ -76,11 +93,17 @@ That is all. Good to know:
 
 | Tab | What it does |
 |---|---|
-| **Edit** | Screen buttons, the selected block's state, optional grid placement, templates, and `More` (undo all changes of a screen, Game view option). |
-| **Preview** | Shows the prefab at the window's own shape, live. Drag the window edge to make it wide or narrow and watch the layout switch. Device presets show the notch / home bar area. |
-| **Check** | Shows your prefabs on many phones and tablets at once and finds blocks that stick out of the screen, overlap, or sit under a notch. |
+| **Edit** | Screen buttons, `View while editing`, the selected block (state, role, position / size / scale, `Fit into the screen`), optional grid placement, templates, AI auto-layout (folded), and `More` (undo all changes of a screen, Game view option). |
+| **Preview** | Shows the screen you are editing by default (`Screen being edited`). Pick `Free (window size)` and drag the window edge to watch the layout switch, or pick a device to see its notch / home bar area. Issues are listed under the picture. |
+| **Check** | Shows your prefabs on many phones and tablets at once and finds blocks that stick out of the screen (also windows inside full-screen panels), overlap, or sit under a notch. Hidden panels the game opens later, squashed blocks, cut-off lists and places other prefabs take are checked too (see [Checks](#checks)). Issues of the same kind are grouped, and `Hide base screen issues` (on by default) hides the issues the portrait design already had. |
 
-**Grid (optional)**: open `Place on a grid`, select a block, then drag over the blue cells in the Scene view. The block snaps to the cells and follows other screen sizes nicely. The orange frame shows the cells the selected block sits on in this screen (or the range you are dragging); blocks not placed on the grid have none. `Horizontal` / `Vertical` choose how it follows: stretch (the default), stick to an edge, or center. Changing `Column` / `Row` / `Width` / `Height` or a mode moves the selected block right away (no extra button); hand nudges on top of the cells are kept. Save the prefab as usual to keep the result. The red area is the notch / home bar of the device with the largest one. Each screen (portrait, square, landscape) has its own grid. By default every prefab uses the project grids, shown read-only here; change them in `Tools > FlexibleUITool > Project Grids` (or the `Project grids...` button). Turn on `Use a grid only for this prefab` to give this prefab its own grids (one per screen, starting as a copy of the project grids) that you can edit here without affecting other prefabs. Templates keep cell numbers, so on a prefab with its own grid they may come out a different size. `Keep the selected blocks inside the safe area` is set per block on each screen: keep it on for buttons and text, and turn it off for backgrounds and bars that should reach the screen edge.
+**View while editing**: panels that cover the screen (shop, notice, settings ...) are often saved turned on, or their Canvas turned off, because the game's code opens and closes them. Use the check boxes in `View while editing` to show or hide top-level blocks while you edit. Nothing there is saved on any screen, and the Preview and Check tabs use the same view. A prefab whose root is saved turned off (the object or its Canvas) is turned on automatically while you edit, and is still saved turned off. Panels deeper inside that are hidden by turning their Canvas off are listed too, with their path; turning one on also turns on the hidden blocks above it.
+
+**Selected block**: change `Pos X / Pos Y / Width / Height / Scale` for the current screen right in the window (several blocks at once too). `Fit into the screen` shrinks a block evenly until it fits the screen and moves it inside. On a screen other than portrait, the window warns about blocks that stick out (`Fit them all into the screen`) and lists the blocks with their own layout on that screen (`Undo this one` puts one back).
+
+**Prefabs inside prefabs**: the `Open` buttons for a prefab inside the one you edit remember where you came from; the inner prefab shows `← Back to "..."`. Both open on the screen you were on (for example Landscape), without saving anything.
+
+**Grid (optional)**: open `Place on a grid`, select a block, then drag over the blue cells in the Scene view. The block snaps to the cells and follows other screen sizes nicely. The orange frame shows the cells the selected block sits on in this screen (or the range you are dragging); blocks not placed on the grid have none. `Horizontal` / `Vertical` choose how it follows: stretch (the default), stick to an edge, or center. Sticking to an edge or centering keeps the size of the cells the block was placed on, not the block's own size; press `Use its own size` to put back its portrait size. `Shrink to fit the cells` keeps the portrait size and shape and scales the block down on every screen size so it fits the cells (pictures, popups, button rows); the scale is recalculated at runtime when the screen size changes. `Pin to` (nine arrows) puts the selected blocks at the same distance from that corner or edge of the safe area as on the portrait screen, with their portrait size. Changing `Column` / `Row` / `Width` / `Height` or a mode moves the selected block right away (no extra button); hand nudges on top of the cells are kept. Save the prefab as usual to keep the result. The red area is the notch / home bar of the device with the largest one. Each screen (portrait, square, landscape) has its own grid. By default every prefab uses the project grids, shown read-only here; change them in `Tools > FlexibleUITool > Project Grids` (or the `Project grids...` button). Turn on `Use a grid only for this prefab` to give this prefab its own grids (one per screen, starting as a copy of the project grids) that you can edit here without affecting other prefabs. Templates keep cell numbers, so on a prefab with its own grid they may come out a different size. `Keep the selected blocks inside the safe area` is set per block on each screen: keep it on for buttons and text, and turn it off for backgrounds and bars that should reach the screen edge.
 
 **Several blocks at once**: select several blocks (Ctrl / Shift + click in the Hierarchy). Like Unity's Inspector, a value shared by all of them is shown as it is, and a value that differs is shown as `—`. Changing a value (role, column, row, width, height, horizontal, vertical, safe area) sets it on all selected blocks, and one Undo takes it back. `Back to Portrait` resets the selected blocks that have their own layout. Dragging in the Scene view works with one block at a time.
 
@@ -100,7 +123,7 @@ Open `Tools > FlexibleUITool > Tutorial` (or press `Tutorial` at the top of the 
 4. Press `Square`: it works the same way.
 5. Open the `Preview` tab and change the window's shape.
 6. Open the `Check` tab and press `Run check`.
-7. Finish, and keep or delete the practice prefab.
+7. Finish, and keep or delete the practice prefab. Deleting also removes the tutorial sample files in `Samples/` (the next tutorial brings them back); files you added there and an open scene are kept.
 
 **Advanced** (on the landscape screen, 6 parts):
 
@@ -134,6 +157,8 @@ The Edit tab has an **Auto-layout with AI (Claude Code)** box under the screen b
    - `Extra instructions (optional)`: write what you want in plain words, for example "In landscape, put the menu buttons on the right. Hide the banner on the square screen." The AI follows it before its own design rules. Leave it empty and the AI decides by itself. The text is kept for each prefab; `Clear` empties it. The AI still cannot change roles, grid settings, the portrait layout or other files, even if you ask.
    - When it finishes, the result box shows how many tokens the run used. Every run is also logged in `Library/FlexibleUITool/ai-runs.log`.
    - The prefab is saved and closed, and a copy is kept as a backup. The box at the top of the window shows what the AI is doing.
+   - The AI sees the same `View while editing` as you: hide popups that cover the main screen (shop, notice ...) before you start, and the AI lays out the screen behind them. The view comes back when the prefab opens again.
+   - The AI gets the parts inside full-screen containers (not only the containers), and moves a row or column made by a layout group as one block.
    - It takes a few minutes and uses your Claude usage limit. `Stop` ends it at any time.
 3. When it is done, the prefab opens again with a short summary. Check each screen with the screen buttons, fix things by hand if you like, or press `Undo AI changes` to put the prefab back as it was.
 
@@ -182,20 +207,30 @@ Canvas units: the **short side of the screen is always 1080**. Landscape 16:9 is
 
 ### Checks
 
-Preview, Check, and the CLI report the same three issues:
+Preview, Check, and the CLI report the same issues:
 
 | Issue | CLI code | Meaning |
 |---|---|---|
 | Out of screen | `OUT_OF_SCREEN` | A block leaves the screen. |
 | Overlap | `OVERLAP` | Two blocks overlap. A block fully inside another is ignored only if it is also inside it on the portrait screen (intentional layering, like a title on a bar). |
 | Control outside SafeArea | `OUTSIDE_SAFE_AREA` | A button sits under a notch or home indicator. |
+| Out of screen when shown | `HIDDEN_OUT_OF_SCREEN` | Something inside a hidden panel leaves the screen once the game shows the panel. Panels with their Canvas off and large objects saved turned off are turned on in a copy for this check (small parts such as list templates or badges are not). |
+| Squashed | `COLLAPSED` | A stretched block got a negative width or height: its fixed margins are larger than the space this screen gives it, so it and its contents disappear. Hidden blocks are checked too. |
+| Cut off in a list | `CLIPPED_IN_LIST` | A list that scrolls one way cuts its items off the other way (for example two columns wider than the list). When the game makes the items, the list's grid settings are used. |
+| Under another prefab | `UNDER_RESERVED` | A button sits under a place another prefab takes (see below) and is drawn below it, so it cannot be pressed. A backdrop button that covers the whole place is fine. |
+| Covers another prefab | `COVERS_RESERVED` | A block drawn above such a place covers part of it. |
 
 `Screen edge ratios` also checks each screen at the narrowest and widest ratio where it can appear. Fixed-size blocks overflow there first.
 
+In the Edit tab, the last five appear under `problems you cannot see right now`, without the ones the portrait screen already has. `Show` turns on the hidden panel while you edit (not saved) so you can fix it on that screen.
+
+**Places other prefabs take**: a menu bar that stays on top of other screens lives in another prefab, so it is not visible while you edit those screens. Open the prefab with the bar, select the bar, and turn on `Other prefabs keep clear of this` (under `Selected block`). The tool records where the bar sits on each screen and at which Canvas order it is drawn (saved in the project settings, updated whenever that prefab is saved). While you edit any other prefab, that place is drawn with a blue frame in the Scene view, the check reports buttons under it, and the AI gets it as `reserved` in `describe`. If the game hides the bar while some prefab is open (a title screen, a full-screen conversation ...), open that prefab and turn off `... is shown over this prefab` in the Edit tab; its place is then not drawn there and not checked.
+
 ### Runtime behavior
 
-- `FlexibleLayout` picks the screen from its own rect's width / height, with a small margin (hysteresis, default 0.01) at boundaries so it does not flicker.
+- `FlexibleLayout` picks the screen from the width / height of the screen it is shown on (its top-level canvas), with a small margin (hysteresis, default 0.01) at boundaries so it does not flicker. With `Choose the screen by: Its own size`, it uses its own rect instead.
 - It switches in Play Mode and on devices. In the editor, use the screen buttons or the Preview tab.
+- While the editor is stopped, scenes still show the layout for the Game view's shape. The tool draws a copy with that layout over the UI and hides the original's drawing; nothing in the scene or prefab changes, and the copy is never saved. Changes you make in the scene go to the base layout (the Scene view says so when you select such a UI). Turn it off with `Tools > FlexibleUITool > Show Screen Layouts While Stopped`.
 - Do not register objects that code or animation moves; switching overwrites them. Register their parent container instead.
 
 ### Languages
@@ -219,6 +254,7 @@ Versions up to 1.0.2 edited other screens through work copies in `Assets/Flexibl
 | Dragging in the Scene view picks cells instead of objects | While the grid is open and a block is selected, clicks pick cells. Close `Place on a grid`, or select in the Hierarchy. |
 | A change appeared on every screen | Non-layout changes (sprites, text, new objects) are shared. Only layout is per screen. |
 | The Preview tab is empty | No prefab is open or selected. |
+| In a scene, a UI does not follow the Game view shape while stopped | `Tools > FlexibleUITool > Show Screen Layouts While Stopped` is off, the canvas is World Space, or the prefab has no changes for that screen. |
 | Layout does not switch in Play Mode | The prefab root is not full-stretch, or the canvas uses the default Canvas Scaler instead of `Flexible Canvas Scaler`. |
 | The agent says `PREFAB_OPEN` | Save and close Prefab Mode, then ask it to retry. |
 | Auto-layout with AI says Claude Code is not logged in | Press `Connect AI`, then `Log in`. Logging in to the Claude desktop app does not log in the `claude` command; it needs its own login once. |

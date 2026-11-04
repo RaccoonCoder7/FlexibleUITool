@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -26,6 +27,7 @@ namespace FlexibleUITool.EditorTools
         private const string AutoGameViewKey = "FlexibleUITool.AutoGameView";
         private const string PreviousGameViewKey = "FlexibleUITool.PreviousGameViewIndex";
         private const string ViewKeyPrefix = "FlexibleUITool.View:";
+        private const string OpenOnKeyPrefix = "FlexibleUITool.OpenOn:";
         private const HideFlags SessionFlags = HideFlags.DontSaveInEditor | HideFlags.HideInInspector | HideFlags.NotEditable;
 
         private static readonly MethodInfo SavePrefabMethod =
@@ -33,9 +35,13 @@ namespace FlexibleUITool.EditorTools
 
         private static bool busy;
         private static string reapplyProfile;
+        private static bool reshowView;
+        private static string frameAfterSwitch;
         private static string diskMapPath;
         private static GameObject diskMapAsset;
         private static Dictionary<string, RectTransform> diskMap;
+        private static GameObject fullDiskMapAsset;
+        private static Dictionary<string, RectTransform> fullDiskMap;
         private static double nextShapeCheck;
 
         // 화면이 바뀌거나 저장됐을 때 (창 다시 그리기용)
@@ -57,7 +63,7 @@ namespace FlexibleUITool.EditorTools
             PrefabStage.prefabSaved += OnSaved;
             PrefabStage.prefabStageOpened += OnOpened;
             PrefabStage.prefabStageClosing += OnClosing;
-            EditorApplication.projectChanged += () => diskMap = null;
+            EditorApplication.projectChanged += () => { diskMap = null; fullDiskMap = null; };
             // 도메인 리로드 뒤에는 열림 이벤트가 오지 않으므로 다시 확인한다
             EditorApplication.delayCall += () => Prepare(PrefabStageUtility.GetCurrentPrefabStage());
             SceneView.duringSceneGui += _ =>
@@ -131,11 +137,10 @@ namespace FlexibleUITool.EditorTools
             if (index < 0)
                 return true;
 
-            Rect rect = ((RectTransform)stage.prefabContentsRoot.transform).rect;
-            if (rect.width <= 0f || rect.height <= 0f)
+            if (!layout.TryGetSelectionSize(out Vector2 size))
                 return true;
 
-            float aspect = rect.width / rect.height;
+            float aspect = size.x / size.y;
             if (aspect >= settings.Profiles[index].minAspect && aspect < settings.MaxAspectOf(index))
                 return true;
             profile = settings.Profiles[index];
@@ -230,6 +235,8 @@ namespace FlexibleUITool.EditorTools
             busy = true;
             try
             {
+                // 편집용으로만 켜고 끈 것은 원래대로 돌려서 기록·저장한다
+                HideView(session);
                 if (active != baseId)
                 {
                     Record(stage, layout, session, active);
@@ -241,6 +248,7 @@ namespace FlexibleUITool.EditorTools
                 if (ok)
                     SaveCount++;
                 diskMap = null;
+                fullDiskMap = null;
 
                 // 이제 내용 = 저장된 기준 배치
                 RebuildLinks(session, root);
@@ -254,10 +262,12 @@ namespace FlexibleUITool.EditorTools
                     if (active == baseId)
                         session.basePlacements = kept;
                     ApplyProfileStates(layout, session, viewAfter);
+                    ApplyNested(stage, viewAfter);
                 }
                 session.profileId = viewAfter;
                 SessionState.SetString(ViewKeyPrefix + stage.assetPath, viewAfter);
                 session.placements.RemoveAll(p => p.target == null);
+                ShowView(session);
                 stage.ClearDirtiness();
                 if (active != viewAfter)
                     ClearUndo(root, session);
@@ -269,6 +279,9 @@ namespace FlexibleUITool.EditorTools
 
             if (active != viewAfter && AutoGameView)
                 SelectWorkResolution(settings.Find(viewAfter));
+            // 화면 모양이 바뀐 뒤 Scene 뷰를 프리팹에 맞춘다 (모양은 Game 뷰 크기가 바뀐 다음 프레임에 바뀐다)
+            if (active != viewAfter)
+                frameAfterSwitch = stage.assetPath;
             Changed?.Invoke();
             SceneView.RepaintAll();
             return ok;
@@ -287,6 +300,8 @@ namespace FlexibleUITool.EditorTools
             FlexibleWorkspace session = Prepare(stage);
             string active = GetActiveProfileId(stage);
             reapplyProfile = null;
+            HideView(session);
+            reshowView = true;
             if (active == layout.Settings.BaseProfileId)
                 return;
 
@@ -301,6 +316,7 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             diskMap = null;
+            fullDiskMap = null;
             PrefabStage stage = PrefabStageUtility.GetPrefabStage(root);
             if (!IsReady(stage, out FlexibleLayout layout))
                 return;
@@ -312,6 +328,7 @@ namespace FlexibleUITool.EditorTools
             {
                 session.placements.Clear();
                 ApplyProfileStates(layout, session, reapplyProfile);
+                ApplyNested(stage, reapplyProfile);
                 reapplyProfile = null;
                 // 다시 적용한 값은 이미 저장된 화면 기록이라 저장할 변경이 아니다
                 stage.ClearDirtiness();
@@ -321,7 +338,182 @@ namespace FlexibleUITool.EditorTools
                         stage.ClearDirtiness();
                 };
             }
+            if (reshowView)
+            {
+                reshowView = false;
+                ShowView(session);
+                stage.ClearDirtiness();
+            }
             Changed?.Invoke();
+        }
+
+        // 지금 화면(기준 화면이 아닐 때)에서 기준 배치와 달라 저장하면 이 화면의 기록이 될 블록 (저장 전 변경 포함).
+        // 편집용 보기로만 켜고 끈 것은 세지 않는다
+        public static List<RectTransform> ChangedBlocks(PrefabStage stage)
+        {
+            var result = new List<RectTransform>();
+            FlexibleWorkspace session = GetSession(stage);
+            if (session == null || IsBaseView(stage))
+                return result;
+            foreach (FlexibleWorkspaceLink link in session.links)
+            {
+                if (link.target == null)
+                    continue;
+                RectTransform saved = FindSavedByPath(stage, link.sourcePath);
+                if (saved == null)
+                    continue;
+                if (FlexibleWorkspaceService.TryBuildState(link.target, saved, null, out FlexibleProfileState state, out _))
+                {
+                    bool viewOnly = session.FindView(link.target.gameObject) != null && state.controlActive && !state.controlLayoutGroup
+                        && state.rect.Approximately(FlexibleRectState.Capture(saved), 0.01f);
+                    if (!viewOnly)
+                        result.Add(link.target);
+                }
+                else if (session.FindPlacement(link.target) != null)
+                {
+                    result.Add(link.target);
+                }
+            }
+            return result;
+        }
+
+        // ───────── 편집용 보기 (저장되지 않음) ─────────
+
+        // 편집하는 동안만 켜거나 끈다. 저장할 때는 원래 상태로 저장된다
+        public static void SetViewVisible(PrefabStage stage, GameObject target, bool visible)
+        {
+            FlexibleWorkspace session = Prepare(stage);
+            if (session == null || target == null)
+                return;
+            bool wasDirty = stage.scene.isDirty;
+            FlexibleViewOverride view = session.FindView(target);
+            if (view == null)
+            {
+                if (FlexibleViewOverride.IsVisible(target) == visible)
+                    return;
+                Canvas canvas = target.GetComponent<Canvas>();
+                view = new FlexibleViewOverride { target = target, savedActive = target.activeSelf, savedCanvas = canvas == null || canvas.enabled };
+                session.viewOverrides.Add(view);
+            }
+            view.shown = visible;
+            ApplyShown(view);
+            // 원래 보이던 그대로가 되면 따로 기억할 필요가 없다
+            if (view.ExpectedActive == view.savedActive && view.ExpectedCanvas == view.savedCanvas)
+                session.viewOverrides.Remove(view);
+            KeepClean(stage, wasDirty);
+            Changed?.Invoke();
+            SceneView.RepaintAll();
+        }
+
+        // 켜고 끈 다음 프레임에 레이아웃이 다시 계산되며 「변경 있음」이 붙는 것을 지운다 (원래 깨끗했을 때만)
+        private static void KeepClean(PrefabStage stage, bool wasDirty)
+        {
+            if (wasDirty)
+                return;
+            stage.ClearDirtiness();
+            int frames = 2;
+            EditorApplication.CallbackFunction clear = null;
+            clear = () =>
+            {
+                if (stage != null && stage.prefabContentsRoot != null)
+                    stage.ClearDirtiness();
+                if (--frames <= 0)
+                    EditorApplication.update -= clear;
+            };
+            EditorApplication.update += clear;
+        }
+
+        // 편집용 보기를 모두 원래대로 (keepRoot면 꺼진 채 저장된 맨 위는 계속 켜 둔다)
+        public static void ClearView(PrefabStage stage, bool keepRoot)
+        {
+            FlexibleWorkspace session = GetSession(stage);
+            if (session == null)
+                return;
+            bool wasDirty = stage.scene.isDirty;
+            GameObject root = stage.prefabContentsRoot;
+            foreach (FlexibleViewOverride view in session.viewOverrides.ToList())
+            {
+                if (keepRoot && view.target == root)
+                    continue;
+                if (view.target != null)
+                    ApplySaved(view);
+                session.viewOverrides.Remove(view);
+            }
+            if (!wasDirty)
+                stage.ClearDirtiness();
+            Changed?.Invoke();
+            SceneView.RepaintAll();
+        }
+
+        public static FlexibleViewOverride FindView(PrefabStage stage, GameObject target)
+        {
+            FlexibleWorkspace session = GetSession(stage);
+            return session != null ? session.FindView(target) : null;
+        }
+
+        // GetViewByPath로 받아 둔 보기를 다시 연 프리팹에 되살린다 (없어진 경로는 건너뛴다)
+        public static void RestoreViewByPath(PrefabStage stage, Dictionary<string, bool> view)
+        {
+            if (stage == null || view == null)
+                return;
+            Transform root = stage.prefabContentsRoot.transform;
+            foreach (KeyValuePair<string, bool> pair in view)
+            {
+                Transform target = FlexiblePathUtility.FindByPath(root, pair.Key);
+                if (target != null)
+                    SetViewVisible(stage, target.gameObject, pair.Value);
+            }
+        }
+
+        // 미리보기·검수 사본에 같은 보기를 적용하기 위한 경로별 값 (루트는 "")
+        public static Dictionary<string, bool> GetViewByPath(PrefabStage stage)
+        {
+            var result = new Dictionary<string, bool>();
+            FlexibleWorkspace session = GetSession(stage);
+            if (session == null)
+                return result;
+            Transform root = stage.prefabContentsRoot.transform;
+            foreach (FlexibleViewOverride view in session.viewOverrides)
+            {
+                if (view.target != null)
+                    result[view.target.transform == root ? "" : FlexiblePathUtility.GetPath(root, view.target.transform)] = view.shown;
+            }
+            return result;
+        }
+
+        private static void HideView(FlexibleWorkspace session)
+        {
+            session.viewOverrides.RemoveAll(v => v.target == null);
+            // 편집용으로 바꾼 뒤 사용자가 직접 켜고 끈 것은 진짜 변경으로 보고 그대로 둔다
+            session.viewOverrides.RemoveAll(v => v.target.activeSelf != v.ExpectedActive || (v.Canvas != null && v.Canvas.enabled != v.ExpectedCanvas));
+            foreach (FlexibleViewOverride view in session.viewOverrides)
+                ApplySaved(view);
+        }
+
+        // 지금 상태(= 저장된 상태)를 원래 값으로 다시 기억하고 편집용 값을 적용한다
+        private static void ShowView(FlexibleWorkspace session)
+        {
+            session.viewOverrides.RemoveAll(v => v.target == null);
+            foreach (FlexibleViewOverride view in session.viewOverrides)
+            {
+                view.savedActive = view.target.activeSelf;
+                view.savedCanvas = view.Canvas == null || view.Canvas.enabled;
+                ApplyShown(view);
+            }
+        }
+
+        private static void ApplyShown(FlexibleViewOverride view)
+        {
+            view.target.SetActive(view.ExpectedActive);
+            if (view.Canvas != null)
+                view.Canvas.enabled = view.ExpectedCanvas;
+        }
+
+        private static void ApplySaved(FlexibleViewOverride view)
+        {
+            view.target.SetActive(view.savedActive);
+            if (view.Canvas != null)
+                view.Canvas.enabled = view.savedCanvas;
         }
 
         private static bool InvokeSave(PrefabStage stage)
@@ -400,6 +592,7 @@ namespace FlexibleUITool.EditorTools
                 if (saved != null)
                     ApplySaved(saved, link.target);
             }
+            RestoreNested(stage);
         }
 
         private static void ApplySaved(RectTransform saved, RectTransform target)
@@ -430,16 +623,9 @@ namespace FlexibleUITool.EditorTools
                     continue;
 
                 FlexibleRectState result = state.gridOrigin ? state.gridResult : state.rect;
-                result.localScale = baseScale;
-                session.placements.Add(new FlexibleGridPlacement
-                {
-                    target = entry.target,
-                    cell = state.gridCell,
-                    modeX = state.gridModeX,
-                    modeY = state.gridModeY,
-                    insideSafeArea = state.gridInsideSafeArea,
-                    result = result,
-                });
+                if (!state.fit)
+                    result.localScale = baseScale;
+                session.placements.Add(FlexibleWorkspaceService.FromState(entry.target, state, result));
             }
         }
 
@@ -469,6 +655,56 @@ namespace FlexibleUITool.EditorTools
             FlexibleWorkspace session = GetSession(stage);
             FlexibleWorkspaceLink link = session != null ? session.links.Find(l => l.target == target) : null;
             return link != null ? FindSavedByPath(stage, link.sourcePath) : null;
+        }
+
+        // 안쪽 프리팹(자기 FlexibleLayout을 가진 중첩 프리팹)도 지금 화면으로 보여 준다.
+        // 보기 전용이라 바깥 프리팹 기록에 들어가지 않고(경로 목록에서 빠짐), 저장 전에 RestoreNested로 되돌린다
+        private static void ApplyNested(PrefabStage stage, string profileId)
+        {
+            foreach (FlexibleLayout nested in NestedLayouts(stage))
+            {
+                nested.RecaptureBase();
+                nested.ApplyForScreen(profileId);
+            }
+        }
+
+        private static void RestoreNested(PrefabStage stage)
+        {
+            Transform root = stage.prefabContentsRoot.transform;
+            foreach (FlexibleLayout nested in NestedLayouts(stage))
+            {
+                foreach (FlexibleLayoutEntry entry in nested.Entries)
+                {
+                    if (entry.target == null)
+                        continue;
+                    RectTransform saved = FindSavedAnywhere(stage, FlexiblePathUtility.GetPath(root, entry.target));
+                    if (saved != null)
+                        ApplySaved(saved, entry.target);
+                }
+            }
+        }
+
+        private static IEnumerable<FlexibleLayout> NestedLayouts(PrefabStage stage)
+        {
+            GameObject root = stage.prefabContentsRoot;
+            return root.GetComponentsInChildren<FlexibleLayout>(true).Where(l => l.gameObject != root);
+        }
+
+        // 안쪽 프리팹 내부까지 포함해 저장된 프리팹에서 같은 경로의 오브젝트를 찾는다
+        private static RectTransform FindSavedAnywhere(PrefabStage stage, string path)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(stage.assetPath);
+            if (asset == null || !(asset.transform is RectTransform assetRoot))
+                return null;
+
+            if (fullDiskMap == null || fullDiskMapAsset != asset)
+            {
+                fullDiskMap = new Dictionary<string, RectTransform>();
+                foreach (RectTransform rt in assetRoot.GetComponentsInChildren<RectTransform>(true))
+                    fullDiskMap[FlexiblePathUtility.GetPath(assetRoot, rt)] = rt;
+                fullDiskMapAsset = asset;
+            }
+            return fullDiskMap.TryGetValue(path, out RectTransform saved) && saved != null ? saved : null;
         }
 
         private static RectTransform FindSavedByPath(PrefabStage stage, string path)
@@ -514,21 +750,78 @@ namespace FlexibleUITool.EditorTools
                 Debug.Log("[FlexibleUITool] " + T("The screen view was reset to the base screen after a script reload."));
             }
             SessionState.SetString(ViewKeyPrefix + stage.assetPath, session.profileId);
-            if (!wasDirty)
-                stage.ClearDirtiness();
+
+            // 맨 위가 꺼진 채(오브젝트 또는 Canvas) 저장된 프리팹(실행 중에 코드가 켬)은 편집하는 동안만 켜서 보여 준다. 저장은 꺼진 그대로
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(stage.assetPath);
+            bool savedActive = asset != null ? asset.activeSelf : root.activeSelf;
+            Canvas savedRootCanvas = asset != null ? asset.GetComponent<Canvas>() : root.GetComponent<Canvas>();
+            bool savedCanvas = savedRootCanvas == null || savedRootCanvas.enabled;
+            if (!savedActive || !savedCanvas)
+            {
+                var view = new FlexibleViewOverride { target = root, savedActive = savedActive, savedCanvas = savedCanvas, shown = true };
+                session.viewOverrides.Add(view);
+                ApplyShown(view);
+            }
+            KeepClean(stage, wasDirty);
             return session;
+        }
+
+        // 다음에 이 프리팹을 열 때 이 화면으로 연다 (바깥·안쪽 프리팹을 오갈 때 보던 화면을 이어 간다)
+        public static void OpenNextOn(string assetPath, string profileId)
+        {
+            if (string.IsNullOrEmpty(profileId))
+                SessionState.EraseString(OpenOnKeyPrefix + assetPath);
+            else
+                SessionState.SetString(OpenOnKeyPrefix + assetPath, profileId);
         }
 
         private static void OnOpened(PrefabStage stage)
         {
             EnsureEnvironmentScaler(stage);
             SessionState.EraseString(ViewKeyPrefix + stage.assetPath);
+            string openOn = SessionState.GetString(OpenOnKeyPrefix + stage.assetPath, "");
+            SessionState.EraseString(OpenOnKeyPrefix + stage.assetPath);
             if (Prepare(stage) == null)
                 return;
 
-            if (AutoGameView && IsReady(stage, out FlexibleLayout layout))
-                SelectWorkResolution(layout.Settings.Find(layout.Settings.BaseProfileId));
+            if (!string.IsNullOrEmpty(openOn))
+                SwitchOnOpen(stage, openOn);
+            if (AutoGameView)
+                SelectWorkResolution(GetActiveProfile(stage));
+            frameAfterSwitch = stage.assetPath;
             Changed?.Invoke();
+        }
+
+        // 방금 연 프리팹(내용 = 저장된 기준 배치)을 저장하지 않고 다른 화면으로 바꾼다
+        private static void SwitchOnOpen(PrefabStage stage, string profileId)
+        {
+            if (!IsReady(stage, out FlexibleLayout layout))
+                return;
+            FlexibleProfileSettings settings = layout.Settings;
+            FlexibleWorkspace session = Prepare(stage);
+            if (settings.Find(profileId) == null || profileId == settings.BaseProfileId || session.profileId != settings.BaseProfileId)
+                return;
+
+            bool wasDirty = stage.scene.isDirty;
+            busy = true;
+            try
+            {
+                HideView(session);
+                session.basePlacements = new List<FlexibleGridPlacement>(session.placements);
+                session.placements.Clear();
+                ApplyProfileStates(layout, session, profileId);
+                ApplyNested(stage, profileId);
+                session.profileId = profileId;
+                SessionState.SetString(ViewKeyPrefix + stage.assetPath, profileId);
+                session.placements.RemoveAll(p => p.target == null);
+                ShowView(session);
+                ClearUndo((RectTransform)stage.prefabContentsRoot.transform, session);
+                KeepClean(stage, wasDirty);
+            }
+            finally
+            {
+                busy = false;
+            }
         }
 
         private static void OnClosing(PrefabStage stage)
@@ -550,12 +843,34 @@ namespace FlexibleUITool.EditorTools
             if (EditorApplication.timeSinceStartup < nextShapeCheck)
                 return;
             nextShapeCheck = EditorApplication.timeSinceStartup + 0.5;
-            if (busy || !AutoGameView || EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
+            if (busy || EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
                 return;
 
             PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
-            if (!IsShapeMatching(stage, out FlexibleProfile profile))
+            bool matching = IsShapeMatching(stage, out FlexibleProfile profile);
+            // 화면을 바꾼 뒤 모양이 맞춰지면 Scene 뷰를 프리팹 전체에 맞춘다
+            if (frameAfterSwitch != null && stage != null && stage.assetPath == frameAfterSwitch && (matching || !AutoGameView))
+            {
+                frameAfterSwitch = null;
+                FrameStage(stage);
+            }
+            if (AutoGameView && !matching)
                 SelectWorkResolution(profile);
+        }
+
+        // Scene 뷰를 열린 프리팹 전체가 보이게 맞춘다
+        public static void FrameStage(PrefabStage stage)
+        {
+            SceneView view = SceneView.lastActiveSceneView;
+            if (view == null || stage == null || !(stage.prefabContentsRoot.transform is RectTransform root))
+                return;
+            var corners = new Vector3[4];
+            root.GetWorldCorners(corners);
+            var bounds = new Bounds(corners[0], Vector3.zero);
+            foreach (Vector3 corner in corners)
+                bounds.Encapsulate(corner);
+            if (bounds.size.sqrMagnitude > 0f)
+                view.Frame(bounds, false);
         }
 
         // 처음 바꾸기 전의 Game 뷰 해상도를 기억해 두었다가 프리팹을 닫을 때 되돌린다

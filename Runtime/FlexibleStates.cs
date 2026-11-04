@@ -153,6 +153,24 @@ namespace FlexibleUITool
         // 그리드로 배치한 적이 있으면 그때의 결과 (손으로 고친 뒤에도 남겨 칸+보정을 다시 계산한다)
         public bool gridOrigin;
         public FlexibleRectState gridResult;
+        // 칸에 맞춰 줄이는 블록: 칸 영역(부모 기준 앵커)과 최대 배율. 같은 화면 안에서 크기가 바뀌어도 다시 맞춘다
+        public bool fit;
+        public Vector2 fitAnchorMin;
+        public Vector2 fitAnchorMax;
+        public float fitMaxScale = 1f;
+
+        // 블록이 칸 영역에 다 들어가는 가장 큰 배율(최대 fitMaxScale)로 맞춘다
+        public void ApplyFit(RectTransform target)
+        {
+            if (!fit || !(target.parent is RectTransform parent))
+                return;
+            Vector2 room = Vector2.Scale(parent.rect.size, fitAnchorMax - fitAnchorMin);
+            Vector2 size = target.rect.size;
+            if (room.x <= 0f || room.y <= 0f || size.x <= 0f || size.y <= 0f)
+                return;
+            float scale = Mathf.Min(fitMaxScale, room.x / size.x, room.y / size.y);
+            target.localScale = new Vector3(scale, scale, target.localScale.z);
+        }
 
         public static FlexibleProfileState Capture(FlexibleLayoutEntry entry, string profileId, bool controlActive, bool controlLayoutGroup)
         {
@@ -181,6 +199,7 @@ namespace FlexibleUITool
         public void ApplyTo(FlexibleLayoutEntry entry, FlexibleProfileState fallback)
         {
             rect.ApplyTo(entry.target);
+            ApplyFit(entry.target);
 
             FlexibleProfileState group = controlLayoutGroup ? this : fallback;
             if (group != null && group.controlLayoutGroup && entry.layoutGroup != null)

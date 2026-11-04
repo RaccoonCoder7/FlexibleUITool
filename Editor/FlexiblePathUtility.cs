@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace FlexibleUITool.EditorTools
 {
@@ -38,6 +39,53 @@ namespace FlexibleUITool.EditorTools
                     builder.Append('/');
             }
             return builder.ToString();
+        }
+
+        // 부모의 레이아웃 그룹(가로·세로 줄, 격자)이 위치를 정하는 블록이면 그 부모. 아니면 null
+        public static RectTransform GetLayoutGroupParent(Transform target)
+        {
+            if (target == null || target.parent == null)
+                return null;
+            var group = target.parent.GetComponent<LayoutGroup>();
+            if (group == null || !group.enabled)
+                return null;
+            var ignorer = target.GetComponent<ILayoutIgnorer>();
+            if (ignorer != null && ignorer.ignoreLayout)
+                return null;
+            return target.parent as RectTransform;
+        }
+
+        // 레이아웃 그룹 안이면, 대신 옮겨야 하는 블록 (그룹이 겹쳐 있으면 가장 바깥 그룹). 아니면 null
+        public static RectTransform GetPlaceInstead(Transform target)
+        {
+            RectTransform result = null;
+            for (RectTransform group = GetLayoutGroupParent(target); group != null; group = GetLayoutGroupParent(group))
+                result = group;
+            return result;
+        }
+
+        // GetPath로 만든 경로("A/B[1]/C")로 찾는다. 없으면 null
+        public static Transform FindByPath(Transform root, string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return root;
+            Transform current = root;
+            foreach (string segment in path.Split('/'))
+            {
+                Transform next = null;
+                foreach (Transform child in current)
+                {
+                    if (GetSegment(child) == segment)
+                    {
+                        next = child;
+                        break;
+                    }
+                }
+                if (next == null)
+                    return null;
+                current = next;
+            }
+            return current;
         }
 
         private static void Collect(Transform parent, List<RectTransform> result)

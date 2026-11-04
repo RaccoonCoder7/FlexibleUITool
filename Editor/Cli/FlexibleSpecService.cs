@@ -61,10 +61,25 @@ namespace FlexibleUITool.EditorTools
                     else if (string.IsNullOrEmpty(block.path) && (layout == null || !layout.Roles.Any(r => r.target != null && r.role == block.role)))
                         errors.Add($"{where}: no block has this role");
 
-                    if (!block.reset && !block.HasCell && !block.HasRect && string.IsNullOrEmpty(block.visible))
-                        errors.Add($"{where}: nothing to do (set cell, rect, visible or reset)");
-                    if (block.HasCell && block.HasRect)
-                        errors.Add($"{where}: use either cell or rect, not both");
+                    if (!block.reset && !block.HasCell && !block.HasRect && !block.HasPin && !block.HasFollow && string.IsNullOrEmpty(block.visible))
+                        errors.Add($"{where}: nothing to do (set cell, rect, pin, follow, visible or reset)");
+                    if ((block.HasCell ? 1 : 0) + (block.HasRect ? 1 : 0) + (block.HasPin ? 1 : 0) + (block.HasFollow ? 1 : 0) > 1)
+                        errors.Add($"{where}: use only one of cell, rect, pin or follow");
+                    if (block.fit && !block.HasCell && !block.HasPin)
+                        errors.Add($"{where}: fit needs cell or pin");
+                    if (block.scaleBy != 0f && (block.scaleBy < 0f || (block.scale != null && block.scale.Length > 0)))
+                        errors.Add($"{where}: scaleBy must be positive and cannot be used with scale");
+                    if ((IsKeep(block.modeX) || IsKeep(block.modeY)) && !block.HasCell)
+                        errors.Add($"{where}: mode 'keep' needs cell");
+                    if (block.HasFollow)
+                    {
+                        if (!map.TryGetValue(block.follow, out RectTransform followed))
+                            errors.Add($"{where}: follow '{block.follow}' not found");
+                        else if (!string.IsNullOrEmpty(block.path) && map.TryGetValue(block.path, out RectTransform follower) && follower.parent != followed.parent)
+                            errors.Add($"{where}: follow '{block.follow}' must have the same parent");
+                    }
+                    if (block.HasPin && !TryParsePin(block.pin, out _, out _))
+                        errors.Add($"{where}: unknown pin '{block.pin}' (top-left, top, top-right, left, center, right, bottom-left, bottom, bottom-right)");
                     if (block.cell != null && block.cell.Length != 0 && block.cell.Length != 4)
                         errors.Add($"{where}: cell must be [column, row, width, height]");
                     if (!TryParseMode(block.modeX, true, out _))
@@ -73,6 +88,12 @@ namespace FlexibleUITool.EditorTools
                         errors.Add($"{where}: unknown modeY '{block.modeY}'");
                     if (!string.IsNullOrEmpty(block.visible) && block.visible != "show" && block.visible != "hide")
                         errors.Add($"{where}: visible must be 'show' or 'hide'");
+                    if ((block.HasCell || block.HasRect || block.HasPin || block.HasFollow) && !string.IsNullOrEmpty(block.path) && map.TryGetValue(block.path, out RectTransform placed))
+                    {
+                        RectTransform group = FlexiblePathUtility.GetPlaceInstead(placed);
+                        if (group != null)
+                            errors.Add($"{where}: placed by the layout group on '{FlexiblePathUtility.GetPath(root, group)}'; give the cell to that block instead (visible is fine)");
+                    }
                 }
             }
 
@@ -121,13 +142,21 @@ namespace FlexibleUITool.EditorTools
             canvasObject.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
             ((RectTransform)canvasObject.transform).sizeDelta = GetWorkSize(profile, settings);
             rootRect.SetParent(canvasObject.transform, false);
+            // 맨 위가 캔버스인 프리팹은 저장된 크기·배율이 0이라 계산용으로 화면에 맞추고, 끝나면 원래 값으로 돌린다
+            bool canvasRoot = root.GetComponent<Canvas>() != null;
+            FlexibleRectState savedRoot = FlexibleRectState.Capture(rootRect);
+            if (canvasRoot)
+                FlexiblePreviewRenderer.FitCopy(rootRect);
 
             GameObject sourceRoot = null;
+            BaseSizes baseSizes = null;
             try
             {
                 var context = new FlexibleGridContext(rootRect, layout != null ? layout.GetGrid(profile.id) : profile.grid, settings.GetSafeInsets(profileIndex));
                 Dictionary<string, RectTransform> map = FlexiblePathUtility.BuildMap(rootRect);
-                foreach (FlexibleSpecBlock block in specProfile.blocks ?? Array.Empty<FlexibleSpecBlock>())
+                // follow는 따라갈 블록이 먼저 자리를 잡은 뒤에 놓는다
+                IEnumerable<FlexibleSpecBlock> ordered = (specProfile.blocks ?? Array.Empty<FlexibleSpecBlock>()).OrderBy(b => b.HasFollow ? 1 : 0);
+                foreach (FlexibleSpecBlock block in ordered)
                 {
                     foreach (RectTransform target in Resolve(block, map, layout))
                     {
@@ -143,12 +172,51 @@ namespace FlexibleUITool.EditorTools
                             ToRectState(block, target).ApplyTo(target);
                             workspace.placements.RemoveAll(p => p.target == target);
                         }
+                        else if (block.HasPin)
+                        {
+                            // 안전 영역의 한 모서리(또는 가운데)에 세로(기준) 화면에서와 같은 거리·크기로 붙인다
+                            TryParsePin(block.pin, out FlexibleAxisMode modeX, out FlexibleAxisMode modeY);
+                            baseSizes ??= new BaseSizes(prefabPath, settings);
+                            var whole = new FlexibleCell(0, 0, context.grid.columns, context.grid.rows);
+                            FlexibleGridAdjustment adjustment = ToAdjustment(block, workspace, target);
+                            string path = FlexiblePathUtility.GetPath(rootRect, target);
+                            Rect? baseRect = baseSizes.GetRect(path);
+                            if (baseRect.HasValue)
+                            {
+                                adjustment.size += KeepSizeOffset(context, target, whole, modeX, modeY, block.safeArea, baseRect.Value.size);
+                                adjustment.position += PinOffset(modeX, modeY, baseRect.Value, baseSizes.Screen, context.grid.margin);
+                            }
+                            FlexibleGridPlacementService.Apply(context, workspace, target, whole, modeX, modeY, block.safeArea, adjustment, block.fit);
+                        }
                         else if (block.HasCell)
                         {
                             TryParseMode(block.modeX, true, out FlexibleAxisMode modeX);
                             TryParseMode(block.modeY, false, out FlexibleAxisMode modeY);
                             var cell = new FlexibleCell(block.cell[0], block.cell[1], block.cell[2], block.cell[3]);
-                            FlexibleGridPlacementService.Apply(context, workspace, target, cell, modeX, modeY, block.safeArea, ToAdjustment(block));
+                            FlexibleGridAdjustment adjustment = ToAdjustment(block, workspace, target);
+                            if (block.keepSize || block.fit)
+                            {
+                                baseSizes ??= new BaseSizes(prefabPath, settings);
+                                FlexibleAxisMode sizeX = block.fit && modeX == FlexibleAxisMode.Stretch ? FlexibleAxisMode.Center : modeX;
+                                FlexibleAxisMode sizeY = block.fit && modeY == FlexibleAxisMode.Stretch ? FlexibleAxisMode.Center : modeY;
+                                adjustment.size += KeepSizeOffset(context, target, cell, sizeX, sizeY, block.safeArea, baseSizes.Get(FlexiblePathUtility.GetPath(rootRect, target)));
+                            }
+                            FlexibleGridPlacementService.Apply(context, workspace, target, cell, modeX, modeY, block.safeArea, adjustment, block.fit);
+                            if (IsKeep(block.modeX) || IsKeep(block.modeY))
+                            {
+                                // 코드가 움직이는 축 등: 그 축만 세로(기준) 값으로 되돌린다 (칸 기록 없이 직접 지정한 배치가 된다)
+                                sourceRoot ??= PrefabUtility.LoadPrefabContents(prefabPath);
+                                KeepAxes(target, rootRect, (RectTransform)sourceRoot.transform, IsKeep(block.modeX), IsKeep(block.modeY));
+                                workspace.placements.RemoveAll(p => p.target == target);
+                            }
+                        }
+                        else if (block.HasFollow)
+                        {
+                            baseSizes ??= new BaseSizes(prefabPath, settings);
+                            Follow(target, map[block.follow], baseSizes, FlexiblePathUtility.GetPath(rootRect, target), block.follow);
+                            if (block.scaleBy > 0f || (block.scale != null && block.scale.Length > 0))
+                                target.localScale = ToAdjustment(block, workspace, target).scale;
+                            workspace.placements.RemoveAll(p => p.target == target);
                         }
 
                         if (block.visible == "show" || block.visible == "hide")
@@ -158,11 +226,179 @@ namespace FlexibleUITool.EditorTools
             }
             finally
             {
+                baseSizes?.Dispose();
                 if (sourceRoot != null)
                     PrefabUtility.UnloadPrefabContents(sourceRoot);
+                if (canvasRoot)
+                    savedRoot.ApplyTo(rootRect);
                 rootRect.SetParent(null, false);
                 UnityEngine.Object.DestroyImmediate(canvasObject);
             }
+        }
+
+        // 크기를 지키는 축(stretch가 아닌 축)은 칸 크기 대신 세로(기준) 화면에서의 블록 크기를 쓰도록 크기 보정을 구한다
+        internal static Vector2 KeepSizeOffset(FlexibleGridContext context, RectTransform target, FlexibleCell cell,
+            FlexibleAxisMode modeX, FlexibleAxisMode modeY, bool insideSafeArea, Vector2? baseSize)
+        {
+            if (!baseSize.HasValue || !FlexibleGridMath.TryComputePlacement(target, context, cell, modeX, modeY, insideSafeArea, out FlexibleRectState slot))
+                return Vector2.zero;
+            FlexibleCell clamped = cell.Clamped(context.grid);
+            var offset = Vector2.zero;
+            if (FlexibleGridMath.ResolveX(modeX, clamped, context.grid) != FlexibleAxisMode.Stretch)
+                offset.x = baseSize.Value.x - slot.sizeDelta.x;
+            if (FlexibleGridMath.ResolveY(modeY, clamped, context.grid) != FlexibleAxisMode.Stretch)
+                offset.y = baseSize.Value.y - slot.sizeDelta.y;
+            return offset;
+        }
+
+        public static bool IsKeep(string mode)
+        {
+            return string.Equals((mode ?? "").Trim(), "keep", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // 고른 축의 앵커·피벗·위치·크기를 세로(기준) 값으로 되돌린다
+        private static void KeepAxes(RectTransform target, RectTransform root, RectTransform sourceRoot, bool x, bool y)
+        {
+            string path = FlexiblePathUtility.GetPath(root, target);
+            if (!FlexiblePathUtility.BuildMap(sourceRoot).TryGetValue(path, out RectTransform source))
+                return;
+            FlexibleRectState current = FlexibleRectState.Capture(target);
+            FlexibleRectState saved = FlexibleRectState.Capture(source);
+            for (int i = 0; i < 2; i++)
+            {
+                if ((i == 0 && !x) || (i == 1 && !y))
+                    continue;
+                current.anchorMin[i] = saved.anchorMin[i];
+                current.anchorMax[i] = saved.anchorMax[i];
+                current.pivot[i] = saved.pivot[i];
+                current.anchoredPosition[i] = saved.anchoredPosition[i];
+                current.sizeDelta[i] = saved.sizeDelta[i];
+            }
+            current.ApplyTo(target);
+        }
+
+        // 같은 부모 아래 다른 블록(followed)과 세로 화면에서의 관계를 지킨다.
+        // 그 블록의 60% 이상을 덮던 축은 같은 여백으로 늘어나고, 아니면 가까운 쪽 가장자리(또는 가운데)에서 같은 거리·크기를 지킨다.
+        // followed와 같은 앵커를 쓰므로 화면 크기가 바뀌어도 함께 움직인다
+        private static void Follow(RectTransform target, RectTransform followed, BaseSizes baseSizes, string path, string followedPath)
+        {
+            Rect? b = baseSizes.GetRect(path);
+            Rect? r = baseSizes.GetRect(followedPath);
+            if (!b.HasValue || !r.HasValue)
+                return;
+            FlexibleRectState state = FlexibleRectState.Capture(target);
+            for (int i = 0; i < 2; i++)
+            {
+                float b0 = b.Value.min[i], b1 = b.Value.max[i], r0 = r.Value.min[i], r1 = r.Value.max[i];
+                float aMin = followed.anchorMin[i], aMax = followed.anchorMax[i];
+                float oMin = followed.offsetMin[i], oMax = followed.offsetMax[i];
+                float startGap = b0 - r0, endGap = r1 - b1, centerGap = (b0 + b1) * 0.5f - (r0 + r1) * 0.5f;
+                if (b1 - b0 >= (r1 - r0) * 0.6f)
+                {
+                    state.anchorMin[i] = aMin;
+                    state.anchorMax[i] = aMax;
+                    state.pivot[i] = 0.5f;
+                    float min = oMin + startGap, max = oMax - endGap;
+                    state.sizeDelta[i] = max - min;
+                    state.anchoredPosition[i] = (min + max) * 0.5f;
+                    continue;
+                }
+                if (Mathf.Abs(startGap) <= Mathf.Abs(endGap) && Mathf.Abs(startGap) <= Mathf.Abs(centerGap))
+                {
+                    state.anchorMin[i] = state.anchorMax[i] = aMin;
+                    state.pivot[i] = 0f;
+                    state.anchoredPosition[i] = oMin + startGap;
+                }
+                else if (Mathf.Abs(endGap) <= Mathf.Abs(centerGap))
+                {
+                    state.anchorMin[i] = state.anchorMax[i] = aMax;
+                    state.pivot[i] = 1f;
+                    state.anchoredPosition[i] = oMax - endGap;
+                }
+                else
+                {
+                    state.anchorMin[i] = state.anchorMax[i] = (aMin + aMax) * 0.5f;
+                    state.pivot[i] = 0.5f;
+                    state.anchoredPosition[i] = (oMin + oMax) * 0.5f + centerGap;
+                }
+                state.sizeDelta[i] = b1 - b0;
+            }
+            state.ApplyTo(target);
+        }
+
+        public static bool TryParsePin(string pin, out FlexibleAxisMode modeX, out FlexibleAxisMode modeY)
+        {
+            modeX = FlexibleAxisMode.Center;
+            modeY = FlexibleAxisMode.Center;
+            string[] parts = (pin ?? "").ToLowerInvariant().Split('-');
+            if (parts.Length == 0 || parts.Length > 2)
+                return false;
+            foreach (string part in parts)
+            {
+                switch (part)
+                {
+                    case "left": modeX = FlexibleAxisMode.Start; break;
+                    case "right": modeX = FlexibleAxisMode.End; break;
+                    case "top": modeY = FlexibleAxisMode.End; break;
+                    case "bottom": modeY = FlexibleAxisMode.Start; break;
+                    case "center": if (parts.Length != 1) return false; break;
+                    default: return false;
+                }
+            }
+            return true;
+        }
+
+        // 세로 화면에서 그 가장자리까지의 거리를 지킨다 (칸 영역은 안전 영역에서 margin만큼 안쪽이라 그만큼 뺀다). 가운데 축은 화면 가운데로부터의 거리
+        internal static Vector2 PinOffset(FlexibleAxisMode modeX, FlexibleAxisMode modeY, Rect block, Vector2 screen, float margin)
+        {
+            var offset = Vector2.zero;
+            if (modeX == FlexibleAxisMode.Start)
+                offset.x = block.xMin - margin;
+            else if (modeX == FlexibleAxisMode.End)
+                offset.x = -(screen.x - block.xMax - margin);
+            else
+                offset.x = block.center.x - screen.x * 0.5f;
+            if (modeY == FlexibleAxisMode.Start)
+                offset.y = block.yMin - margin;
+            else if (modeY == FlexibleAxisMode.End)
+                offset.y = -(screen.y - block.yMax - margin);
+            else
+                offset.y = block.center.y - screen.y * 0.5f;
+            return offset;
+        }
+
+        // 저장된 프리팹(= 기준 화면)을 기준 작업 해상도로 놓았을 때의 블록 크기·위치
+        internal sealed class BaseSizes : IDisposable
+        {
+            private readonly FlexiblePreviewRenderer renderer = new FlexiblePreviewRenderer();
+            private readonly RectTransform root;
+
+            public BaseSizes(string prefabPath, FlexibleProfileSettings settings)
+            {
+                FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
+                renderer.Prepare(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath), baseProfile.id, GetWorkSize(baseProfile, settings), new Rect(0f, 0f, 1f, 1f));
+                root = (RectTransform)renderer.Instance.transform;
+            }
+
+            public Vector2 Screen => root.rect.size;
+
+            public Vector2? Get(string path)
+            {
+                var target = FlexiblePathUtility.FindByPath(root, path) as RectTransform;
+                return target != null ? target.rect.size : (Vector2?)null;
+            }
+
+            // 화면 왼쪽 아래를 (0,0)으로 한 위치
+            public Rect? GetRect(string path)
+            {
+                var target = FlexiblePathUtility.FindByPath(root, path) as RectTransform;
+                if (target == null)
+                    return null;
+                Rect r = FlexiblePreviewRenderer.GetRectInRoot(root, target);
+                return new Rect(r.x - root.rect.xMin, r.y - root.rect.yMin, r.width, r.height);
+            }
+
+            public void Dispose() => renderer.Dispose();
         }
 
         public static Vector2 GetWorkSize(FlexibleProfile profile, FlexibleProfileSettings settings)
@@ -189,7 +425,7 @@ namespace FlexibleUITool.EditorTools
             workspace.placements.RemoveAll(p => p.target == target);
         }
 
-        private static FlexibleGridAdjustment ToAdjustment(FlexibleSpecBlock block)
+        private static FlexibleGridAdjustment ToAdjustment(FlexibleSpecBlock block, FlexibleWorkspace workspace, RectTransform target)
         {
             var adjustment = new FlexibleGridAdjustment();
             if (block.offset != null && block.offset.Length == 2)
@@ -202,6 +438,11 @@ namespace FlexibleUITool.EditorTools
                 adjustment.scale = block.scale.Length >= 3
                     ? new Vector3(block.scale[0], block.scale[1], block.scale[2])
                     : new Vector3(block.scale[0], block.scale[0], 1f);
+            }
+            if (block.scaleBy > 0f)
+            {
+                adjustment.overrideScale = true;
+                adjustment.scale = FlexibleGridPlacementService.GetBaseScale(workspace, target) * block.scaleBy;
             }
             return adjustment;
         }
@@ -232,6 +473,8 @@ namespace FlexibleUITool.EditorTools
                 case "start": mode = FlexibleAxisMode.Start; return true;
                 case "end": mode = FlexibleAxisMode.End; return true;
                 case "center": mode = FlexibleAxisMode.Center; return true;
+                // 그 축은 세로(기준) 값 그대로 (코드가 그 축으로 움직이는 패널 등)
+                case "keep": mode = FlexibleAxisMode.Stretch; return true;
                 case "left": mode = FlexibleAxisMode.Start; return horizontal;
                 case "right": mode = FlexibleAxisMode.End; return horizontal;
                 case "bottom": mode = FlexibleAxisMode.Start; return !horizontal;
@@ -278,13 +521,25 @@ namespace FlexibleUITool.EditorTools
                 json.Value("role", role);
 
             bool rectChanged = !state.rect.Approximately(FlexibleRectState.Capture(entry.target), Epsilon);
-            if (state.gridOrigin && FlexibleGridPlacementService.TryGetAdjustment(state.rect, state.gridResult, entry.target.localScale, out FlexibleGridAdjustment adjustment))
+            // 칸에 맞춰 줄이는 블록은 맞춘 배율이 칸 결과의 일부이고, 최대 배율이 원래와 다르면 scale로 내보낸다
+            FlexibleGridAdjustment adjustment;
+            bool fromGrid = state.fit
+                ? FlexibleGridPlacementService.TryGetAdjustment(state.rect, state.gridResult, out adjustment)
+                : FlexibleGridPlacementService.TryGetAdjustment(state.rect, state.gridResult, entry.target.localScale, out adjustment);
+            if (state.gridOrigin && fromGrid)
             {
                 FlexibleCell cell = state.gridCell;
                 json.Numbers("cell", cell.column, cell.row, cell.width, cell.height)
                     .Value("modeX", ModeName(state.gridModeX))
                     .Value("modeY", ModeName(state.gridModeY))
                     .Value("safeArea", state.gridInsideSafeArea);
+                if (state.fit)
+                {
+                    json.Value("fit", true);
+                    if (Mathf.Abs(state.fitMaxScale - entry.target.localScale.x) > 0.0001f)
+                        json.Numbers("scale", state.fitMaxScale);
+                    adjustment.overrideScale = false;
+                }
                 if (adjustment.position.sqrMagnitude > 0.0001f)
                     json.Numbers("offset", adjustment.position.x, adjustment.position.y);
                 if (adjustment.size.sqrMagnitude > 0.0001f)

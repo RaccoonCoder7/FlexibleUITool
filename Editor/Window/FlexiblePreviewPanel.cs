@@ -25,7 +25,9 @@ namespace FlexibleUITool.EditorTools
             new Color(0.90f, 0.35f, 0.35f),
         };
 
-        [SerializeField] private int presetIndex = -1;
+        // -2 = 편집 중인 화면을 따라감(기본), -1 = 창 크기, 0~ = 기기 프리셋
+        [SerializeField] private int presetIndex = FollowEditing;
+        private const int FollowEditing = -2;
         [SerializeField] private bool rotated;
         [SerializeField] private bool simulateSafeArea = true;
         [SerializeField] private bool showIssues = true;
@@ -33,7 +35,8 @@ namespace FlexibleUITool.EditorTools
         [SerializeField] private string lockedPath;
         private FlexiblePreviewRenderer renderer;
         private int currentProfile = -1;
-        private List<string> issues = new List<string>();
+        private string targetPath;
+        private List<FlexibleIssue> issues = new List<FlexibleIssue>();
         private string targetLabel;
 
         // 지금 미리보기가 고른 화면 (튜토리얼 확인용)
@@ -54,6 +57,13 @@ namespace FlexibleUITool.EditorTools
             renderer = null;
         }
 
+        // 튜토리얼처럼 창 크기를 바꿔 보는 단계에서 쓴다
+        public void UseWindowSize()
+        {
+            presetIndex = -1;
+            MarkDirty();
+        }
+
         public void MarkDirty()
         {
             if (renderer != null)
@@ -67,7 +77,12 @@ namespace FlexibleUITool.EditorTools
 
             FlexibleProfileSettings settings = FlexibleSettingsUtility.GetOrCreateDefault();
             DrawToolbar(settings);
-            GUILayout.Label(T("Drag the window edge to change its shape. The layout switches automatically at each screen ratio."), EditorStyles.wordWrappedMiniLabel);
+            // 편집 중인 화면 따라가기: 프리팹 모드에서 지금 편집 중인 화면의 작업 해상도 비율로 보여 준다
+            PrefabStage editing = PrefabStageUtility.GetCurrentPrefabStage();
+            FlexibleProfile editingProfile = presetIndex == FollowEditing ? FlexibleScreenSession.GetActiveProfile(editing) : null;
+            GUILayout.Label(editingProfile != null
+                ? T("Showing the screen you are editing. To see other sizes, pick one from the list above (Free = window size).")
+                : T("Drag the window edge to change its shape. The layout switches automatically at each screen ratio."), EditorStyles.wordWrappedMiniLabel);
 
             Rect body = GUILayoutUtility.GetRect(10f, 100000f, 10f, 100000f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             if (Event.current.type == EventType.Layout)
@@ -75,8 +90,15 @@ namespace FlexibleUITool.EditorTools
 
             var info = new Rect(body.x, body.yMax - InfoHeight, body.width, InfoHeight);
             body.height -= InfoHeight;
+            // 문제 목록은 그림을 가리지 않게 그림 아래에 둔다
+            List<string> issueLines = showIssues ? GroupIssues(issues) : new List<string>();
+            float issueHeight = issueLines.Count > 0 ? issueLines.Count * IssueLineHeight + 6f : 0f;
+            var issueRect = new Rect(body.x, body.yMax - issueHeight, body.width, issueHeight);
+            body.height -= issueHeight;
             FlexiblePreviewPreset preset = GetPreset(settings);
-            Rect screen = preset != null ? FitAspect(body, preset.Aspect) : body;
+            Rect screen = preset != null ? FitAspect(body, preset.Aspect)
+                : editingProfile != null && editingProfile.workResolution.y > 0f ? FitAspect(body, editingProfile.workResolution.x / editingProfile.workResolution.y)
+                : body;
             if (screen.width < 8f || screen.height < 8f)
                 return;
 
@@ -90,7 +112,7 @@ namespace FlexibleUITool.EditorTools
             if (!ResolveTarget(profile, out GameObject source, out string applyProfileId))
             {
                 EditorGUI.HelpBox(new Rect(body.x + 8f, body.y + 8f, body.width - 16f, 40f),
-                    T("Open a UI prefab (double-click it in the Project window) or select one."), MessageType.Info);
+                    T("Open a UI prefab, or select one in the Project window or in the scene."), MessageType.Info);
                 return;
             }
 
@@ -98,16 +120,18 @@ namespace FlexibleUITool.EditorTools
             {
                 Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(aspect, settings.ReferenceShortSide);
                 float scale = EditorGUIUtility.pixelsPerPoint;
-                renderer.Render(source, applyProfileId, logical, new Vector2Int(Mathf.RoundToInt(screen.width * scale), Mathf.RoundToInt(screen.height * scale)), safeArea);
-                issues = renderer.CollectIssues(safeArea);
+                PrefabStage open = PrefabStageUtility.GetCurrentPrefabStage();
+                Dictionary<string, bool> view = open != null && open.assetPath == targetPath ? FlexibleScreenSession.GetViewByPath(open) : null;
+                renderer.Render(source, applyProfileId, logical, new Vector2Int(Mathf.RoundToInt(screen.width * scale), Mathf.RoundToInt(screen.height * scale)), safeArea, profile.id, view);
+                issues = renderer.CollectIssueList(safeArea);
             }
 
             if (renderer.Texture != null)
                 GUI.DrawTexture(screen, renderer.Texture, ScaleMode.StretchToFill, false);
             if (preset != null && simulateSafeArea)
                 DrawUnsafeArea(screen, safeArea);
-            if (showIssues && issues.Count > 0)
-                DrawIssues(screen);
+            if (issueLines.Count > 0)
+                DrawIssues(issueRect, issueLines);
 
             DrawInfo(info, settings, aspect, profile);
         }
@@ -116,9 +140,9 @@ namespace FlexibleUITool.EditorTools
         {
             using (new GUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                var presetNames = new List<string> { T("Free (window size)") };
+                var presetNames = new List<string> { T("Screen being edited"), T("Free (window size)") };
                 presetNames.AddRange(settings.PreviewPresets.Select(p => T(p.name)));
-                presetIndex = EditorGUILayout.Popup(presetIndex + 1, presetNames.ToArray(), EditorStyles.toolbarPopup, GUILayout.Width(150f)) - 1;
+                presetIndex = EditorGUILayout.Popup(presetIndex + 2, presetNames.ToArray(), EditorStyles.toolbarPopup, GUILayout.Width(150f)) - 2;
                 using (new EditorGUI.DisabledScope(presetIndex < 0))
                     rotated = GUILayout.Toggle(rotated, T("Rotate"), EditorStyles.toolbarButton, GUILayout.Width(52f));
                 using (new EditorGUI.DisabledScope(presetIndex < 0))
@@ -147,6 +171,7 @@ namespace FlexibleUITool.EditorTools
             applyProfileId = profile.id;
             PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
             string path = locked ? lockedPath : GetCurrentSourcePath();
+            targetPath = path;
             if (string.IsNullOrEmpty(path))
                 return false;
 
@@ -194,9 +219,9 @@ namespace FlexibleUITool.EditorTools
                 return workspace != null && !workspace.inPlace ? AssetDatabase.GUIDToAssetPath(workspace.sourceGuid) : stage.assetPath;
             }
 
-            var selected = Selection.activeObject as GameObject;
-            string path = selected != null ? AssetDatabase.GetAssetPath(selected) : null;
-            return !string.IsNullOrEmpty(path) && path.EndsWith(".prefab") ? path : null;
+            // Project 창에서 고른 프리팹, 또는 씬에서 고른 프리팹 인스턴스(안쪽 프리팹이 먼저)
+            List<string> paths = FlexibleEditPanel.GetSelectedPrefabPaths();
+            return paths.Count > 0 ? paths[0] : null;
         }
 
         private FlexiblePreviewPreset GetPreset(FlexibleProfileSettings settings)
@@ -233,18 +258,26 @@ namespace FlexibleUITool.EditorTools
             EditorGUI.DrawRect(new Rect(screen.xMax - right, screen.y + top, right, screen.height - top - bottom), shade);
         }
 
-        private void DrawIssues(Rect screen)
+        private const float IssueLineHeight = 14f;
+        private const int MaxIssueLines = 4;
+
+        // 같은 종류는 한 줄로: 「종류 ×개수: 블록, 블록, …」
+        private static List<string> GroupIssues(List<FlexibleIssue> list)
         {
-            var style = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(1f, 0.55f, 0.45f) }, wordWrap = true };
-            float lineHeight = 14f;
-            int count = Mathf.Min(issues.Count, 6);
-            var box = new Rect(screen.x + 4f, screen.yMax - (count + (issues.Count > 6 ? 1 : 0)) * lineHeight - 8f, Mathf.Min(screen.width - 8f, 320f), 0f);
-            box.height = screen.yMax - 4f - box.y;
-            EditorGUI.DrawRect(box, new Color(0f, 0f, 0f, 0.6f));
-            for (int i = 0; i < count; i++)
-                GUI.Label(new Rect(box.x + 4f, box.y + 2f + i * lineHeight, box.width - 8f, lineHeight), "⚠ " + issues[i], style);
-            if (issues.Count > 6)
-                GUI.Label(new Rect(box.x + 4f, box.y + 2f + count * lineHeight, box.width - 8f, lineHeight), F("{0} more", issues.Count - 6), style);
+            List<string> lines = list.GroupBy(i => i.code).Select(g =>
+            {
+                List<string> names = g.Select(i => i.BlockNames).Distinct().ToList();
+                return $"⚠ {FlexibleIssue.Title(g.Key)} ×{g.Count()}: {string.Join(", ", names.Take(4))}{(names.Count > 4 ? ", …" : "")}";
+            }).ToList();
+            return lines.Count > MaxIssueLines ? lines.Take(MaxIssueLines).ToList() : lines;
+        }
+
+        private static void DrawIssues(Rect rect, List<string> lines)
+        {
+            var style = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(1f, 0.55f, 0.45f) } };
+            EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f));
+            for (int i = 0; i < lines.Count; i++)
+                GUI.Label(new Rect(rect.x + 6f, rect.y + 3f + i * IssueLineHeight, rect.width - 12f, IssueLineHeight), lines[i], style);
         }
 
         private void DrawInfo(Rect rect, FlexibleProfileSettings settings, float aspect, FlexibleProfile profile)

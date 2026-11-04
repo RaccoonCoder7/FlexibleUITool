@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 using static FlexibleUITool.EditorTools.FlexibleText;
@@ -33,6 +34,8 @@ namespace FlexibleUITool.EditorTools
         [SerializeField] private DefaultAsset folder;
         [SerializeField] private float thumbnailHeight = 200f;
         [SerializeField] private bool onlyIssues;
+        // 기준(세로) 화면의 문제는 원래 디자인 문제라 기본으로 숨긴다 (새로 만든 화면의 문제에 집중)
+        [SerializeField] private bool hideBaseIssues = true;
         [SerializeField] private bool includeEdges = true;
         [SerializeField] private bool onlyOpenPrefab = true;
         private float renderedHeight; // 마지막 검수 때 썸네일을 그린 높이 (화면 단위)
@@ -75,7 +78,7 @@ namespace FlexibleUITool.EditorTools
             EnsurePresetFlags(settings);
             string open = OpenPrefabPath();
 
-            GUILayout.Label(T("Shows your prefabs on many phones and tablets at once, and finds blocks that stick out of the screen, overlap, or sit under the notch."), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(T("Shows your prefabs on many phones and tablets at once, and finds blocks that stick out of the screen, overlap, or sit under the notch. Panels the game opens later, lists, and places other prefabs take (such as a menu bar) are checked too."), EditorStyles.wordWrappedMiniLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (!string.IsNullOrEmpty(targetPrefab))
@@ -124,6 +127,7 @@ namespace FlexibleUITool.EditorTools
             {
                 includeEdges = GUILayout.Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size blocks overflow there first.")), EditorStyles.miniButton);
                 onlyIssues = GUILayout.Toggle(onlyIssues, T("Only issues"), EditorStyles.miniButton);
+                hideBaseIssues = GUILayout.Toggle(hideBaseIssues, new GUIContent(T("Hide base screen issues"), T("Issues on the base (portrait) screen come from the original design. Hide them to focus on the screens you made.")), EditorStyles.miniButton);
                 GUILayout.Label(T("Thumbnail"), GUILayout.ExpandWidth(false));
                 thumbnailHeight = GUILayout.HorizontalSlider(thumbnailHeight, 100f, 400f, GUILayout.Width(100f));
                 GUILayout.FlexibleSpace();
@@ -138,13 +142,17 @@ namespace FlexibleUITool.EditorTools
             if (thumbnailHeight > renderedHeight * 1.1f)
                 EditorGUILayout.HelpBox(F("Thumbnails were rendered smaller. Press [{0}] again for sharp thumbnails at this size.", T("Run check")), MessageType.None);
 
-            int total = rows.Sum(r => r.cells.Sum(c => c.issues.Count));
+            int total = rows.Sum(r => r.cells.Sum(c => Visible(c).Count));
             EditorGUILayout.LabelField(F("{0} prefabs · {1} issues", rows.Count, total), EditorStyles.boldLabel);
+            // 종류별 개수 요약
+            var byCode = rows.SelectMany(r => r.cells.SelectMany(Visible)).GroupBy(i => i.code).Select(g => $"{FlexibleIssue.Title(g.Key)} {g.Count()}").ToList();
+            if (byCode.Count > 0)
+                GUILayout.Label(string.Join(" · ", byCode), EditorStyles.miniLabel);
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
             foreach (Row row in rows)
             {
-                if (onlyIssues && row.cells.All(c => c.issues.Count == 0))
+                if (onlyIssues && row.cells.All(c => Visible(c).Count == 0))
                     continue;
                 DrawRow(row);
             }
@@ -176,7 +184,7 @@ namespace FlexibleUITool.EditorTools
                 {
                     foreach (Cell cell in row.cells)
                     {
-                        if (!onlyIssues || cell.issues.Count > 0)
+                        if (!onlyIssues || Visible(cell).Count > 0)
                             DrawCell(cell);
                     }
                     GUILayout.FlexibleSpace();
@@ -192,15 +200,40 @@ namespace FlexibleUITool.EditorTools
                 GUILayout.Label($"{cell.ScreenName}\n→ {FlexibleEditPanel.Name(cell.profile)}", EditorStyles.miniLabel);
                 Rect rect = GUILayoutUtility.GetRect(width, thumbnailHeight, GUILayout.Width(width), GUILayout.Height(thumbnailHeight));
                 GUI.DrawTexture(rect, cell.texture, ScaleMode.StretchToFill, false);
-                if (cell.issues.Count > 0)
+                List<FlexibleIssue> visible = Visible(cell);
+                if (visible.Count > 0)
                     EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 3f), new Color(1f, 0.4f, 0.3f));
 
-                var style = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true, normal = { textColor = cell.issues.Count > 0 ? new Color(1f, 0.55f, 0.45f) : Color.gray } };
-                List<string> messages = cell.Messages;
-                string text = messages.Count == 0 ? T("No issues") : string.Join("\n", messages.Take(4)) + (messages.Count > 4 ? "\n" + F("{0} more", messages.Count - 4) : "");
-                GUILayout.Label(new GUIContent(text, string.Join("\n", messages)), style, GUILayout.Width(Mathf.Max(width, 120f)));
+                var style = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true, normal = { textColor = visible.Count > 0 ? new Color(1f, 0.55f, 0.45f) : Color.gray } };
+                // 같은 종류는 한 줄로 묶는다: 「종류 ×개수: 블록, 블록, …」
+                List<string> lines = visible.GroupBy(i => i.code).Select(g =>
+                {
+                    List<string> names = g.Select(i => i.BlockNames).Distinct().ToList();
+                    return $"{FlexibleIssue.Title(g.Key)} ×{g.Count()}: {string.Join(", ", names.Take(3))}{(names.Count > 3 ? ", …" : "")}";
+                }).ToList();
+                string text = visible.Count > 0 ? string.Join("\n", lines)
+                    : cell.issues.Count > 0 ? F("Base screen issues hidden ({0})", cell.issues.Count)
+                    : T("No issues");
+                GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(Mathf.Max(width, 120f)));
             }
         }
+
+        // 기준 화면 문제를 숨기면, 다른 화면에서도 기준 화면에 이미 있던 같은 문제(원래 디자인·일부러 밖에 둔 것)는 뺀다
+        private List<FlexibleIssue> Visible(Cell cell)
+        {
+            if (!hideBaseIssues)
+                return cell.issues;
+            string baseId = FlexibleSettingsUtility.GetOrCreateDefault().BaseProfileId;
+            if (cell.profile.id == baseId)
+                return new List<FlexibleIssue>();
+            Row row = rows.Find(r => r.cells.Contains(cell));
+            if (row == null)
+                return cell.issues;
+            var onBase = new HashSet<string>(row.cells.Where(c => c.profile.id == baseId).SelectMany(c => c.issues).Select(Key));
+            return cell.issues.Where(i => !onBase.Contains(Key(i))).ToList();
+        }
+
+        private static string Key(FlexibleIssue issue) => issue.code + "|" + string.Join("|", issue.blocks);
 
         private void Run(FlexibleProfileSettings settings)
         {
@@ -221,6 +254,9 @@ namespace FlexibleUITool.EditorTools
             float scale = EditorGUIUtility.pixelsPerPoint;
             renderedHeight = thumbnailHeight;
 
+            // 열려 있는 프리팹은 편집용 보기(편집하는 동안만 켜고 끈 것)를 그대로 써서 검수한다
+            PrefabStage openStage = PrefabStageUtility.GetCurrentPrefabStage();
+            Dictionary<string, bool> openView = openStage != null ? FlexibleScreenSession.GetViewByPath(openStage) : null;
             using (var renderer = new FlexiblePreviewRenderer())
             {
                 for (int i = 0; i < paths.Count; i++)
@@ -241,7 +277,7 @@ namespace FlexibleUITool.EditorTools
                         // GPU 메모리를 아끼려고 지금 보이는 크기로만 그린다 (문제 판정은 논리 크기 기준이라 영향 없음)
                         int height = Mathf.RoundToInt(thumbnailHeight * scale);
                         var pixel = new Vector2Int(Mathf.RoundToInt(height * screen.aspect), height);
-                        renderer.Render(asset, profile.id, logical, pixel, screen.safeArea);
+                        renderer.Render(asset, profile.id, logical, pixel, screen.safeArea, null, openStage != null && openStage.assetPath == paths[i] ? openView : null);
 
                         var texture = new RenderTexture(pixel.x, pixel.y, 0, RenderTextureFormat.ARGB32) { hideFlags = HideFlags.HideAndDontSave };
                         Graphics.Blit(renderer.Texture, texture);

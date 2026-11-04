@@ -25,6 +25,8 @@ param(
     [string]$Path,
     [string]$Scene,
     [string]$Role,
+    [string[]]$Hide,
+    [string[]]$Show,
     [switch]$DryRun,
     [switch]$All,
     [string]$Project,
@@ -87,6 +89,8 @@ function New-CommandJson {
     if ($Path) { $cmd.path = $Path }
     if ($Scene) { $cmd.scene = $Scene }
     if ($Bound.ContainsKey('Role')) { $cmd.role = $Role }
+    if ($Hide) { $cmd.hide = @($Hide | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }) }
+    if ($Show) { $cmd.show = @($Show | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }) }
     if ($DryRun) { $cmd.dryRun = $true }
     if ($All) { $cmd.all = $true }
     return ($cmd | ConvertTo-Json -Depth 5 -Compress)
