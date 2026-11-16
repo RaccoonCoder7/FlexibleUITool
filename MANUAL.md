@@ -38,7 +38,7 @@ The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unit
 
 From a local folder (while developing the tool): `"com.raccooncoder7.flexibleuitool": "file:C:/path/to/FlexibleUITool"`.
 
-Everything the tool creates in your project stays in `Assets/FlexibleUITool/`: `Settings/FlexibleProfileSettings.asset` (created on first use; commit it) and `Samples/` (created by the tutorial).
+Everything the tool creates in your project stays in `Assets/FlexibleUITool/`: `Settings/FlexibleProfileSettings.asset` (created on first use; commit it) and `Samples/` (created by the tutorial). `Workspace/` (temporary work copies) and, when the tool is installed as a package, `Samples/` are kept out of git by `Assets/FlexibleUITool/.gitignore`, which the tool writes and which does not show up in git itself; delete its first line to keep your own edits.
 
 ---
 

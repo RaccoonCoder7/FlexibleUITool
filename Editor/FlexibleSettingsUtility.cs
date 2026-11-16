@@ -77,6 +77,48 @@ namespace FlexibleUITool.EditorTools
         public const string SamplePrefabName = "FlexibleSample";
         public const string SampleTargetFolder = DataFolder + "/Samples";
 
+        // ───────── git 변경사항에서 빼기 ─────────
+
+        // 이 줄이 맨 위에 있는 동안만 툴이 파일을 고친다 (지우면 사용자가 고친 내용을 그대로 둔다)
+        private const string GitIgnoreMarker = "# Written by FlexibleUITool. Delete this line to keep your own edits.";
+
+        [InitializeOnLoadMethod]
+        private static void KeepGeneratedFoldersOutOfGitOnLoad()
+        {
+            EditorApplication.delayCall += KeepGeneratedFoldersOutOfGit;
+        }
+
+        // 툴이 만드는 폴더(작업 사본 Workspace, 패키지에서 가져온 튜토리얼 Samples)와 그 .meta 를 git 변경사항에서 뺀다.
+        // 툴 데이터 폴더 안의 .gitignore 하나만 쓰고(프로젝트 루트의 .gitignore 는 건드리지 않는다), 이 파일 자신도 변경사항에 뜨지 않게 한다.
+        // 툴이 Assets 안에 직접 들어 있으면 Samples 는 툴의 원본이라 빼지 않는다
+        public static void KeepGeneratedFoldersOutOfGit()
+        {
+            string data = Path.GetFullPath(DataFolder);
+            bool workspace = Directory.Exists(Path.Combine(data, "Workspace"));
+            bool samples = IsPackage && Directory.Exists(Path.Combine(data, "Samples"));
+            if (!workspace && !samples)
+                return;
+
+            // 예전 버전이 작업 폴더 안에 만든 .gitignore 는 아래 규칙으로 대신한다
+            string inner = Path.Combine(data, "Workspace", ".gitignore");
+            if (File.Exists(inner) && File.ReadAllText(inner).Replace("\r", "") == "*\n!.gitignore\n")
+                File.Delete(inner);
+
+            string content = GitIgnoreMarker + "\n/.gitignore\n/Workspace/\n/Workspace.meta\n"
+                + (IsPackage ? "/Samples/\n/Samples.meta\n" : "");
+            string path = Path.Combine(data, ".gitignore");
+            bool existed = File.Exists(path);
+            if (existed)
+            {
+                string old = File.ReadAllText(path).Replace("\r", "");
+                if (!old.StartsWith(GitIgnoreMarker) || old == content)
+                    return;
+            }
+            File.WriteAllText(path, content);
+            if (!existed)
+                Debug.Log(FlexibleText.F("FlexibleUITool: {0} are kept out of git by {1}/.gitignore.", IsPackage ? "Workspace, Samples" : "Workspace", DataFolder));
+        }
+
         // 튜토리얼 샘플 폴더 (FlexibleSample 프리팹이 있는 곳). 없으면 null
         public static string FindSampleFolder()
         {
@@ -98,6 +140,7 @@ namespace FlexibleUITool.EditorTools
                 return existing;
 
             EnsureFolder(SampleTargetFolder);
+            KeepGeneratedFoldersOutOfGit();
             if (existing != null)
             {
                 MoveFolderContents(existing, SampleTargetFolder);

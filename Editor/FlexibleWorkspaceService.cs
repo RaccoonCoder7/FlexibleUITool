@@ -149,9 +149,7 @@ namespace FlexibleUITool.EditorTools
         {
             FlexibleSettingsUtility.EnsureFolder(WorkspaceFolder);
             // 작업 프리팹은 임시 파일이라 git에 올리지 않는다
-            string ignore = Path.Combine(WorkspaceFolder, ".gitignore");
-            if (!File.Exists(ignore))
-                File.WriteAllText(ignore, "*\n!.gitignore\n");
+            FlexibleSettingsUtility.KeepGeneratedFoldersOutOfGit();
             if (!AssetDatabase.CopyAsset(sourcePath, workspacePath))
                 throw new InvalidOperationException(F("Could not copy the workspace: {0} → {1}", sourcePath, workspacePath));
 

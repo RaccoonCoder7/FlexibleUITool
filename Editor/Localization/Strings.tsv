@@ -403,3 +403,4 @@ Shrink to fit the cells	칸에 맞춰 줄이기	マスに合わせて縮める
 Keeps the portrait size and shape, and scales the block down on every screen size so it fits the cells (big pictures, popups, button rows).	세로 화면의 크기·모양을 지키면서, 화면 크기마다 칸에 다 들어가도록 줄여요 (큰 그림, 팝업, 버튼 줄).	縦画面のサイズと形を保ったまま、画面サイズごとにマスに収まるよう縮めます（大きな絵、ポップアップ、ボタンの列）。
 Pin to	모서리에 붙이기	端に固定
 Puts the block at the same distance from that corner or edge of the safe area as on the portrait screen, with its portrait size. Good for bars, corner buttons and centered popups.	안전 영역의 그 모서리·가장자리에서 세로 화면과 같은 거리, 같은 크기로 놓아요. 바, 모서리 버튼, 가운데 팝업에 좋아요.	セーフエリアのその角・辺から縦画面と同じ距離・同じサイズで置きます。バー、角のボタン、中央のポップアップ向けです。
+FlexibleUITool: {0} are kept out of git by {1}/.gitignore.	FlexibleUITool: {0} 폴더는 {1}/.gitignore 로 git 변경사항에서 빠져요.	FlexibleUITool: {0} フォルダーは {1}/.gitignore で git の変更から外れます。
