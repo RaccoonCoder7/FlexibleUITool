@@ -207,12 +207,6 @@ namespace FlexibleUITool.EditorTools
             return width;
         }
 
-        public static void Section(string text)
-        {
-            EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField(text, EditorStyles.boldLabel);
-        }
-
         private static Color PixelColor(char c)
         {
             switch (c)

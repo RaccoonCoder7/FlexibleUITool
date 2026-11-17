@@ -31,6 +31,17 @@ namespace FlexibleUITool.EditorTools
     // 작업 프리팹 안에서의 그리드 배치(기록 포함)·템플릿 저장/적용
     public static class FlexibleGridPlacementService
     {
+        public const string BackdropFitWarning = "fit also shrinks this block's own background, which covers the whole portrait screen (a dim or page background), so the edges of the screen are left uncovered. Keep the block as it is and fit the parts inside it instead.";
+
+        // 화면을 다 덮는 배경(막·페이지 배경)이 자기 자신에 붙은 블록 (세로 화면에서의 크기로 본다). 칸에 맞춰 줄이면 배경도 같이 줄어든다
+        public static bool IsScreenBackdrop(RectTransform target, Vector2 baseSize, Vector2 baseScreen)
+        {
+            var graphic = target.GetComponent<UnityEngine.UI.Graphic>();
+            if (graphic == null || !graphic.enabled || !(graphic.color.a > 0.05f) || baseScreen.x <= 0f || baseScreen.y <= 0f)
+                return false;
+            return baseSize.x >= baseScreen.x * 0.95f && baseSize.y >= baseScreen.y * 0.95f;
+        }
+
         private static string baseMapSource;
         private static Dictionary<string, RectTransform> baseMap;
 
@@ -74,24 +85,28 @@ namespace FlexibleUITool.EditorTools
             adjusted.sizeDelta += adjustment.size;
             adjusted.localScale = adjustment.overrideScale ? adjustment.scale : currentScale;
 
-            // 칸 영역(늘어나는 앵커)과 최대 배율을 기록하고, 지금 크기에 맞는 배율을 결과와 실제 값 모두에 쓴다
+            Undo.RecordObjects(new Object[] { target, workspace }, "Flexible Grid Placement");
+            adjusted.ApplyTo(target);
+
+            // 칸 영역(늘어나는 앵커)과 최대 배율을 기록하고, 지금 크기에 맞는 배율을 결과와 실제 값 모두에 쓴다.
+            // 크기는 레이아웃을 다시 계산한 뒤의 실제 크기로 잰다 (Content Size Fitter가 내용에 맞춰 늘린 높이 등)
             var area = new FlexibleRectState();
             float maxScale = adjustment.overrideScale ? adjustment.scale.x : state.localScale.x;
-            if (fit && FlexibleGridMath.TryComputePlacement(target, context, clamped, FlexibleAxisMode.Stretch, FlexibleAxisMode.Stretch, insideSafeArea, out area)
+            if (fit && FlexibleGridMath.TryComputeSlotState(target, context.root, FlexibleGridMath.GetFitSlotRect(context.GetArea(insideSafeArea), context.grid, clamped),
+                    FlexibleAxisMode.Stretch, FlexibleAxisMode.Stretch, out area)
                 && target.parent is RectTransform parent)
             {
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(target);
                 Vector2 room = Vector2.Scale(parent.rect.size, area.anchorMax - area.anchorMin);
-                Vector2 size = adjusted.sizeDelta;
+                Vector2 size = FlexibleProfileState.FitSize(target);
                 float scale = Mathf.Min(maxScale, room.x / Mathf.Max(1f, size.x), room.y / Mathf.Max(1f, size.y));
                 state.localScale = adjusted.localScale = new Vector3(scale, scale, adjusted.localScale.z);
+                target.localScale = adjusted.localScale;
             }
             else
             {
                 fit = false;
             }
-
-            Undo.RecordObjects(new Object[] { target, workspace }, "Flexible Grid Placement");
-            adjusted.ApplyTo(target);
             RecordPrefabInstance(target);
 
             workspace.placements.RemoveAll(p => p.target == target || p.target == null);
@@ -169,6 +184,14 @@ namespace FlexibleUITool.EditorTools
         }
 
         // 작업 프리팹 블록에 대응하는 원본 프리팹 블록의 스케일 (못 찾으면 지금 스케일)
+        // Content Size Fitter가 크기를 내용에 맞춰 정하는 블록: 칸 크기를 줘도 덮어쓰므로 칸에 맞춰 줄여서만 놓을 수 있다
+        public static bool IsContentSized(RectTransform target)
+        {
+            var fitter = target != null ? target.GetComponent<UnityEngine.UI.ContentSizeFitter>() : null;
+            return fitter != null && fitter.enabled
+                && (fitter.horizontalFit != UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained || fitter.verticalFit != UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained);
+        }
+
         public static Vector3 GetBaseScale(FlexibleWorkspace workspace, RectTransform target)
         {
             if (workspace == null || target == null)

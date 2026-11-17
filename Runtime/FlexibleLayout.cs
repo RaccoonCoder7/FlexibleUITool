@@ -252,7 +252,7 @@ namespace FlexibleUITool
                 if (entry.target == null)
                     continue;
 
-                baseStates[i] = FlexibleProfileState.Capture(entry, null, entry.ControlsActive, entry.ControlsLayoutGroup);
+                baseStates[i] = FlexibleProfileState.Capture(entry, null, entry.ControlsActive, entry.ControlsLayoutGroup, entry.ControlsSizeFitter);
             }
         }
     }

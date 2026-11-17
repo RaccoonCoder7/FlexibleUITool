@@ -78,7 +78,6 @@ namespace FlexibleUITool.EditorTools
             EnsurePresetFlags(settings);
             string open = OpenPrefabPath();
 
-            GUILayout.Label(T("Shows your prefabs on many phones and tablets at once, and finds blocks that stick out of the screen, overlap, or sit under the notch. Panels the game opens later, lists, and places other prefabs take (such as a menu bar) are checked too."), EditorStyles.wordWrappedMiniLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (!string.IsNullOrEmpty(targetPrefab))
@@ -98,7 +97,7 @@ namespace FlexibleUITool.EditorTools
                     }
                 }
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button(T("Run check"), GUILayout.Width(100f), GUILayout.Height(22f)))
+                if (GUILayout.Button(new GUIContent(T("Run check"), T("Shows your prefabs on many phones and tablets at once, and finds objects that stick out of the screen, overlap, or sit under the notch. Panels the game opens later, lists, and places other prefabs take (such as a menu bar) are checked too.")), GUILayout.Width(100f), GUILayout.Height(22f)))
                 {
                     if (onlyOpenPrefab && open != null && string.IsNullOrEmpty(targetPrefab))
                     {
@@ -118,14 +117,29 @@ namespace FlexibleUITool.EditorTools
                 FlexibleGui.Mark("check:run");
             }
 
-            using (new EditorGUILayout.HorizontalScope())
+            float available = EditorGUIUtility.currentViewWidth - 24f;
+            int index = 0;
+            while (index < settings.PreviewPresets.Count)
             {
-                for (int i = 0; i < settings.PreviewPresets.Count; i++)
-                    presetEnabled[i] = GUILayout.Toggle(presetEnabled[i], T(settings.PreviewPresets[i].name), EditorStyles.miniButton);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    float used = 0f;
+                    do
+                    {
+                        var content = new GUIContent(T(settings.PreviewPresets[index].name));
+                        float width = EditorStyles.miniButton.CalcSize(content).x + 4f;
+                        if (used > 0f && used + width > available)
+                            break;
+                        presetEnabled[index] = GUILayout.Toggle(presetEnabled[index], content, EditorStyles.miniButton, GUILayout.Width(width));
+                        used += width;
+                        index++;
+                    } while (index < settings.PreviewPresets.Count);
+                    GUILayout.FlexibleSpace();
+                }
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                includeEdges = GUILayout.Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size blocks overflow there first.")), EditorStyles.miniButton);
+                includeEdges = GUILayout.Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size objects overflow there first.")), EditorStyles.miniButton);
                 onlyIssues = GUILayout.Toggle(onlyIssues, T("Only issues"), EditorStyles.miniButton);
                 hideBaseIssues = GUILayout.Toggle(hideBaseIssues, new GUIContent(T("Hide base screen issues"), T("Issues on the base (portrait) screen come from the original design. Hide them to focus on the screens you made.")), EditorStyles.miniButton);
                 GUILayout.Label(T("Thumbnail"), GUILayout.ExpandWidth(false));
@@ -185,14 +199,14 @@ namespace FlexibleUITool.EditorTools
                     foreach (Cell cell in row.cells)
                     {
                         if (!onlyIssues || Visible(cell).Count > 0)
-                            DrawCell(cell);
+                            DrawCell(row, cell);
                     }
                     GUILayout.FlexibleSpace();
                 }
             }
         }
 
-        private void DrawCell(Cell cell)
+        private void DrawCell(Row row, Cell cell)
         {
             float width = thumbnailHeight * cell.texture.width / cell.texture.height;
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(Mathf.Max(width, 120f))))
@@ -215,7 +229,41 @@ namespace FlexibleUITool.EditorTools
                     : cell.issues.Count > 0 ? F("Base screen issues hidden ({0})", cell.issues.Count)
                     : T("No issues");
                 GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(Mathf.Max(width, 120f)));
+                if (visible.Count > 0 && GUILayout.Button(new GUIContent(T("Show the problem"), T("Opens the prefab on this screen and selects the objects with the problem.")), EditorStyles.miniButton, GUILayout.Width(Mathf.Max(width, 120f))))
+                {
+                    ShowProblem(row.path, cell.profile.id, visible);
+                    GUIUtility.ExitGUI();
+                }
             }
+        }
+
+        // 문제가 난 화면으로 프리팹을 열고 그 블록을 골라 둔다 (열고 나서 직접 찾지 않아도 되게)
+        private static void ShowProblem(string path, string profileId, List<FlexibleIssue> issues)
+        {
+            string[] blockPaths = issues.Where(i => i.blocks != null).SelectMany(i => i.blocks).Distinct().ToArray();
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage != null && stage.assetPath == path)
+            {
+                if (FlexibleScreenSession.GetActiveProfileId(stage) != profileId)
+                    FlexibleScreenSession.ShowProfile(stage, profileId);
+            }
+            else
+            {
+                FlexibleScreenSession.OpenNextOn(path, profileId);
+                PrefabStageUtility.OpenPrefab(path);
+            }
+            EditorApplication.delayCall += () =>
+            {
+                PrefabStage opened = PrefabStageUtility.GetCurrentPrefabStage();
+                if (opened == null || opened.assetPath != path)
+                    return;
+                Transform root = opened.prefabContentsRoot.transform;
+                Object[] found = blockPaths.Select(b => FlexiblePathUtility.FindByPath(root, b)).Where(t => t != null).Select(t => (Object)t.gameObject).ToArray();
+                if (found.Length == 0)
+                    return;
+                Selection.objects = found;
+                EditorGUIUtility.PingObject(found[0]);
+            };
         }
 
         // 기준 화면 문제를 숨기면, 다른 화면에서도 기준 화면에 이미 있던 같은 문제(원래 디자인·일부러 밖에 둔 것)는 뺀다

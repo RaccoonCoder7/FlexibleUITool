@@ -83,6 +83,8 @@ namespace FlexibleUITool.EditorTools
         private FlexibleLayout layout;
         private RenderTexture texture;
         private HashSet<string> baseNested;
+        // 안쪽 Flexible 프리팹이 소유한 오브젝트 경로 → 그 프리팹 루트 경로 (그 프리팹 검수에서 따로 보므로 여기서는 뺀다)
+        private Dictionary<string, string> nestedOwner;
         private bool baseNestedReady;
         // 사본에 다른 화면 배치를 입혔는지. 입힌 뒤 「그대로 그리기」를 하려면 사본을 새로 만들어야 한다
         private bool profileApplied;
@@ -126,15 +128,18 @@ namespace FlexibleUITool.EditorTools
         // profileId가 null이면 사본을 그대로(편집 중인 화면 등) 그린다. 안쪽 프리팹은 screenProfileId(없으면 profileId) 화면으로 맞춘다
         public void Render(GameObject source, string profileId, Vector2 logicalSize, Vector2Int pixelSize, Rect normalizedSafeArea, string screenProfileId = null, IDictionary<string, bool> view = null)
         {
-            if (!Prepare(source, profileId, logicalSize, normalizedSafeArea, screenProfileId, view))
-                return;
+            using (new FlexibleFontDirtyGuard())
+            {
+                if (!Prepare(source, profileId, logicalSize, normalizedSafeArea, screenProfileId, view))
+                    return;
 
-            EnsureTexture(pixelSize);
-            camera.targetTexture = texture;
-            camera.aspect = logicalSize.x / logicalSize.y;
-            camera.orthographicSize = logicalSize.y * 0.5f;
-            using (new FlexibleRendererFeatureGuard())
-                camera.Render();
+                EnsureTexture(pixelSize);
+                camera.targetTexture = texture;
+                camera.aspect = logicalSize.x / logicalSize.y;
+                camera.orthographicSize = logicalSize.y * 0.5f;
+                using (new FlexibleRendererFeatureGuard())
+                    camera.Render();
+            }
         }
 
         // 그리지 않고 배치만 맞춘다 (블록 위치 조회용)
@@ -143,7 +148,12 @@ namespace FlexibleUITool.EditorTools
         {
             if (source == null)
                 return false;
+            using (new FlexibleFontDirtyGuard())
+                return PrepareCopy(source, profileId, logicalSize, normalizedSafeArea, screenProfileId, view);
+        }
 
+        private bool PrepareCopy(GameObject source, string profileId, Vector2 logicalSize, Rect normalizedSafeArea, string screenProfileId, IDictionary<string, bool> view)
+        {
             if (Dirty || instance == null || source != template || (profileId == null && profileApplied))
                 Rebuild(source);
 
@@ -155,6 +165,8 @@ namespace FlexibleUITool.EditorTools
                 layout.ApplyProfile(profileId);
                 profileApplied = true;
             }
+            else if (profileId == null)
+                RefitEditing(source);
 
             // 안쪽 프리팹(자기 FlexibleLayout을 가진 중첩 프리팹)도 같은 화면으로 (바깥이 먼저 놓은 뒤라 위에서 아래 순서)
             string screen = screenProfileId ?? profileId;
@@ -173,8 +185,36 @@ namespace FlexibleUITool.EditorTools
             foreach (FlexibleSafeArea safeArea in instance.GetComponentsInChildren<FlexibleSafeArea>(true))
                 safeArea.ApplyNormalized(normalizedSafeArea);
 
+            // 글자 크기는 첫 그리기에서 정해지므로, 한 번 그린 뒤 레이아웃을 다시 맞추고 한 번 더 그린다 (첫 장만 글자 크기를 모르는 채 찍히지 않게)
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)instance.transform);
             Canvas.ForceUpdateCanvases();
             return true;
+        }
+
+        // 편집 중인 화면은 기록 대신 지금의 칸 배치를 쓴다. 칸에 맞춰 줄이는 블록은 이 화면 크기에서 다시 줄인다 (실행 중과 같게)
+        private void RefitEditing(GameObject source)
+        {
+            var workspace = source.GetComponent<FlexibleWorkspace>();
+            if (workspace == null || instance == null)
+                return;
+            Canvas.ForceUpdateCanvases();
+            foreach (FlexibleGridPlacement placement in workspace.placements)
+            {
+                if (placement.target == null || !placement.fit)
+                    continue;
+                var target = FlexiblePathUtility.FindByPath(instance.transform, FlexiblePathUtility.GetPath(source.transform, placement.target)) as RectTransform;
+                if (target == null)
+                    continue;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(target);
+                new FlexibleProfileState
+                {
+                    fit = true,
+                    fitAnchorMin = placement.fitAnchorMin,
+                    fitAnchorMax = placement.fitAnchorMax,
+                    fitMaxScale = placement.fitMaxScale,
+                }.ApplyFit(target);
+            }
         }
 
         public void SavePng(string path)
@@ -202,7 +242,8 @@ namespace FlexibleUITool.EditorTools
             return CollectIssueList(normalizedSafeArea).ConvertAll(i => i.Message);
         }
 
-        public List<FlexibleIssue> CollectIssueList(Rect normalizedSafeArea)
+        // extraOnly: 보이는 블록의 화면 밖·겹침·SafeArea 검사는 건너뛰고, 숨긴 패널·뒤집힌 크기·목록 잘림·다른 프리팹 자리만 본다 (편집 탭의 숨은 문제용)
+        public List<FlexibleIssue> CollectIssueList(Rect normalizedSafeArea, bool extraOnly = false)
         {
             var issues = new List<FlexibleIssue>();
             if (instance == null)
@@ -211,6 +252,12 @@ namespace FlexibleUITool.EditorTools
             var root = (RectTransform)instance.transform;
             Rect rootRect = root.rect;
             List<RectTransform> blocks = CollectBlocks(root);
+            if (extraOnly)
+            {
+                CollectReserved(root, blocks, issues);
+                CollectHiddenAndCollapsed(root, issues);
+                return FilterIssues(root, issues);
+            }
 
             // 블록 목록만 넘기면 화면 전체를 덮는 컨테이너(맨 위 Canvas 등) 안쪽을 보지 않으므로, 편집 탭과 같이 전체를 본다
             foreach (RectTransform outside in FindOutside(root))
@@ -255,7 +302,223 @@ namespace FlexibleUITool.EditorTools
 
             CollectReserved(root, blocks, issues);
             CollectHiddenAndCollapsed(root, issues);
-            return issues;
+            return FilterIssues(root, issues);
+        }
+
+        // ───────── 잘못 잡히는 문제 거르기 ─────────
+
+        // 안쪽 Flexible 프리팹 것(그 프리팹 검수에서 따로 본다), 보이지 않는 것, 화면을 다 덮는 배경, 실제 글자는 화면 안인 글자 칸,
+        // 스크롤바 기본 구조, 장식 그림과의 겹침, 화면을 덮는 막(Dim) 위아래로 나뉜 겹침을 빼고, 같은 문제는 한 번만 남긴다
+        private List<FlexibleIssue> FilterIssues(RectTransform root, List<FlexibleIssue> issues)
+        {
+            var byPath = new Dictionary<string, RectTransform>();
+            bool Find(string path, out RectTransform found)
+            {
+                if (!byPath.TryGetValue(path, out found))
+                    byPath[path] = found = FlexiblePathUtility.FindByPath(root, path) as RectTransform;
+                return found != null;
+            }
+            Rect screen = root.rect;
+            List<(RectTransform rt, long key)> backdrops = null;
+            Dictionary<Transform, long> drawKeys = null;
+            var seen = new HashSet<string>();
+            var result = new List<FlexibleIssue>();
+            foreach (FlexibleIssue issue in issues)
+            {
+                if (!seen.Add(issue.code + "|" + string.Join("|", issue.blocks)))
+                    continue;
+                if (issue.blocks.Length == 1)
+                {
+                    if (nestedOwner != null && nestedOwner.ContainsKey(issue.blocks[0]))
+                        continue;
+                    if (!Find(issue.blocks[0], out RectTransform target))
+                    {
+                        result.Add(issue);
+                        continue;
+                    }
+                    if (IsFalseSingle(issue.code, root, screen, target))
+                        continue;
+                }
+                else if (issue.code == "OVERLAP")
+                {
+                    string ownerA = null, ownerB = null;
+                    bool nestedA = nestedOwner != null && nestedOwner.TryGetValue(issue.blocks[0], out ownerA);
+                    bool nestedB = nestedOwner != null && nestedOwner.TryGetValue(issue.blocks[1], out ownerB);
+                    if (nestedA && nestedB && ownerA == ownerB)
+                        continue;
+                    if (Find(issue.blocks[0], out RectTransform a) && Find(issue.blocks[1], out RectTransform b))
+                    {
+                        if (IsDecorative(a) || IsDecorative(b) || !TextRectsOverlap(root, a, b))
+                            continue;
+                        drawKeys = drawKeys ?? DrawKeys(root);
+                        backdrops = backdrops ?? FindBackdrops(root, drawKeys);
+                        if (SeparatedByBackdrop(a, b, backdrops, drawKeys))
+                            continue;
+                    }
+                }
+                result.Add(issue);
+            }
+            return result;
+        }
+
+        private static bool IsFalseSingle(string code, RectTransform root, Rect screen, RectTransform target)
+        {
+            bool outside = code == "OUT_OF_SCREEN" || code == "HIDDEN_OUT_OF_SCREEN";
+            if (outside)
+            {
+                // 보이는 것이 없거나(충돌판 등) 화면을 통째로 덮는 배경·막은 화면 밖으로 넘쳐도 문제가 아니다
+                if (!HasVisual(target) || Contains(GetRectInRoot(root, target), screen))
+                    return true;
+                // 글자 칸이 넓어도 실제 글자가 화면 안이면 괜찮다
+                if (TryGetTextRect(root, target, out Rect text) && !IsOutside(text, screen))
+                    return true;
+            }
+            // 스크롤바 안의 기본 구조(음수 여백)와 숨긴 패널 속 스크롤바 위치는 보이는 문제가 아니다
+            if ((code == "COLLAPSED" || code == "HIDDEN_OUT_OF_SCREEN") && target.GetComponentInParent<Scrollbar>(true) != null)
+                return true;
+            return false;
+        }
+
+        // 보이는 그림이나 누를 수 있는 것이 하나라도 있는지
+        private static bool HasVisual(RectTransform target)
+        {
+            if (target.GetComponentInChildren<Selectable>(true) != null)
+                return true;
+            foreach (Graphic graphic in target.GetComponentsInChildren<Graphic>(true))
+            {
+                if (graphic.enabled && graphic.color.a > 0.01f)
+                    return true;
+            }
+            return false;
+        }
+
+        // 장식 그림: 누를 수 있는 것·글자가 없고, 그림이 모두 입력을 받지 않는다
+        private static bool IsDecorative(RectTransform target)
+        {
+            if (target.GetComponentInChildren<Selectable>(true) != null)
+                return false;
+            bool any = false;
+            foreach (Graphic graphic in target.GetComponentsInChildren<Graphic>(false))
+            {
+                if (!graphic.enabled)
+                    continue;
+                any = true;
+                if (IsText(graphic) || graphic.raycastTarget)
+                    return false;
+            }
+            return any;
+        }
+
+        private static bool IsText(Graphic graphic)
+        {
+            return graphic is Text || graphic.GetType().Name.StartsWith("TextMeshPro") || graphic.GetType().Name == "TMP_Text";
+        }
+
+        // 글자 블록은 칸 대신 실제 글자 범위로 겹침을 본다
+        private static bool TextRectsOverlap(RectTransform root, RectTransform a, RectTransform b)
+        {
+            bool textA = TryGetTextRect(root, a, out Rect ra);
+            bool textB = TryGetTextRect(root, b, out Rect rb);
+            if (!textA && !textB)
+                return true;
+            if (!textA)
+                ra = GetRectInRoot(root, a);
+            if (!textB)
+                rb = GetRectInRoot(root, b);
+            return Overlaps(ra, rb);
+        }
+
+        // TMP 글자의 실제 범위 (TMP를 직접 참조하지 않고 textBounds를 읽는다). 글자가 없거나 TMP가 아니면 false
+        private static bool TryGetTextRect(RectTransform root, RectTransform target, out Rect rect)
+        {
+            rect = default;
+            Graphic graphic = target.GetComponent<Graphic>();
+            if (graphic == null || !graphic.GetType().Name.StartsWith("TextMeshPro"))
+                return false;
+            if (!(graphic.GetType().GetProperty("textBounds")?.GetValue(graphic) is Bounds bounds) || bounds.size.x <= 0f || bounds.size.y <= 0f)
+                return false;
+            Vector2 min = root.InverseTransformPoint(target.TransformPoint(bounds.min));
+            Vector2 max = root.InverseTransformPoint(target.TransformPoint(bounds.max));
+            rect = Rect.MinMaxRect(Mathf.Min(min.x, max.x), Mathf.Min(min.y, max.y), Mathf.Max(min.x, max.x), Mathf.Max(min.y, max.y));
+            return true;
+        }
+
+        // 화면을 거의 다 덮고 입력을 막거나 보이는 막(Dim·팝업 배경). 그려지는 순서 값과 함께
+        private static List<(RectTransform rt, long key)> FindBackdrops(RectTransform root, Dictionary<Transform, long> drawKeys)
+        {
+            var result = new List<(RectTransform, long)>();
+            Rect screen = root.rect;
+            foreach (Graphic graphic in root.GetComponentsInChildren<Graphic>(false))
+            {
+                if (!graphic.enabled || !(graphic.raycastTarget || graphic.color.a > 0.05f) || IsUnderHiddenCanvas(graphic.transform, root))
+                    continue;
+                Rect r = GetRectInRoot(root, graphic.rectTransform);
+                if (r.width >= screen.width * 0.98f && r.height >= screen.height * 0.98f)
+                    result.Add((graphic.rectTransform, drawKeys[graphic.transform]));
+            }
+            return result;
+        }
+
+        // 겹친 두 블록 사이에 화면을 덮는 막이 그려지면, 위쪽은 모달 패널이라 아래쪽과 동시에 눌리거나 읽히지 않는다
+        private static bool SeparatedByBackdrop(RectTransform a, RectTransform b, List<(RectTransform rt, long key)> backdrops, Dictionary<Transform, long> drawKeys)
+        {
+            if (backdrops.Count == 0)
+                return false;
+            long keyA = drawKeys[a];
+            long keyB = drawKeys[b];
+            RectTransform low = keyA <= keyB ? a : b;
+            long lo = Math.Min(keyA, keyB), hi = Math.Max(keyA, keyB);
+            foreach ((RectTransform rt, long key) in backdrops)
+            {
+                if (key > lo && key < hi && !rt.IsChildOf(low) && !low.IsChildOf(rt))
+                    return true;
+            }
+            return false;
+        }
+
+        // 그려지는 순서: 캔버스 정렬 순서가 먼저, 같으면 계층 순서
+        private static Dictionary<Transform, long> DrawKeys(RectTransform root)
+        {
+            var keys = new Dictionary<Transform, long>();
+            var orders = new Dictionary<Canvas, int>();
+            Transform[] all = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < all.Length; i++)
+                keys[all[i]] = ((long)FlexibleReservedAreas.EffectiveOrder(all[i], root, orders) << 32) + i;
+            return keys;
+        }
+
+        // 안쪽 Flexible 프리팹이 소유한 오브젝트 (경로 → 그 프리팹 루트 경로). 바깥 프리팹에서 추가한 오브젝트는 빼서 바깥 소유로 둔다
+        private static Dictionary<string, string> FindNestedOwners(GameObject source)
+        {
+            var owners = new Dictionary<string, string>();
+            Transform root = source.transform;
+            foreach (FlexibleLayout nested in source.GetComponentsInChildren<FlexibleLayout>(true))
+            {
+                if (nested.gameObject == source)
+                    continue;
+                string nestedPath = FlexiblePathUtility.GetPath(root, nested.transform);
+                var added = new HashSet<Transform>(FlexiblePathUtility.AddedByOuter(nested.transform));
+                foreach (Transform t in nested.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t == nested.transform || IsUnder(t, added, nested.transform))
+                        continue;
+                    // 더 안쪽 Flexible 프리팹이 있으면 그쪽이 소유한다 (나중에 덮어쓴다)
+                    owners[FlexiblePathUtility.GetPath(root, t)] = nestedPath;
+                }
+            }
+            return owners;
+        }
+
+        public static bool IsUnder(Transform t, HashSet<Transform> roots, Transform stop)
+        {
+            if (roots.Count == 0)
+                return false;
+            for (Transform c = t; c != null && c != stop; c = c.parent)
+            {
+                if (roots.Contains(c))
+                    return true;
+            }
+            return false;
         }
 
         // ───────── 다른 프리팹이 차지한 자리 ─────────
@@ -493,9 +756,11 @@ namespace FlexibleUITool.EditorTools
                 UnityEngine.Object.DestroyImmediate(instance);
 
             template = source;
+            nestedOwner = FindNestedOwners(source);
             baseNestedReady = false;
             profileApplied = false;
             instance = UnityEngine.Object.Instantiate(source, canvasRect, false);
+            FlexiblePathUtility.RegisterCopy(instance.transform, source.transform);
             instance.hideFlags = HideFlags.HideAndDontSave;
             FitCopy((RectTransform)instance.transform);
             // 맨 위가 꺼진 채(오브젝트 또는 Canvas) 저장된 프리팹(실행 중에 코드가 켬)도 그려 보이게 켠다
@@ -506,7 +771,29 @@ namespace FlexibleUITool.EditorTools
             layout = instance.GetComponent<FlexibleLayout>();
             if (layout != null && !layout.enabled)
                 layout = null;
+            FillPreviewItems(instance);
             Dirty = false;
+        }
+
+        // 코드가 채우는 목록에 견본 아이템을 넣는다 (이미 아이템이 있으면 그대로 둔다)
+        private static void FillPreviewItems(GameObject copy)
+        {
+            foreach (FlexiblePreviewItems items in copy.GetComponentsInChildren<FlexiblePreviewItems>(true))
+            {
+                if (items.itemPrefab == null)
+                    continue;
+                bool hasItem = false;
+                foreach (Transform child in items.transform)
+                    hasItem |= child.gameObject.activeSelf;
+                if (hasItem)
+                    continue;
+                for (int i = 0; i < Mathf.Max(1, items.count); i++)
+                {
+                    GameObject item = UnityEngine.Object.Instantiate(items.itemPrefab, items.transform, false);
+                    item.hideFlags = HideFlags.HideAndDontSave;
+                    item.SetActive(true);
+                }
+            }
         }
 
         private void ApplyView(IDictionary<string, bool> view)
@@ -641,6 +928,7 @@ namespace FlexibleUITool.EditorTools
                 probeRect.SetParent(canvasRect, false);
                 probeRect.sizeDelta = size;
                 GameObject copy = UnityEngine.Object.Instantiate(baseSource, probeRect, false);
+                FlexiblePathUtility.RegisterCopy(copy.transform, baseSource.transform);
                 var root = (RectTransform)copy.transform;
                 FitCopy(root);
                 copy.SetActive(true);

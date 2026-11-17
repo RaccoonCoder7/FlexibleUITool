@@ -172,33 +172,33 @@ namespace FlexibleUITool.EditorTools
             switch (step)
             {
                 case Step.AdvWelcome:
-                    return T("Now let's place blocks precisely.\nYou'll learn the grid (cells), how blocks follow the screen size, fine-tuning, and roles and templates. We practice on the <b>Landscape</b> screen of a fresh practice prefab.");
+                    return T("Now let's place objects precisely.\nYou'll learn the grid (cells), how objects follow the screen size, fine-tuning, and roles and templates. We practice on the <b>Landscape</b> screen of a fresh practice prefab.");
                 case Step.OpenGrid:
                     return T("Open <b>Place on a grid</b> (orange frame).\nBlue cells (the grid) appear in the Scene view. Each screen has its own grid.");
                 case Step.ChangeGrid:
                     return T("<b>Columns</b> and <b>Rows</b> set how many cells there are. <b>Margin</b> is the space at the screen edge, <b>Gutter</b> the space between cells.\nChange any number and watch the Scene view.\nThis practice prefab has <b>Use a grid only for this prefab</b> on, so other prefabs are not affected. Without it, every prefab shares the project grid (<b>Project grids...</b>).");
                 case Step.SelectBlock:
-                    return T("Pick the block to place. Click <b>Main</b> in the Hierarchy or the Scene view.");
+                    return T("Pick the object to place. Click <b>Main</b> in the Hierarchy or the Scene view.");
                 case Step.DragCells:
-                    return T("Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height. The block moves as soon as you finish typing.)");
+                    return T("Drag over the blue cells in the Scene view. When you let go, Main fits those cells exactly.\n(You can also type Column / Row / Width / Height. The object moves as soon as you finish typing.)");
                 case Step.SetMode:
-                    return T("Choose how the block follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle.\nChange <b>Horizontal</b> from Stretch to another mode. The block changes right away.");
+                    return T("Choose how the object follows the screen size.\n<b>Stretch</b>: grows with the screen. <b>Stick left / right</b>: keeps its size on that side. <b>Center</b>: keeps its size in the middle.\nChange <b>Horizontal</b> from Stretch to another mode. The object changes right away.");
                 case Step.SeeMode:
-                    return T("Open the <b>Preview</b> tab and make the window wider and narrower.\nStretched blocks grow with it; stuck blocks keep their size. Press <b>Got it</b> when you've seen it.");
+                    return T("Open the <b>Preview</b> tab and make the window wider and narrower.\nStretched objects grow with it; stuck objects keep their size. Press <b>Got it</b> when you've seen it.");
                 case Step.Nudge:
                     return T("After placing on cells you can still adjust by hand.\nChange <b>Pos X</b> or <b>Width</b> of Main in the Inspector. (To drag it in the Scene view, close <b>Place on a grid</b> first.)\nThe adjustment is kept even when the grid changes.");
                 case Step.SaveAdjust:
                     return T("Nice! Now save with <b>Ctrl+S</b> (or the Save button).");
                 case Step.SetRole:
-                    return T("A <b>role</b> (Header, Main, ...) says what a block is for. Blocks with roles can be laid out in one go with a template.\nSelect Main and set <b>Role</b> to Main.");
+                    return T("A <b>role</b> (Header, Main, ...) says what an object is for. Objects with roles can be laid out in one go with a template.\nSelect Main and set <b>Role</b> to Main.");
                 case Step.OpenTemplates:
                     return T("Open <b>Templates</b> (orange frame).");
                 case Step.SaveTemplate:
-                    return T("Type a name and press <b>Save current layout as template</b>.\nOnly blocks that have a role and were placed on cells are saved.");
+                    return T("Type a name and press <b>Save current layout as template</b>.\nOnly objects that have a role and were placed on cells are saved.");
                 case Step.ApplyTemplate:
-                    return T("Now use it. Move Main anywhere, then press <b>Apply</b> next to the template.\nMain goes back to its saved cells. Any prefab whose blocks have the same roles can be laid out like this in one click.");
+                    return T("Now use it. Move Main anywhere, then press <b>Apply</b> next to the template.\nMain goes back to its saved cells. Any prefab whose objects have the same roles can be laid out like this in one click.");
                 case Step.AdvFinish:
-                    return T("Advanced done! Grid → place on cells → how blocks follow → fine-tune → roles and templates.\nThe grid settings and practice templates changed during the tutorial were put back.");
+                    return T("Advanced done! Grid → place on cells → how objects follow → fine-tune → roles and templates.\nThe grid settings and practice templates changed during the tutorial were put back.");
                 case Step.ChapterDone:
                     return T("This part is done!\nThe grid settings and practice templates changed during the tutorial were put back.");
                 default:

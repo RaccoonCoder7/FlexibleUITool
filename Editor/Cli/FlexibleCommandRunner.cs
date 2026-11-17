@@ -1029,9 +1029,20 @@ namespace FlexibleUITool.EditorTools
             {
                 if (!(child is RectTransform rt))
                     continue;
+                if ((rt.gameObject.hideFlags & HideFlags.DontSaveInEditor) != 0)
+                    continue;
                 blocks.Add(rt);
                 if (depth < ContainerDepth && IsScreenContainer(root, rt))
                     AddScreenBlocks(root, rt, depth + 1, blocks);
+                // 안쪽 Flexible 프리팹 안이라도 이 프리팹이 추가한 오브젝트는 이 프리팹이 배치한다
+                if (rt.GetComponent<FlexibleLayout>() != null)
+                {
+                    foreach (Transform added in FlexiblePathUtility.AddedByOuter(rt))
+                    {
+                        if (added is RectTransform addedRect && (added.gameObject.hideFlags & HideFlags.DontSaveInEditor) == 0)
+                            blocks.Add(addedRect);
+                    }
+                }
             }
         }
 

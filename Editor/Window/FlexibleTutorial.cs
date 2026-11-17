@@ -196,7 +196,7 @@ namespace FlexibleUITool.EditorTools
                         ? T("This is the <b>Portrait</b> screen. It is the base of every screen.\nNow press the <b>Landscape</b> button (orange frame)!")
                         : T("Open the practice prefab first.");
                 case Step.MoveMain:
-                    return T("You are on the <b>Landscape</b> screen now.\nMove the <b>Main</b> block anywhere you like: drag it in the Scene view, or change Pos X in the Inspector.");
+                    return T("You are on the <b>Landscape</b> screen now.\nMove the <b>Main</b> object anywhere you like: drag it in the Scene view, or change Pos X in the Inspector.");
                 case Step.Save:
                     return T("Nice! Now save with <b>Ctrl+S</b> (or the Save button).");
                 case Step.PressPortrait:
@@ -204,15 +204,15 @@ namespace FlexibleUITool.EditorTools
                 case Step.PressLandscapeAgain:
                     return T("Press <b>Landscape</b> again.\nYour landscape layout is still there.");
                 case Step.Grid:
-                    return T("(Optional) For neat alignment, open <b>Place on a grid</b>, select a block and drag over the blue cells in the Scene view.");
+                    return T("(Optional) For neat alignment, open <b>Place on a grid</b>, select an object and drag over the blue cells in the Scene view.");
                 case Step.Square:
-                    return T("Tablets use the <b>Square</b> screen. It works the same way.\nPress the <b>Square</b> button. Blocks you don't touch keep the portrait layout.");
+                    return T("Tablets use the <b>Square</b> screen. It works the same way.\nPress the <b>Square</b> button. Objects you don't touch keep the portrait layout.");
                 case Step.Preview:
                     return T("Open the <b>Preview</b> tab. Drag the window edge to make it wide, then let go and make it narrow.\nWhen the screen name at the bottom changes, you're done.");
                 case Step.Check:
                     return T("Last one: the <b>Check</b> tab shows the prefab on many phones and tablets at once.\nOpen it and press <b>Run check</b>.");
                 case Step.Finish:
-                    return T("All done! In the check, a red bar on a thumbnail means a problem on that device.\nJust remember: 1. Press a screen button  2. Move blocks  3. Ctrl+S\nShall I delete the practice prefab?");
+                    return T("All done! In the check, a red bar on a thumbnail means a problem on that device.\nJust remember: 1. Press a screen button  2. Move objects  3. Ctrl+S\nShall I delete the practice prefab?");
                 case Step.Menu:
                     return T("Which tutorial do you want to do?");
                 default:
@@ -295,7 +295,7 @@ namespace FlexibleUITool.EditorTools
         // 다시 해 보고 싶은 튜토리얼 고르기
         private static void DrawMenu(FlexibleWindow window)
         {
-            if (GUILayout.Button(T("Basic: switch screens and move blocks"), GUILayout.Height(24f)))
+            if (GUILayout.Button(T("Basic: switch screens and move objects"), GUILayout.Height(24f)))
             {
                 Enter(Step.Welcome, window);
                 GUIUtility.ExitGUI();

@@ -246,6 +246,8 @@ namespace FlexibleUITool.EditorTools
 
                     if (sourceGroup != null)
                         entry.layoutGroup = sourceGroup;
+                    if (state.controlSizeFitter)
+                        entry.sizeFitter = source.GetComponent<ContentSizeFitter>();
                     entry.states.Add(state);
                     report.recorded++;
 
@@ -263,7 +265,8 @@ namespace FlexibleUITool.EditorTools
                     AddChange(report, layout, FlexiblePathUtility.GetPath(sourceRoot, removed), removed, "removed");
             }
 
-            layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0);
+            // 안쪽 프리팹으로 옮겨진(Apply된) 오브젝트의 기록은 이제 안쪽 프리팹이 맡으므로 지운다
+            layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0 || FlexiblePathUtility.IsOwnedByNested(e.target, layout.transform));
             layout.Roles.RemoveAll(r => r.target == null || string.IsNullOrEmpty(r.role));
 
             foreach (RectTransform rt in FlexiblePathUtility.CollectTargets(workspaceRoot))
@@ -285,11 +288,34 @@ namespace FlexibleUITool.EditorTools
             FlexibleRectState editedRect = FlexibleRectState.Capture(edited);
             FlexibleRectState sourceRect = FlexibleRectState.Capture(source);
 
-            // 레이아웃 그룹·피터가 정하는 값은 화면 크기에 따라 재계산되므로 비교에서 뺀다
+            // 레이아웃 그룹·피터가 정하는 값은 화면 크기에 따라 재계산되므로 비교에서 뺀다 (피터가 정하는 축만)
+            var editedFitter = edited.GetComponent<ContentSizeFitter>();
+            var sourceFitter = source.GetComponent<ContentSizeFitter>();
             if (IsDrivenByParentLayout(edited))
-                sourceRect = editedRect;
-            else if (edited.GetComponent<ContentSizeFitter>() != null || edited.GetComponent<AspectRatioFitter>() != null)
+            {
+                // 레이아웃은 위치를 늘 정하지만, 크기는 자식 크기 제어를 켠 축만 정한다. 스케일은 정하지 않는다
+                FlexibleRectState kept = editedRect;
+                var line = edited.parent.GetComponent<HorizontalOrVerticalLayoutGroup>();
+                bool fitsX = editedFitter != null && editedFitter.enabled && editedFitter.horizontalFit != ContentSizeFitter.FitMode.Unconstrained;
+                bool fitsY = editedFitter != null && editedFitter.enabled && editedFitter.verticalFit != ContentSizeFitter.FitMode.Unconstrained;
+                if (line != null && !line.childControlWidth && !fitsX)
+                    kept.sizeDelta.x = sourceRect.sizeDelta.x;
+                if (line != null && !line.childControlHeight && !fitsY)
+                    kept.sizeDelta.y = sourceRect.sizeDelta.y;
+                kept.localScale = sourceRect.localScale;
+                sourceRect = kept;
+            }
+            else if (edited.GetComponent<AspectRatioFitter>() != null)
                 sourceRect.sizeDelta = editedRect.sizeDelta;
+            else if (editedFitter != null && editedFitter.enabled)
+            {
+                if (editedFitter.horizontalFit != ContentSizeFitter.FitMode.Unconstrained)
+                    sourceRect.sizeDelta.x = editedRect.sizeDelta.x;
+                if (editedFitter.verticalFit != ContentSizeFitter.FitMode.Unconstrained)
+                    sourceRect.sizeDelta.y = editedRect.sizeDelta.y;
+            }
+            bool fitterChanged = editedFitter != null && sourceFitter != null
+                && (editedFitter.horizontalFit != sourceFitter.horizontalFit || editedFitter.verticalFit != sourceFitter.verticalFit);
 
             bool rectChanged = !editedRect.Approximately(sourceRect, Epsilon);
             bool activeChanged = edited.gameObject.activeSelf != source.gameObject.activeSelf;
@@ -301,7 +327,7 @@ namespace FlexibleUITool.EditorTools
                 groupChanged = !editedGroupState.Approximately(FlexibleLayoutGroupState.Capture(sourceGroup), Epsilon);
             }
 
-            if (!rectChanged && !activeChanged && !groupChanged)
+            if (!rectChanged && !activeChanged && !groupChanged && !fitterChanged)
                 return false;
 
             state = new FlexibleProfileState
@@ -312,6 +338,9 @@ namespace FlexibleUITool.EditorTools
                 active = edited.gameObject.activeSelf,
                 controlLayoutGroup = groupChanged,
                 layoutGroup = editedGroupState,
+                controlSizeFitter = fitterChanged,
+                fitterHorizontal = fitterChanged ? editedFitter.horizontalFit : default,
+                fitterVertical = fitterChanged ? editedFitter.verticalFit : default,
             };
             return true;
         }
@@ -333,6 +362,7 @@ namespace FlexibleUITool.EditorTools
             state.fitAnchorMin = placement.fitAnchorMin;
             state.fitAnchorMax = placement.fitAnchorMax;
             state.fitMaxScale = placement.fitMaxScale;
+            state.gridSizeKept = placement.sizeKept;
         }
 
         // 기록된 화면 상태에서 그리드 배치 기록을 되살린다
@@ -350,6 +380,7 @@ namespace FlexibleUITool.EditorTools
                 fitAnchorMin = state.fitAnchorMin,
                 fitAnchorMax = state.fitAnchorMax,
                 fitMaxScale = state.fitMaxScale,
+                sizeKept = state.gridSizeKept,
             };
         }
 
@@ -363,6 +394,7 @@ namespace FlexibleUITool.EditorTools
             return a.rect.Approximately(b.rect, Epsilon)
                 && a.controlActive == b.controlActive && (!a.controlActive || a.active == b.active)
                 && a.controlLayoutGroup == b.controlLayoutGroup && (!a.controlLayoutGroup || a.layoutGroup.Approximately(b.layoutGroup, Epsilon))
+                && a.controlSizeFitter == b.controlSizeFitter && (!a.controlSizeFitter || (a.fitterHorizontal == b.fitterHorizontal && a.fitterVertical == b.fitterVertical))
                 && a.fit == b.fit;
         }
 

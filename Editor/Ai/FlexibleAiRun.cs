@@ -330,11 +330,11 @@ namespace FlexibleUITool.EditorTools
                 {
                     case "ping": return T("Connecting to Unity");
                     case "profiles": return T("Reading the screen settings");
-                    case "describe": return T("Reading where the blocks are");
+                    case "describe": return T("Reading where the objects are");
                     case "render": return T("Drawing the screens to look at them");
                     case "check": return T("Checking for problems");
                     case "apply-spec": return T("Applying a layout");
-                    case "set-role": return T("Giving blocks roles");
+                    case "set-role": return T("Giving objects roles");
                     case "export-spec": return T("Reading the current layout");
                 }
             }

@@ -109,6 +109,24 @@ namespace FlexibleUITool.EditorTools
             return TryComputeSlotState(target, context.root, slot, ResolveX(modeX, clamped, grid), ResolveY(modeY, clamped, grid), out state);
         }
 
+        // 칸에 맞춰 줄일 영역: 칸 범위가 한 방향으로 그리드 전체면 그 방향은 바깥 여백까지 쓴다
+        // (화면 폭을 채우는 블록이 여백 때문에 늘 조금씩 줄어들지 않도록)
+        public static Rect GetFitSlotRect(Rect area, FlexibleGrid grid, FlexibleCell cell)
+        {
+            Rect slot = GetSlotRect(area, grid, cell);
+            if (cell.column == 0 && cell.width >= grid.columns)
+            {
+                slot.xMin = area.xMin;
+                slot.xMax = area.xMax;
+            }
+            if (cell.row == 0 && cell.height >= grid.rows)
+            {
+                slot.yMin = area.yMin;
+                slot.yMax = area.yMax;
+            }
+            return slot;
+        }
+
         private static Vector2 GetCellSize(Rect area, FlexibleGrid grid)
         {
             float width = (area.width - grid.margin * 2f - (grid.columns - 1) * grid.gutter) / grid.columns;

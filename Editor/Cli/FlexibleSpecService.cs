@@ -105,6 +105,7 @@ namespace FlexibleUITool.EditorTools
         {
             string guid = AssetDatabase.AssetPathToGUID(prefabPath);
             string workspacePath = $"{FlexibleWorkspaceService.WorkspaceFolder}/_cli_{guid.Substring(0, 8)}_{specProfile.profile}.prefab";
+            placeWarnings.Clear();
             AssetDatabase.DeleteAsset(workspacePath);
             FlexibleWorkspaceService.CreateAt(prefabPath, specProfile.profile, workspacePath);
             try
@@ -120,13 +121,18 @@ namespace FlexibleUITool.EditorTools
                     PrefabUtility.UnloadPrefabContents(root);
                 }
 
-                return FlexibleWorkspaceService.Commit(workspacePath, dryRun);
+                FlexibleCommitReport report = FlexibleWorkspaceService.Commit(workspacePath, dryRun);
+                report.warnings.AddRange(placeWarnings);
+                return report;
             }
             finally
             {
                 AssetDatabase.DeleteAsset(workspacePath);
             }
         }
+
+        // 배치하면서 알게 된 주의 사항 (배경까지 줄어드는 맞춤 등). 결과의 warnings 로 돌려준다
+        private static readonly List<string> placeWarnings = new List<string>();
 
         // 루트를 프로필 작업 해상도 크기의 임시 캔버스에 넣어 GUI 작업 프리팹과 같은 조건에서 배치한다
         private static void PlaceBlocks(GameObject root, string prefabPath, FlexibleSpecProfile specProfile, FlexibleProfileSettings settings)
@@ -187,6 +193,7 @@ namespace FlexibleUITool.EditorTools
                                 adjustment.position += PinOffset(modeX, modeY, baseRect.Value, baseSizes.Screen, context.grid.margin);
                             }
                             FlexibleGridPlacementService.Apply(context, workspace, target, whole, modeX, modeY, block.safeArea, adjustment, block.fit);
+                            WarnBackdropFit(block, rootRect, target, baseSizes);
                         }
                         else if (block.HasCell)
                         {
@@ -202,6 +209,7 @@ namespace FlexibleUITool.EditorTools
                                 adjustment.size += KeepSizeOffset(context, target, cell, sizeX, sizeY, block.safeArea, baseSizes.Get(FlexiblePathUtility.GetPath(rootRect, target)));
                             }
                             FlexibleGridPlacementService.Apply(context, workspace, target, cell, modeX, modeY, block.safeArea, adjustment, block.fit);
+                            WarnBackdropFit(block, rootRect, target, baseSizes);
                             if (IsKeep(block.modeX) || IsKeep(block.modeY))
                             {
                                 // 코드가 움직이는 축 등: 그 축만 세로(기준) 값으로 되돌린다 (칸 기록 없이 직접 지정한 배치가 된다)
@@ -234,6 +242,16 @@ namespace FlexibleUITool.EditorTools
                 rootRect.SetParent(null, false);
                 UnityEngine.Object.DestroyImmediate(canvasObject);
             }
+        }
+
+        private static void WarnBackdropFit(FlexibleSpecBlock block, RectTransform root, RectTransform target, BaseSizes baseSizes)
+        {
+            if (!block.fit || baseSizes == null)
+                return;
+            string path = FlexiblePathUtility.GetPath(root, target);
+            Vector2? size = baseSizes.Get(path);
+            if (size.HasValue && FlexibleGridPlacementService.IsScreenBackdrop(target, size.Value, baseSizes.Screen))
+                placeWarnings.Add($"{path}: {FlexibleGridPlacementService.BackdropFitWarning}");
         }
 
         // 크기를 지키는 축(stretch가 아닌 축)은 칸 크기 대신 세로(기준) 화면에서의 블록 크기를 쓰도록 크기 보정을 구한다
@@ -507,6 +525,8 @@ namespace FlexibleUITool.EditorTools
                     WriteBlock(json, root, layout, entry, state);
                     if (state.controlLayoutGroup)
                         warnings.Add($"{profile.id}/{FlexiblePathUtility.GetPath(root, entry.target)}: layout group overrides are not exported");
+                    if (state.controlSizeFitter)
+                        warnings.Add($"{profile.id}/{FlexiblePathUtility.GetPath(root, entry.target)}: Content Size Fitter overrides are not exported");
                 }
                 json.EndArray().EndObject();
             }

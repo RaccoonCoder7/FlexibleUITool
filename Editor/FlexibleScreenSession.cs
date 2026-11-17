@@ -62,6 +62,20 @@ namespace FlexibleUITool.EditorTools
             PrefabStage.prefabSaving += OnSaving;
             PrefabStage.prefabSaved += OnSaved;
             PrefabStage.prefabStageOpened += OnOpened;
+            // 스크립트를 다시 불러온 뒤 글자 컴포넌트 등이 다시 계산되며 붙는 「변경 있음」을 지운다 (저장된 것과 같을 때만)
+            // 다시 불러오기 전에 이미 바뀐 내용이 있었으면(사용자 편집) 건드리지 않는다
+            AssemblyReloadEvents.beforeAssemblyReload += () =>
+            {
+                PrefabStage current = PrefabStageUtility.GetCurrentPrefabStage();
+                SessionState.SetBool(CleanBeforeReloadKey, current != null && !current.scene.isDirty);
+            };
+            AssemblyReloadEvents.afterAssemblyReload += () =>
+            {
+                PrefabStage current = PrefabStageUtility.GetCurrentPrefabStage();
+                if (current != null && SessionState.GetBool(CleanBeforeReloadKey, false))
+                    CleanIfUnchangedLater(current);
+                SessionState.EraseBool(CleanBeforeReloadKey);
+            };
             PrefabStage.prefabStageClosing += OnClosing;
             EditorApplication.projectChanged += () => { diskMap = null; fullDiskMap = null; };
             // 도메인 리로드 뒤에는 열림 이벤트가 오지 않으므로 다시 확인한다
@@ -140,8 +154,12 @@ namespace FlexibleUITool.EditorTools
             if (!layout.TryGetSelectionSize(out Vector2 size))
                 return true;
 
+            // 그 화면 종류의 범위 안이라도 작업 해상도와 비율이 다르면 맞지 않는 것으로 본다.
+            // 세로 원본을 3:4 크기로 편집하면 위치·크기가 그 크기 기준으로 저장되기 때문이다
             float aspect = size.x / size.y;
-            if (aspect >= settings.Profiles[index].minAspect && aspect < settings.MaxAspectOf(index))
+            Vector2 work = settings.Profiles[index].workResolution;
+            float workAspect = work.y > 0f ? work.x / work.y : aspect;
+            if (Mathf.Abs(aspect - workAspect) <= workAspect * 0.01f)
                 return true;
             profile = settings.Profiles[index];
             return false;
@@ -178,6 +196,46 @@ namespace FlexibleUITool.EditorTools
             return Commit(stage, profileId, null);
         }
 
+        // 한 화면의 기록 전체를 글로 (기록 전후가 같은지 비교용)
+        private static string RecordsOf(FlexibleLayout layout, string profileId)
+        {
+            var text = new System.Text.StringBuilder();
+            foreach (FlexibleLayoutEntry entry in layout.Entries)
+            {
+                FlexibleProfileState state = entry.target != null ? entry.Find(profileId) : null;
+                if (state != null)
+                    text.Append(entry.target.GetInstanceID()).Append(':').Append(JsonUtility.ToJson(state)).Append('|');
+            }
+            return text.ToString();
+        }
+
+        private static bool DiffersFromSaved(PrefabStage stage, FlexibleWorkspace session)
+        {
+            // 레이아웃 설정(전용 그리드·화면 고르는 기준·역할)
+            var live = stage.prefabContentsRoot.GetComponent<FlexibleLayout>();
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(stage.assetPath);
+            var savedLayout = asset != null ? asset.GetComponent<FlexibleLayout>() : null;
+            if (live == null || savedLayout == null || live.UseOwnGrid != savedLayout.UseOwnGrid || live.ProfileSource != savedLayout.ProfileSource
+                || live.Roles.Count != savedLayout.Roles.Count || live.Entries.Count != savedLayout.Entries.Count)
+                return true;
+            if (live.Settings != null && live.Settings.Profiles.Any(p => !live.GetGrid(p.id).Equals(savedLayout.GetGrid(p.id))))
+                return true;
+            var root = stage.prefabContentsRoot.transform;
+            var savedRoles = new HashSet<string>(savedLayout.Roles.Where(r => r.target != null).Select(r => FlexiblePathUtility.GetPath(asset.transform, r.target) + "=" + r.role));
+            if (live.Roles.Any(r => r.target != null && !savedRoles.Contains(FlexiblePathUtility.GetPath(root, r.target) + "=" + r.role)))
+                return true;
+
+            foreach (FlexibleWorkspaceLink link in session.links)
+            {
+                if (link.target == null)
+                    continue;
+                RectTransform saved = FindSavedByPath(stage, link.sourcePath);
+                if (saved == null || FlexibleWorkspaceService.TryBuildState(link.target, saved, null, out _, out _))
+                    return true;
+            }
+            return false;
+        }
+
         public static bool Save(PrefabStage stage)
         {
             return Commit(stage, GetActiveProfileId(stage), null);
@@ -190,7 +248,8 @@ namespace FlexibleUITool.EditorTools
             {
                 foreach (FlexibleLayoutEntry entry in layout.Entries)
                     entry.states.RemoveAll(s => s.profileId == profileId);
-                layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0);
+                // 안쪽 프리팹으로 옮겨진(Apply된) 오브젝트의 기록은 이제 안쪽 프리팹이 맡으므로 지운다
+            layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0 || FlexiblePathUtility.IsOwnedByNested(e.target, layout.transform));
             });
         }
 
@@ -228,6 +287,8 @@ namespace FlexibleUITool.EditorTools
             FlexibleWorkspace session = Prepare(stage);
             string active = GetActiveProfileId(stage);
             string baseId = settings.BaseProfileId;
+            // 바뀐 게 없으면 화면만 바꾸고 파일은 다시 쓰지 않는다 (같은 화면 저장·기록 수정은 늘 저장)
+            bool needSave = stage.scene.isDirty || modify != null || viewAfter == active;
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             var kept = new List<FlexibleGridPlacement>(session.placements);
             bool ok;
@@ -239,13 +300,22 @@ namespace FlexibleUITool.EditorTools
                 HideView(session);
                 if (active != baseId)
                 {
+                    string before = needSave ? null : RecordsOf(layout, active);
                     Record(stage, layout, session, active);
+                    needSave |= before != null && before != RecordsOf(layout, active);
                     RestoreBase(stage, session);
+                }
+                else
+                {
+                    bool fitsChanged = RecordBaseFits(layout, session, baseId);
+                    // 「바뀜」 표시 없이 스크립트로 바뀐 값도 놓치지 않게 저장된 프리팹과 비교한다
+                    if (!needSave)
+                        needSave = fitsChanged || DiffersFromSaved(stage, session);
                 }
 
                 modify?.Invoke(layout);
-                ok = InvokeSave(stage);
-                if (ok)
+                ok = !needSave || InvokeSave(stage);
+                if (ok && needSave)
                     SaveCount++;
                 diskMap = null;
                 fullDiskMap = null;
@@ -256,6 +326,7 @@ namespace FlexibleUITool.EditorTools
                 if (viewAfter == baseId)
                 {
                     session.placements.AddRange(active == baseId ? kept : session.basePlacements);
+                    RestoreBasePlacements(layout, session, baseId);
                 }
                 else
                 {
@@ -279,6 +350,10 @@ namespace FlexibleUITool.EditorTools
 
             if (active != viewAfter && AutoGameView)
                 SelectWorkResolution(settings.Find(viewAfter));
+            // 내용은 이제 저장된 것(또는 방금 저장한 것)과 같다. 화면 크기가 바뀐 뒤 레이아웃·글자 컴포넌트가 다시 계산되며 붙는
+            // 「변경 있음」 표시를 몇 프레임 동안 지운다 (남아 있으면 다음 화면 전환이 바뀐 게 없어도 파일을 다시 저장한다)
+            if (ok)
+                KeepClean(stage, false, 10);
             // 화면 모양이 바뀐 뒤 Scene 뷰를 프리팹에 맞춘다 (모양은 Game 뷰 크기가 바뀐 다음 프레임에 바뀐다)
             if (active != viewAfter)
                 frameAfterSwitch = stage.assetPath;
@@ -303,7 +378,10 @@ namespace FlexibleUITool.EditorTools
             HideView(session);
             reshowView = true;
             if (active == layout.Settings.BaseProfileId)
+            {
+                RecordBaseFits(layout, session, active);
                 return;
+            }
 
             Record(stage, layout, session, active);
             RestoreBase(stage, session);
@@ -364,7 +442,7 @@ namespace FlexibleUITool.EditorTools
                     continue;
                 if (FlexibleWorkspaceService.TryBuildState(link.target, saved, null, out FlexibleProfileState state, out _))
                 {
-                    bool viewOnly = session.FindView(link.target.gameObject) != null && state.controlActive && !state.controlLayoutGroup
+                    bool viewOnly = session.FindView(link.target.gameObject) != null && state.controlActive && !state.controlLayoutGroup && !state.controlSizeFitter
                         && state.rect.Approximately(FlexibleRectState.Capture(saved), 0.01f);
                     if (!viewOnly)
                         result.Add(link.target);
@@ -406,12 +484,11 @@ namespace FlexibleUITool.EditorTools
         }
 
         // 켜고 끈 다음 프레임에 레이아웃이 다시 계산되며 「변경 있음」이 붙는 것을 지운다 (원래 깨끗했을 때만)
-        private static void KeepClean(PrefabStage stage, bool wasDirty)
+        private static void KeepClean(PrefabStage stage, bool wasDirty, int frames = 2)
         {
             if (wasDirty)
                 return;
             stage.ClearDirtiness();
-            int frames = 2;
             EditorApplication.CallbackFunction clear = null;
             clear = () =>
             {
@@ -575,11 +652,57 @@ namespace FlexibleUITool.EditorTools
                 }
                 if (savedGroup != null)
                     target.layoutGroup = link.target.GetComponent<LayoutGroup>();
+                if (state.controlSizeFitter)
+                    target.sizeFitter = link.target.GetComponent<ContentSizeFitter>();
                 target.states.Add(state);
             }
 
-            layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0);
+            // 안쪽 프리팹으로 옮겨진(Apply된) 오브젝트의 기록은 이제 안쪽 프리팹이 맡으므로 지운다
+            layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0 || FlexiblePathUtility.IsOwnedByNested(e.target, layout.transform));
             layout.Roles.RemoveAll(r => r.target == null || string.IsNullOrEmpty(r.role));
+        }
+
+        // 기준 화면에서 칸에 맞춰 줄인 블록. 기준 화면은 프리팹 자체라 줄이기 정보(칸 영역·최대 배율)를 따로 기록해야
+        // 실행 중·미리보기에서 화면 크기(같은 세로 안의 다른 비율)에 맞춰 다시 줄인다. 바뀌었으면 true
+        private static bool RecordBaseFits(FlexibleLayout layout, FlexibleWorkspace session, string baseId)
+        {
+            string before = RecordsOf(layout, baseId);
+            foreach (FlexibleLayoutEntry entry in layout.Entries)
+                entry.states.RemoveAll(s => s.profileId == baseId);
+            foreach (FlexibleGridPlacement placement in session.placements)
+            {
+                if (placement.target == null || !placement.fit)
+                    continue;
+                var state = new FlexibleProfileState
+                {
+                    profileId = baseId,
+                    rect = FlexibleRectState.Capture(placement.target),
+                    active = placement.target.gameObject.activeSelf,
+                };
+                FlexibleWorkspaceService.MarkGridPlacement(state, placement);
+                FlexibleLayoutEntry entry = layout.Entries.Find(e => e.target == placement.target);
+                if (entry == null)
+                {
+                    entry = new FlexibleLayoutEntry { target = placement.target };
+                    layout.Entries.Add(entry);
+                }
+                entry.states.Add(state);
+            }
+            // 안쪽 프리팹으로 옮겨진(Apply된) 오브젝트의 기록은 이제 안쪽 프리팹이 맡으므로 지운다
+            layout.Entries.RemoveAll(e => e.target == null || e.states.Count == 0 || FlexiblePathUtility.IsOwnedByNested(e.target, layout.transform));
+            return before != RecordsOf(layout, baseId);
+        }
+
+        // 기록해 둔 기준 화면의 칸 배치를 되살린다 (프리팹을 다시 열어도 칸·줄이기 설정이 남게)
+        private static void RestoreBasePlacements(FlexibleLayout layout, FlexibleWorkspace session, string baseId)
+        {
+            foreach (FlexibleLayoutEntry entry in layout.Entries)
+            {
+                FlexibleProfileState state = entry.target != null ? entry.Find(baseId) : null;
+                if (state == null || !state.gridOrigin || session.FindPlacement(entry.target) != null)
+                    continue;
+                session.placements.Add(FlexibleWorkspaceService.FromState(entry.target, state, state.gridResult));
+            }
         }
 
         private static void RestoreBase(PrefabStage stage, FlexibleWorkspace session)
@@ -605,6 +728,14 @@ namespace FlexibleUITool.EditorTools
             var group = target.GetComponent<LayoutGroup>();
             if (savedGroup != null && group != null && savedGroup.GetType() == group.GetType())
                 FlexibleLayoutGroupState.Capture(savedGroup).ApplyTo(group);
+
+            var savedFitter = saved.GetComponent<ContentSizeFitter>();
+            var fitter = target.GetComponent<ContentSizeFitter>();
+            if (savedFitter != null && fitter != null)
+            {
+                fitter.horizontalFit = savedFitter.horizontalFit;
+                fitter.verticalFit = savedFitter.verticalFit;
+            }
         }
 
         // 내용이 기준 배치인 상태에서 부른다. 그리드로 놓았던 기록은 배치 기록으로 되살린다
@@ -781,15 +912,41 @@ namespace FlexibleUITool.EditorTools
             SessionState.EraseString(ViewKeyPrefix + stage.assetPath);
             string openOn = SessionState.GetString(OpenOnKeyPrefix + stage.assetPath, "");
             SessionState.EraseString(OpenOnKeyPrefix + stage.assetPath);
-            if (Prepare(stage) == null)
+            FlexibleWorkspace opened = Prepare(stage);
+            if (opened == null)
                 return;
+            if (IsReady(stage, out FlexibleLayout openedLayout))
+                RestoreBasePlacements(openedLayout, opened, openedLayout.Settings.BaseProfileId);
 
             if (!string.IsNullOrEmpty(openOn))
                 SwitchOnOpen(stage, openOn);
             if (AutoGameView)
                 SelectWorkResolution(GetActiveProfile(stage));
             frameAfterSwitch = stage.assetPath;
+            CleanIfUnchangedLater(stage);
             Changed?.Invoke();
+        }
+
+        private const string CleanBeforeReloadKey = "FlexibleUITool.CleanBeforeReload";
+
+        // 연 직후·스크립트를 다시 불러온 직후에는 아무것도 바꾸지 않았는데 「변경 있음」이 붙는 경우가 있다(글자 컴포넌트·레이아웃 재계산).
+        // 몇 프레임 뒤 기준 화면이고 저장된 프리팹과 실제로 같으면 표시를 지운다 (닫을 때 저장 확인창이 뜨지 않게)
+        private static void CleanIfUnchangedLater(PrefabStage stage)
+        {
+            int frames = 10;
+            EditorApplication.CallbackFunction check = null;
+            check = () =>
+            {
+                if (--frames > 0)
+                    return;
+                EditorApplication.update -= check;
+                if (stage == null || stage.prefabContentsRoot == null || !stage.scene.isDirty || busy || !IsBaseView(stage))
+                    return;
+                FlexibleWorkspace session = GetSession(stage);
+                if (session != null && !DiffersFromSaved(stage, session))
+                    stage.ClearDirtiness();
+            };
+            EditorApplication.update += check;
         }
 
         // 방금 연 프리팹(내용 = 저장된 기준 배치)을 저장하지 않고 다른 화면으로 바꾼다

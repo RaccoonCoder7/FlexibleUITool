@@ -80,9 +80,6 @@ namespace FlexibleUITool.EditorTools
             // 편집 중인 화면 따라가기: 프리팹 모드에서 지금 편집 중인 화면의 작업 해상도 비율로 보여 준다
             PrefabStage editing = PrefabStageUtility.GetCurrentPrefabStage();
             FlexibleProfile editingProfile = presetIndex == FollowEditing ? FlexibleScreenSession.GetActiveProfile(editing) : null;
-            GUILayout.Label(editingProfile != null
-                ? T("Showing the screen you are editing. To see other sizes, pick one from the list above (Free = window size).")
-                : T("Drag the window edge to change its shape. The layout switches automatically at each screen ratio."), EditorStyles.wordWrappedMiniLabel);
 
             Rect body = GUILayoutUtility.GetRect(10f, 100000f, 10f, 100000f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             if (Event.current.type == EventType.Layout)

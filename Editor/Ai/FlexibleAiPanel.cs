@@ -171,7 +171,6 @@ namespace FlexibleUITool.EditorTools
                 }
                 FlexibleGui.Mark("ai:start");
             }
-            GUILayout.Label(T("Takes a few minutes and uses your Claude usage. The prefab is saved and closed while the AI works, and opens again when it is done."), EditorStyles.wordWrappedMiniLabel);
 
             using (new EditorGUILayout.HorizontalScope())
             {

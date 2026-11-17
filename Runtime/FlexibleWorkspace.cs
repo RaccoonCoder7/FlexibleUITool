@@ -78,5 +78,7 @@ namespace FlexibleUITool
         public Vector2 fitAnchorMin;
         public Vector2 fitAnchorMax;
         public float fitMaxScale = 1f;
+        // 칸과 보이는 크기가 달라도 이대로 두기로 했다 (FlexibleProfileState.gridSizeKept)
+        public bool sizeKept;
     }
 }

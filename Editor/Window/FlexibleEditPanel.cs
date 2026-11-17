@@ -82,9 +82,10 @@ namespace FlexibleUITool.EditorTools
                 input.modeX = FlexibleGridMath.ResolveX(input.placement.modeX, input.cell, context.grid);
                 input.modeY = FlexibleGridMath.ResolveY(input.placement.modeY, input.cell, context.grid);
                 input.insideSafeArea = input.placement.insideSafeArea;
-                input.fit = input.placement.fit;
+                input.fit = input.placement.fit || FlexibleGridPlacementService.IsContentSized(target);
                 return input;
             }
+            input.fit = FlexibleGridPlacementService.IsContentSized(target);
 
             input.modeX = FlexibleAxisMode.Stretch;
             input.modeY = FlexibleAxisMode.Stretch;
@@ -108,8 +109,15 @@ namespace FlexibleUITool.EditorTools
             FlexibleGridAdjustment adjustment = default;
             if (input.placement != null)
                 FlexibleGridPlacementService.TryGetAdjustment(input.placement, out adjustment);
+            else
+            {
+                // 새로 놓을 때(드래그)는 손으로 바꾼 스케일도 원래 값으로 돌린다. 그래야 놓은 칸과 같은 크기로 보인다
+                adjustment.overrideScale = true;
+                adjustment.scale = FlexibleGridPlacementService.GetBaseScale(session, input.target);
+            }
             FlexibleCell cell = input.cell.Clamped(context.grid);
-            if (input.ownSize && sizes != null)
+            // 칸에 맞춰 줄이는 블록은 세로 화면 크기·모양을 지킨 채 줄인다 (칸 크기를 쓰면 내용물보다 좁아질 수 있다)
+            if ((input.ownSize || input.fit) && sizes != null)
             {
                 // 칸에 맞춰 줄이는 블록은 늘어나는 축도 크기를 지킨다 (가운데로)
                 FlexibleAxisMode sizeX = input.fit && FlexibleGridMath.ResolveX(input.modeX, cell, context.grid) == FlexibleAxisMode.Stretch ? FlexibleAxisMode.Center : input.modeX;
@@ -118,6 +126,14 @@ namespace FlexibleUITool.EditorTools
                     sizes.Get(FlexiblePathUtility.GetPath(context.root, input.target)));
             }
             FlexibleGridPlacementService.Apply(context, session, input.target, cell, input.modeX, input.modeY, input.insideSafeArea, adjustment, input.fit);
+
+            // 화면을 다 덮는 배경이 붙은 블록을 줄이면 배경도 같이 줄어든다는 것을 알린다
+            Vector2? baseSize = input.fit && sizes != null ? sizes.Get(FlexiblePathUtility.GetPath(context.root, input.target)) : null;
+            if (baseSize.HasValue && FlexibleGridPlacementService.IsScreenBackdrop(input.target, baseSize.Value, sizes.Screen))
+            {
+                fillNoteTarget = input.target;
+                fillNote = F("\"{0}\" has its own background covering the whole portrait screen (a dim or page background). Fitting shrinks that background too, so the screen edges are left uncovered. Keep this block as it is and fit the parts inside it instead.", input.target.name);
+            }
         }
 
         // 고른 블록 전부에 한 번에 적용하고 Undo 한 번으로 묶는다
@@ -131,7 +147,7 @@ namespace FlexibleUITool.EditorTools
                 foreach (BlockInput input in inputs)
                 {
                     BlockInput changed = change(input);
-                    if (changed.ownSize && sizes == null)
+                    if ((changed.ownSize || changed.fit) && sizes == null)
                         sizes = OpenBaseSizes(session, context.root);
                     Place(context, session, changed, sizes);
                 }
@@ -142,6 +158,328 @@ namespace FlexibleUITool.EditorTools
             }
             Undo.CollapseUndoOperations(group);
             SceneView.RepaintAll();
+        }
+
+        // ───────── 칸과 보이는 크기가 다를 때 ─────────
+
+        // 「칸 채우기」를 누른 뒤 안쪽에서 삐져나온 것 (그 블록을 고르고 있는 동안 보인다)
+        private static RectTransform fillNoteTarget;
+        private static string fillNote;
+
+        // 내용에 맞춰 크기가 정해지는 블록은 칸 모양과 다르면 칸보다 작게 보인다. 이때만 알린다
+        private static bool TryGetSizeMismatch(FlexibleGridContext context, FlexibleGridPlacement placement, out Rect cells, out Rect shown)
+        {
+            cells = shown = default;
+            if (placement == null || placement.target == null || placement.sizeKept || !FlexibleGridPlacementService.IsContentSized(placement.target))
+                return false;
+            cells = FlexibleGridMath.GetSlotRect(context.GetArea(placement.insideSafeArea), context.grid, placement.cell.Clamped(context.grid));
+            shown = ShownRect(context.root, placement.target);
+            return Mathf.Abs(shown.width - cells.width) > 2f || Mathf.Abs(shown.height - cells.height) > 2f;
+        }
+
+        // 화면(root) 기준으로 실제로 보이는 범위 (스케일 포함)
+        private static Rect ShownRect(RectTransform root, RectTransform target)
+        {
+            var corners = new Vector3[4];
+            target.GetWorldCorners(corners);
+            Vector2 min = root.InverseTransformPoint(corners[0]);
+            Vector2 max = root.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
+        private static void DrawSizeMismatch(FlexibleGridContext context, FlexibleWorkspace session, BlockInput input)
+        {
+            if (fillNoteTarget != null && fillNoteTarget == input.target && !string.IsNullOrEmpty(fillNote))
+                EditorGUILayout.HelpBox(fillNote, MessageType.Info);
+            if (!TryGetSizeMismatch(context, input.placement, out Rect cells, out Rect shown))
+                return;
+
+            bool onBase = FlexibleScreenSession.IsBaseView(PrefabStageUtility.GetCurrentPrefabStage());
+            EditorGUILayout.HelpBox(F("\"{0}\" looks {1:0} x {2:0}, but the cells you placed it on are {3:0} x {4:0}. Its size follows its contents (Content Size Fitter), so it keeps its shape and is scaled down to fit. Choose what to do:",
+                input.target.name, shown.width, shown.height, cells.width, cells.height), MessageType.Warning);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                string fillTip = onBase
+                    ? T("Turns off its Content Size Fitter so it takes the size of the cells. This is the base screen, so it changes every screen that has no layout of its own. Contents that do not shrink may stick out.")
+                    : T("Turns off its Content Size Fitter on this screen only, so it takes the size of the cells. Contents that do not shrink may stick out.");
+                if (GUILayout.Button(new GUIContent(T("Fill the cells"), fillTip), GUILayout.Height(24f)))
+                {
+                    FillCells(context, session, input);
+                    GUIUtility.ExitGUI();
+                }
+                if (GUILayout.Button(new GUIContent(T("Keep it as it is"), T("Keeps its shape and size. You will not be asked again for this object on this screen.")), GUILayout.Height(24f)))
+                {
+                    Undo.RecordObject(session, "Flexible Keep Size");
+                    input.placement.sizeKept = true;
+                    EditorUtility.SetDirty(session);
+                }
+            }
+        }
+
+        // 이 화면에서 Content Size Fitter를 끄고 칸 크기 그대로 다시 놓는다
+        private static void FillCells(FlexibleGridContext context, FlexibleWorkspace session, BlockInput input)
+        {
+            RectTransform block = input.target;
+            var fitter = block.GetComponent<ContentSizeFitter>();
+            // 스크롤 영역이 있으면 피터는 그대로 두고 안쪽을 맞춘다 (제목·버튼은 제 크기를 지키고 스크롤 영역만 늘고 준다)
+            ScrollRect scroll = fitter.horizontalFit == ContentSizeFitter.FitMode.Unconstrained
+                ? block.GetComponentsInChildren<ScrollRect>(false).FirstOrDefault(s => !IsClipped(s.transform, block)) : null;
+            if (scroll != null)
+            {
+                FillByScroll(context, session, input, (RectTransform)scroll.transform);
+                return;
+            }
+
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            Undo.RecordObject(fitter, "Flexible Fill Cells");
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            BlockInput fill = input;
+            fill.placement = null;
+            fill.fit = false;
+            fill.ownSize = false;
+            fill.modeX = FlexibleAxisMode.Stretch;
+            fill.modeY = FlexibleAxisMode.Stretch;
+            PlaceAll(context, session, new List<BlockInput> { fill }, i => i);
+            Undo.CollapseUndoOperations(group);
+
+            List<string> outside = FindStickingOut(input.target);
+            fillNoteTarget = input.target;
+            fillNote = outside.Count == 0
+                ? F("\"{0}\" now fills the cells.", input.target.name)
+                : F("\"{0}\" now fills the cells, but these parts inside do not shrink and stick out: {1}. To make them follow, change their layout in the prefab (for example give a scroll area a Layout Element with Flexible Height).",
+                    input.target.name, string.Join(", ", outside.Take(3)) + (outside.Count > 3 ? ", …" : ""));
+        }
+
+        // 칸 모양으로 놓고 안쪽을 맞춘다. 바꾸는 것은 RectTransform뿐이라 이 화면의 기록으로만 남는다.
+        // · 폭: 넘치는 안쪽은 세로 화면에서의 폭 비율로 좁히거나(그림·글자·스크롤) 줄인다(그 밖의 묶음). 디자인의 좌우 여백이 남는다
+        // · 높이: 스크롤 영역이 받는다. 다른 부분의 최소 높이 때문에 더 못 줄이면 블록 전체를 조금 줄이고 그만큼 폭을 넓혀 칸을 채운다
+        private static void FillByScroll(FlexibleGridContext context, FlexibleWorkspace session, BlockInput input, RectTransform scroll)
+        {
+            RectTransform block = input.target;
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            Undo.RecordObjects(block.GetComponentsInChildren<RectTransform>(true).Cast<Object>().ToArray(), "Flexible Fill Cells");
+
+            // 다시 눌러도 같은 결과가 나오게, 안쪽은 원래 디자인(저장된 기준 배치)에서 새로 계산한다
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            foreach (RectTransform inside in block.GetComponentsInChildren<RectTransform>(true))
+            {
+                RectTransform saved = inside != block && stage != null ? FlexibleScreenSession.FindSaved(stage, inside) : null;
+                if (saved != null)
+                    FlexibleRectState.Capture(saved).ApplyTo(inside);
+            }
+
+            BlockInput fill = input;
+            fill.placement = null;
+            fill.fit = false;
+            fill.ownSize = false;
+            fill.modeX = FlexibleAxisMode.Center;
+            fill.modeY = FlexibleAxisMode.Center;
+            PlaceAll(context, session, new List<BlockInput> { fill }, i => i);
+
+            FlexibleGridPlacement placement = session.FindPlacement(block);
+            Rect cells = FlexibleGridMath.GetSlotRect(context.GetArea(placement.insideSafeArea), context.grid, placement.cell.Clamped(context.grid));
+            // 높이를 직접 정하는 곳: 스크롤 영역이 부모에 늘어나 붙어 있거나 레이아웃이 높이를 정하면 그 위로 올라간다
+            RectTransform elastic = scroll;
+            while (elastic != block && elastic.parent is RectTransform up
+                && (!Mathf.Approximately(elastic.anchorMin.y, elastic.anchorMax.y)
+                    || (up.GetComponent<HorizontalOrVerticalLayoutGroup>() is HorizontalOrVerticalLayoutGroup upGroup && upGroup.childControlHeight)))
+                elastic = up;
+
+            Vector3 baseScale = block.localScale;
+            float factor = 1f;
+            var touched = new HashSet<RectTransform>();
+            FlexibleSpecService.BaseSizes sizes = OpenBaseSizes(session, context.root);
+            try
+            {
+                for (int round = 0; round < 8; round++)
+                {
+                    block.localScale = new Vector3(baseScale.x * factor, baseScale.y * factor, baseScale.z);
+                    block.sizeDelta = new Vector2(cells.width / Mathf.Abs(baseScale.x * factor), block.sizeDelta.y);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(block);
+                    NarrowInside(context.root, block, block, block.rect.width, touched, sizes);
+                    if (elastic != block)
+                        FitHeight(block, elastic, cells.height / Mathf.Abs(baseScale.y * factor));
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(block);
+
+                    float shown = block.rect.height * Mathf.Abs(baseScale.y * factor);
+                    float next = Mathf.Min(1f, factor * cells.height / Mathf.Max(1f, shown));
+                    if (Mathf.Abs(next - factor) < 0.0005f)
+                        break;
+                    factor = next;
+                }
+            }
+            finally
+            {
+                sizes?.Dispose();
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(block);
+            Undo.CollapseUndoOperations(group);
+
+            List<string> outside = FindStickingOut(block);
+            bool tooTall = block.rect.height * Mathf.Abs(block.localScale.y) > cells.height + 2f;
+            fillNoteTarget = block;
+            if (tooTall)
+                fillNote = F("\"{0}\" is still taller than the cells: even with \"{1}\" at its smallest, the other parts need more room.", block.name, scroll.name);
+            else if (outside.Count > 0)
+                fillNote = F("\"{0}\" now fills the cells (\"{1}\" became shorter or longer), but these parts still stick out: {2}.", block.name, scroll.name, string.Join(", ", outside.Take(3)) + (outside.Count > 3 ? ", …" : ""));
+            else
+                fillNote = F("\"{0}\" now fills the cells: \"{1}\" became shorter or longer, and wide parts inside were narrowed. Only this screen changes.", block.name, scroll.name);
+            if (!tooTall && factor < 0.995f)
+                fillNote += " " + F("The other parts need more height than the cells, so it is also shown at {0:0%} size.", factor);
+        }
+
+        // 높이를 정하는 곳(elastic)을 블록이 목표 높이를 넘지 않는 가장 큰 값으로 맞춘다.
+        // 다른 부분의 최소 높이 때문에 목표까지 못 줄이면, 블록 높이가 더 늘지 않는 가장 큰 값 (남는 빈 공간을 스크롤 영역이 쓴다)
+        private static void FitHeight(RectTransform block, RectTransform elastic, float target)
+        {
+            const float minHeight = 80f;
+            float Measure(float value)
+            {
+                elastic.sizeDelta = new Vector2(elastic.sizeDelta.x, value);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(block);
+                return block.rect.height;
+            }
+
+            float low = minHeight;
+            float goal = Mathf.Max(target, Measure(low)) + 0.5f;
+            float high = Mathf.Max(low, target);
+            if (Measure(high) <= goal)
+                return;
+            for (int i = 0; i < 24; i++)
+            {
+                float mid = (low + high) * 0.5f;
+                if (Measure(mid) <= goal)
+                    low = mid;
+                else
+                    high = mid;
+            }
+            Measure(low);
+        }
+
+        // 폭이 들어갈 자리보다 넓은 안쪽을 세로 화면에서의 폭 비율로 맞춘다 (한 번 맞춘 것은 자리가 바뀌면 다시 맞춘다).
+        // 레이아웃이 폭을 정하거나 부모에 늘어나 붙은 것은 부모를 따라가므로 그 안만 본다
+        private static void NarrowInside(RectTransform root, RectTransform block, RectTransform node, float room, HashSet<RectTransform> touched, FlexibleSpecService.BaseSizes sizes)
+        {
+            if (node != block && (node.GetComponent<Mask>() != null || node.GetComponent<RectMask2D>() != null))
+                return;
+            var group = node.GetComponent<HorizontalOrVerticalLayoutGroup>();
+            float padding = group != null ? group.padding.horizontal : 0;
+            float inner = Mathf.Min(node.rect.width, room) - padding;
+            Vector2? baseNode = sizes?.Get(FlexiblePathUtility.GetPath(root, node));
+            foreach (Transform t in node)
+            {
+                if (!(t is RectTransform child) || !child.gameObject.activeSelf)
+                    continue;
+                var graphic = child.GetComponent<Graphic>();
+                if (graphic != null && graphic.GetType().Name.StartsWith("TMP_SubMesh"))
+                    continue;
+                var element = child.GetComponent<LayoutElement>();
+                bool driven = group != null && group.childControlWidth && (element == null || !element.ignoreLayout);
+                bool stretched = !Mathf.Approximately(child.anchorMin.x, child.anchorMax.x);
+                if (driven || stretched)
+                {
+                    NarrowInside(root, block, child, inner, touched, sizes);
+                    continue;
+                }
+
+                float scale = Mathf.Max(0.0001f, Mathf.Abs(child.localScale.x));
+                float width = child.rect.width * scale;
+                if (inner > 1f && (width > inner + 1f || touched.Contains(child)))
+                {
+                    // 세로 화면에서 부모와의 좌우 여백을 그대로 둔다 (테두리 그림은 크기가 변하지 않으므로 여백도 같은 값이어야 한다).
+                    // 여백을 지키면 너무 좁아질 때만 세로 화면의 폭 비율로 (모르면 꽉 채운다)
+                    float want = inner;
+                    Vector2? baseChild = sizes?.Get(FlexiblePathUtility.GetPath(root, child));
+                    if (baseChild.HasValue && baseNode.HasValue && baseNode.Value.x - padding > 1f)
+                    {
+                        float gap = Mathf.Max(0f, baseNode.Value.x - padding - baseChild.Value.x);
+                        float ratio = Mathf.Clamp(baseChild.Value.x / (baseNode.Value.x - padding), 0.1f, 1f);
+                        want = inner - gap >= inner * ratio * 0.6f ? inner - gap : inner * ratio;
+                    }
+                    if (Mathf.Abs(want - width) > 0.5f)
+                    {
+                        if (graphic != null || child.GetComponent<ScrollRect>() != null)
+                        {
+                            // 글자는 좁아지면 줄이 늘어난다. 레이아웃이 높이를 정하지 않으면 늘어난 만큼 영역도 키워
+                            // 아래 것과의 간격을 원래 디자인과 같게 둔다 (영역 밖으로 넘치는 정도가 그대로)
+                            bool heightFree = !(group != null && group.childControlHeight) && Mathf.Approximately(child.anchorMin.y, child.anchorMax.y);
+                            float baseWidth = baseChild.HasValue ? baseChild.Value.x : child.sizeDelta.x;
+                            float baseHeight = baseChild.HasValue ? baseChild.Value.y : child.sizeDelta.y;
+                            float lines = heightFree ? PreferredHeightAt(child, want / scale) - PreferredHeightAt(child, baseWidth) : 0f;
+                            child.sizeDelta = new Vector2(want / scale, Mathf.Abs(lines) > 0.5f ? baseHeight + lines : child.sizeDelta.y);
+                        }
+                        else
+                        {
+                            float s = scale * want / width;
+                            child.localScale = new Vector3(s, s, child.localScale.z);
+                        }
+                    }
+                    touched.Add(child);
+                }
+                NarrowInside(root, block, child, child.rect.width, touched, sizes);
+            }
+        }
+
+        // 이 폭일 때 내용(글자 등)이 원하는 높이. 폭을 잠시 바꿔 재고 되돌린다
+        private static float PreferredHeightAt(RectTransform target, float width)
+        {
+            Vector2 size = target.sizeDelta;
+            target.sizeDelta = new Vector2(width, size.y);
+            foreach (ILayoutElement element in target.GetComponents<ILayoutElement>())
+            {
+                element.CalculateLayoutInputHorizontal();
+                element.CalculateLayoutInputVertical();
+            }
+            float height = LayoutUtility.GetPreferredHeight(target);
+            target.sizeDelta = size;
+            return height;
+        }
+
+        // 블록 안에서 마스크에 잘리는 자리인지
+        private static bool IsClipped(Transform t, Transform block)
+        {
+            for (Transform p = t.parent; p != null && p != block; p = p.parent)
+            {
+                if (p.GetComponent<Mask>() != null || p.GetComponent<RectMask2D>() != null)
+                    return true;
+            }
+            return false;
+        }
+
+        // 블록 밖으로 나간 안쪽 그림·버튼 (마스크로 잘리는 것, 이미 적은 것의 안쪽은 뺀다)
+        private static List<string> FindStickingOut(RectTransform block)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(block);
+            Rect bounds = block.rect;
+            float margin = Mathf.Max(2f, Mathf.Min(bounds.width, bounds.height) * 0.02f);
+            var listed = new List<Transform>();
+            var corners = new Vector3[4];
+            foreach (RectTransform child in block.GetComponentsInChildren<RectTransform>(false))
+            {
+                if (child == block || child.GetComponent<Graphic>() == null || child.GetComponent<Graphic>().GetType().Name.StartsWith("TMP_SubMesh"))
+                    continue;
+                bool skip = false;
+                for (Transform t = child.parent; t != null && t != block; t = t.parent)
+                {
+                    if (listed.Contains(t) || t.GetComponent<Mask>() != null || t.GetComponent<RectMask2D>() != null)
+                    {
+                        skip = true;
+                        break;
+                    }
+                }
+                if (skip)
+                    continue;
+                child.GetWorldCorners(corners);
+                Vector2 min = block.InverseTransformPoint(corners[0]);
+                Vector2 max = block.InverseTransformPoint(corners[2]);
+                if (min.x < bounds.xMin - margin || min.y < bounds.yMin - margin || max.x > bounds.xMax + margin || max.y > bounds.yMax + margin)
+                    listed.Add(child);
+            }
+            return listed.Select(t => t.name).ToList();
         }
 
         // 저장된 프리팹(= 세로 화면)에서 블록 크기·위치를 읽는다
@@ -228,51 +566,85 @@ namespace FlexibleUITool.EditorTools
             }
 
             DrawScreens(stage, layout);
-            DrawView(stage);
             DrawOutside(stage);
-            FlexibleAiPanel.DrawLauncher(stage, layout);
             DrawPendingLegacy(stage);
+            // 탭 순서: 보기 → 선택한 오브젝트 → 그리드 → AI → 템플릿 → 기타
+            DrawView(stage);
             DrawSelected(stage, layout);
-            DrawNestedPrefabs(stage, layout);
             DrawGrid(stage, layout);
+            FlexibleAiPanel.DrawLauncher(stage, layout);
             DrawTemplates(stage, layout);
             DrawMore(stage, layout);
         }
 
         // ───────── 보기 (편집하는 동안만) ─────────
 
-        [SerializeField] private bool showView = true;
-        private static GUIStyle viewHeader;
+        [SerializeField] private bool showView;
+        // 사용자가 직접 펼치거나 접었는지 (그 전에는 숨긴 블록이 있을 때만 펼친다)
+        [SerializeField] private bool viewToggled;
+        // 펼친 줄 ("프리팹 경로|블록 경로")
+        [SerializeField] private List<string> viewExpanded = new List<string>();
+        private Vector2 viewScroll;
+        private int viewRevealed;
+        private static GUIStyle viewRowLabel;
+        private static GUIStyle viewRowChanged;
 
-        // 맨 위 블록을 편집하는 동안만 켜고 끈다 (저장되지 않음, 미리보기·검수에도 같이 적용)
+        private const float ViewRowHeight = 18f;
+        private const float ViewIndent = 14f;
+        private const int ViewMaxRows = 16;
+
+        // 하이라키처럼 보이는 줄 하나. 안쪽 프리팹은 펼치지 않고 그 프리팹을 여는 버튼을 단다
+        private struct ViewRow
+        {
+            public Transform target;
+            public int depth;
+            public bool hasChildren;
+            public string nestedPath;
+        }
+
+        // 하이라키와 같은 구조로 편집하는 동안만 켜고 끈다 (저장되지 않음, 미리보기·검수에도 같이 적용)
         private void DrawView(PrefabStage stage)
         {
             GameObject root = stage.prefabContentsRoot;
-            List<Transform> items = GetViewItems(stage, root.transform);
-            int overridden = items.Count(t => FlexibleScreenSession.FindView(stage, t.gameObject) != null);
+            FlexibleWorkspace session = FlexibleScreenSession.GetSession(stage);
+            var changedViews = session != null
+                ? new HashSet<Transform>(session.viewOverrides.Where(v => v.target != null && v.target != root).Select(v => v.target.transform))
+                : new HashSet<Transform>();
+            int overridden = changedViews.Count;
             EditorGUILayout.Space(4f);
-            // 굵은 제목은 한글 일부 글자만 굵게 그려져 얼룩져 보이므로 보통 굵기로
-            if (viewHeader == null)
-                viewHeader = new GUIStyle(EditorStyles.foldoutHeader) { fontStyle = FontStyle.Normal };
-            showView = EditorGUILayout.Foldout(showView, overridden > 0 ? F("View while editing ({0} changed, not saved)", overridden) : T("View while editing (not saved)"), true, viewHeader);
+            bool anyHidden = root.transform.Cast<Transform>().Any(t => !FlexibleViewOverride.IsVisible(t.gameObject));
+            bool open = viewToggled ? showView : anyHidden || overridden > 0;
+            string title = overridden > 0 ? F("View while editing ({0} changed, not saved)", overridden) : T("View while editing");
+            EditorGUI.BeginChangeCheck();
+            open = EditorGUILayout.Foldout(open, new GUIContent(title, T("Show or hide objects only while you edit, for example panels that cover the screen. Nothing here is saved, on any screen. The Preview and Check tabs use the same view.")), true, EditorStyles.foldoutHeader);
+            if (EditorGUI.EndChangeCheck())
+            {
+                showView = open;
+                viewToggled = true;
+            }
             FlexibleGui.Mark("view");
-            if (!showView)
+            if (!open)
                 return;
+
+            RevealSelection(stage, root.transform);
+            var rows = new List<ViewRow>();
+            CollectViewRows(stage, root.transform, root.transform, 0, rows);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUILayout.Label(T("Show or hide blocks only while you edit, for example panels that cover the screen. Nothing here is saved, on any screen. The Preview and Check tabs use the same view."), EditorStyles.wordWrappedMiniLabel);
-                foreach (Transform child in items)
+                bool scroll = rows.Count > ViewMaxRows;
+                if (scroll)
+                    viewScroll = EditorGUILayout.BeginScrollView(viewScroll, GUILayout.Height(ViewMaxRows * ViewRowHeight + 4f));
+                Rect area = GUILayoutUtility.GetRect(10f, rows.Count * ViewRowHeight, GUILayout.ExpandWidth(true));
+                for (int i = 0; i < rows.Count; i++)
                 {
-                    GameObject go = child.gameObject;
-                    bool changed = FlexibleScreenSession.FindView(stage, go) != null;
-                    bool deep = child.parent != root.transform;
-                    EditorGUI.BeginChangeCheck();
-                    string label = deep ? FlexiblePathUtility.GetPath(root.transform, child) : go.name;
-                    bool on = EditorGUILayout.ToggleLeft(label, FlexibleViewOverride.IsVisible(go), changed ? EditorStyles.boldLabel : EditorStyles.label);
-                    if (EditorGUI.EndChangeCheck())
-                        ShowInView(stage, root.transform, child, on);
+                    var rect = new Rect(area.x, area.y + i * ViewRowHeight, area.width, ViewRowHeight);
+                    if (DrawViewRow(stage, root.transform, rows[i], rect, changedViews))
+                        GUIUtility.ExitGUI();
                 }
+                if (scroll)
+                    EditorGUILayout.EndScrollView();
+
                 using (new EditorGUI.DisabledScope(overridden == 0))
                 {
                     if (GUILayout.Button(T("Back to the saved view")))
@@ -281,21 +653,149 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
-        // 보기 목록: 맨 위 블록 + 더 안쪽에서 Canvas를 꺼서 숨겨 둔 패널(코드가 Canvas를 켜서 여는 방식) + 편집용으로 바꾼 것
-        private static List<Transform> GetViewItems(PrefabStage stage, Transform root)
+        private string ViewKey(PrefabStage stage, Transform root, Transform t)
         {
-            var items = new List<Transform>();
-            foreach (Transform child in root)
+            return stage.assetPath + "|" + FlexiblePathUtility.GetPath(root, t);
+        }
+
+        private void CollectViewRows(PrefabStage stage, Transform root, Transform parent, int depth, List<ViewRow> rows)
+        {
+            foreach (Transform child in parent)
             {
-                items.Add(child);
-                foreach (Canvas canvas in child.GetComponentsInChildren<Canvas>(true))
+                bool nested = PrefabUtility.IsAnyPrefabInstanceRoot(child.gameObject);
+                var row = new ViewRow
                 {
-                    Transform t = canvas.transform;
-                    if (t != child && (!canvas.enabled || FlexibleScreenSession.FindView(stage, t.gameObject) != null))
-                        items.Add(t);
+                    target = child,
+                    depth = depth,
+                    hasChildren = !nested && child.childCount > 0,
+                    nestedPath = nested ? PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(child.gameObject) : null
+                };
+                rows.Add(row);
+                if (row.hasChildren && viewExpanded.Contains(ViewKey(stage, root, child)))
+                    CollectViewRows(stage, root, child, depth + 1, rows);
+            }
+        }
+
+        // 줄 하나: 펼침 화살표 · 보임 체크 · 아이콘과 이름(누르면 선택) · 안쪽 프리팹이면 「열기」. 프리팹을 열면 true
+        private bool DrawViewRow(PrefabStage stage, Transform root, ViewRow row, Rect rect, HashSet<Transform> changedViews)
+        {
+            GameObject go = row.target.gameObject;
+            if (viewRowLabel == null)
+            {
+                viewRowLabel = new GUIStyle(EditorStyles.label) { padding = new RectOffset(2, 2, 0, 0) };
+                viewRowChanged = new GUIStyle(viewRowLabel) { fontStyle = FontStyle.Bold };
+            }
+            if (Selection.gameObjects.Contains(go))
+                EditorGUI.DrawRect(rect, new Color(FlexibleGui.Accent.r, FlexibleGui.Accent.g, FlexibleGui.Accent.b, 0.25f));
+
+            float x = rect.x + row.depth * ViewIndent;
+            string key = ViewKey(stage, root, row.target);
+            if (row.hasChildren)
+            {
+                bool expanded = viewExpanded.Contains(key);
+                bool now = EditorGUI.Foldout(new Rect(x, rect.y, ViewIndent, rect.height), expanded, GUIContent.none, true);
+                if (now != expanded)
+                {
+                    if (now)
+                        viewExpanded.Add(key);
+                    else
+                        viewExpanded.RemoveAll(k => k == key || k.StartsWith(key + "/"));
                 }
             }
-            return items;
+            x += ViewIndent;
+
+            bool visible = FlexibleViewOverride.IsVisible(go);
+            EditorGUI.BeginChangeCheck();
+            bool on = EditorGUI.Toggle(new Rect(x, rect.y + 1f, 16f, rect.height), visible);
+            if (EditorGUI.EndChangeCheck())
+                ShowInView(stage, root, row.target, on);
+            x += 18f;
+
+            float buttonWidth = row.nestedPath != null ? 52f + 18f : 0f;
+            var labelRect = new Rect(x, rect.y, Mathf.Max(10f, rect.xMax - x - buttonWidth - 2f), rect.height);
+            bool shown = true;
+            for (Transform t = row.target; t != null && t != root; t = t.parent)
+                shown &= FlexibleViewOverride.IsVisible(t.gameObject);
+            string name = go.name;
+            if (row.hasChildren && !viewExpanded.Contains(key))
+            {
+                int inside = changedViews.Count(t => t != row.target && t.IsChildOf(row.target));
+                if (inside > 0)
+                    name += "  " + F("({0} changed inside)", inside);
+            }
+            var content = new GUIContent(name, AssetPreview.GetMiniThumbnail(go));
+            Color old = GUI.contentColor;
+            if (!shown)
+                GUI.contentColor = new Color(old.r, old.g, old.b, 0.5f);
+            GUI.Label(labelRect, content, changedViews.Contains(row.target) ? viewRowChanged : viewRowLabel);
+            GUI.contentColor = old;
+            Event e = Event.current;
+            if (e.type == EventType.MouseDown && e.button == 0 && labelRect.Contains(e.mousePosition))
+            {
+                if (e.control || e.command)
+                    Selection.objects = Selection.objects.Contains(go) ? Selection.objects.Where(o => o != go).ToArray() : Selection.objects.Append(go).ToArray();
+                else
+                    Selection.activeGameObject = go;
+                viewRevealed = go.GetInstanceID();
+                if (e.clickCount == 2 && row.nestedPath != null)
+                {
+                    e.Use();
+                    OpenNestedPrefab(row.nestedPath, stage);
+                    return true;
+                }
+                e.Use();
+            }
+
+            if (row.nestedPath != null)
+            {
+                var nestedAsset = AssetDatabase.LoadAssetAtPath<GameObject>(row.nestedPath);
+                if (nestedAsset != null && nestedAsset.GetComponent<FlexibleLayout>() != null)
+                    GUI.Label(new Rect(rect.xMax - buttonWidth, rect.y, 16f, rect.height), new GUIContent($"<color=#{ColorUtility.ToHtmlStringRGB(FlexibleGui.Good)}>✔</color>", T("Already Flexible UI")), FlexibleGui.WrapLabel);
+                var buttonRect = new Rect(rect.xMax - 52f, rect.y + 1f, 52f, rect.height - 2f);
+                if (GUI.Button(buttonRect, new GUIContent(T("Open"), T("Open this prefab to show or hide what is inside it.")), EditorStyles.miniButton))
+                {
+                    OpenNestedPrefab(row.nestedPath, stage);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 하이라키에서 고른 블록이 보이게 위쪽을 펼친다 (안쪽 프리팹 속이면 그 프리팹 줄까지)
+        private void RevealSelection(PrefabStage stage, Transform root)
+        {
+            GameObject selected = Selection.activeGameObject;
+            if (selected == null || selected.GetInstanceID() == viewRevealed)
+                return;
+            viewRevealed = selected.GetInstanceID();
+            Transform target = selected.transform;
+            if (target == root || !target.IsChildOf(root))
+                return;
+
+            var chain = new List<Transform>();
+            for (Transform t = target; t != null && t != root; t = t.parent)
+                chain.Insert(0, t);
+            // 안쪽 프리팹 속은 보이지 않으므로 바깥에서 가장 먼저 만나는 안쪽 프리팹에서 멈춘다
+            int stop = chain.FindIndex(t => PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject));
+            if (stop >= 0)
+                chain.RemoveRange(stop + 1, chain.Count - stop - 1);
+            for (int i = 0; i < chain.Count - 1; i++)
+            {
+                string key = ViewKey(stage, root, chain[i]);
+                if (!viewExpanded.Contains(key))
+                    viewExpanded.Add(key);
+            }
+
+            // 펼친 뒤 그 줄이 스크롤 밖이면 보이는 곳으로
+            var rows = new List<ViewRow>();
+            CollectViewRows(stage, root, root, 0, rows);
+            int index = rows.FindIndex(r => r.target == chain[chain.Count - 1]);
+            if (index < 0 || rows.Count <= ViewMaxRows)
+                return;
+            float top = index * ViewRowHeight;
+            float visibleHeight = ViewMaxRows * ViewRowHeight;
+            if (top < viewScroll.y || top + ViewRowHeight > viewScroll.y + visibleHeight)
+                viewScroll.y = Mathf.Max(0f, top - visibleHeight * 0.5f);
         }
 
         // 켤 때는 꺼진 위쪽 블록도 같이 켜야 보인다 (끌 때는 그것만)
@@ -355,11 +855,6 @@ namespace FlexibleUITool.EditorTools
             public bool flexible;
         }
 
-        [SerializeField] private bool showNested = true;
-        private readonly Dictionary<string, bool> nestedChoice = new Dictionary<string, bool>();
-        private List<NestedPrefab> nestedCache;
-        private string nestedCacheStage;
-        private double nestedCacheAt;
 
         // 열린 프리팹 안의 프리팹 중 화면을 꽉 채우는 것(전체 화면 UI)과 이미 Flexible UI인 것. 버튼 같은 부품은 뺀다
         public static List<NestedPrefab> FindNestedPrefabs(PrefabStage stage)
@@ -409,64 +904,6 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
-        private void DrawNestedPrefabs(PrefabStage stage, FlexibleLayout layout)
-        {
-            if (nestedCache == null || nestedCacheStage != stage.assetPath || EditorApplication.timeSinceStartup - nestedCacheAt > 1.0)
-            {
-                nestedCache = FindNestedPrefabs(stage);
-                nestedCacheStage = stage.assetPath;
-                nestedCacheAt = EditorApplication.timeSinceStartup;
-            }
-            if (nestedCache.Count == 0)
-                return;
-
-            int pending = nestedCache.Count(n => !n.flexible);
-            EditorGUILayout.Space(6f);
-            showNested = EditorGUILayout.Foldout(showNested, pending > 0 ? F("Prefabs inside ({0} not Flexible UI yet)", pending) : T("Prefabs inside"), true, EditorStyles.foldoutHeader);
-            if (!showNested)
-                return;
-
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                GUILayout.Label(T("Full-screen prefabs inside this one. Make them Flexible UI so each can have its own layout per screen. Small parts such as buttons are not listed; this prefab places them."), EditorStyles.wordWrappedMiniLabel);
-                foreach (NestedPrefab nested in nestedCache)
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        if (nested.flexible)
-                        {
-                            GUILayout.Label($"<color=#{ColorUtility.ToHtmlStringRGB(FlexibleGui.Good)}>✔</color> " + nested.name, FlexibleGui.WrapLabel);
-                        }
-                        else
-                        {
-                            bool on = !nestedChoice.TryGetValue(nested.path, out bool chosen) || chosen;
-                            nestedChoice[nested.path] = EditorGUILayout.ToggleLeft(nested.name, on);
-                        }
-                        GUILayout.FlexibleSpace();
-                        if (GUILayout.Button(T("Open"), EditorStyles.miniButton, GUILayout.Width(60f)))
-                        {
-                            OpenNestedPrefab(nested.path, stage);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-                }
-
-                List<string> chosenPaths = nestedCache.Where(n => !n.flexible && (!nestedChoice.TryGetValue(n.path, out bool c) || c)).Select(n => n.path).ToList();
-                if (pending > 0)
-                {
-                    using (new EditorGUI.DisabledScope(chosenPaths.Count == 0))
-                    {
-                        if (GUILayout.Button(F("Make the checked prefabs Flexible UI ({0})", chosenPaths.Count), GUILayout.Height(26f)))
-                        {
-                            MakeNestedFlexible(stage, layout, chosenPaths);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-                    GUILayout.Label(T("Their current look becomes their portrait layout. Make their other screens by opening each one later."), EditorStyles.wordWrappedMiniLabel);
-                }
-            }
-        }
-
         private static void MakeNestedFlexible(PrefabStage stage, FlexibleLayout layout, List<string> paths)
         {
             // 기준 화면에서 저장된 상태로 바꾼다 (안쪽 프리팹 파일이 바뀌면 열린 프리팹 안의 인스턴스도 다시 불러와진다)
@@ -501,10 +938,12 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             DrawSceneCanvasCheck();
+            if (!string.IsNullOrEmpty(sceneSetupResult) && sceneSetupScene == EditorSceneManager.GetActiveScene().path)
+                EditorGUILayout.HelpBox(sceneSetupResult, MessageType.Info);
 
             EditorGUILayout.Space(4f);
             GUILayout.Label(T("Open a UI prefab"), FlexibleGui.Title);
-            GUILayout.Label(T("Double-click a UI prefab in the Project window, or select it (or anything inside it) in the scene and press the Open button below. It opens in Prefab Mode, and the screen buttons (Portrait / Square / Landscape) appear here."), FlexibleGui.WrapLabel);
+            GUILayout.Label(T("Open one from the list of this scene's UI prefabs below, or double-click a UI prefab in the Project window."), FlexibleGui.WrapLabel);
 
             List<string> paths = GetSelectedPrefabPaths();
             for (int i = 0; i < paths.Count; i++)
@@ -517,6 +956,205 @@ namespace FlexibleUITool.EditorTools
                     GUIUtility.ExitGUI();
                 }
             }
+            DrawSceneUiList();
+        }
+
+        // ───────── 씬에 있는 UI 프리팹 목록 (하이라키에서 고르지 않고 바로 연다) ─────────
+
+        private struct SceneUiRow
+        {
+            public GameObject instance;
+            public string path;
+            public int depth;
+            public bool hasChildren;
+            public bool flexible;
+        }
+
+        private static List<SceneUiRow> sceneUiRows;
+
+        // 씬 UI 목록과 「아직 준비 안 된 UI」 검사는 씬을 통째로 훑어 오래 걸리므로(큰 씬에서 약 0.1초), 매번이 아니라 씬·계층·애셋이 바뀔 때만 다시 한다
+        [InitializeOnLoadMethod]
+        private static void WatchSceneForLists()
+        {
+            void Invalidate()
+            {
+                // 실행 중에는 오브젝트가 계속 생기고 사라지므로 다시 찾지 않는다
+                if (EditorApplication.isPlaying)
+                    return;
+                sceneUiRows = null;
+                sceneCanvases = null;
+            }
+            EditorApplication.hierarchyChanged += Invalidate;
+            EditorApplication.projectChanged += Invalidate;
+            EditorSceneManager.activeSceneChangedInEditMode += (a, b) => Invalidate();
+            EditorSceneManager.sceneOpened += (scene, mode) => Invalidate();
+            EditorSceneManager.sceneClosed += scene => Invalidate();
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.EnteredEditMode)
+                    Invalidate();
+            };
+        }
+        private static readonly HashSet<int> sceneUiExpanded = new HashSet<int>();
+        private static Vector2 sceneUiScroll;
+        private static GUIStyle sceneUiLabel;
+
+        // 열린 씬의 UI 프리팹 인스턴스를 하이라키 순서로. 안쪽 프리팹은 그것을 담은 프리팹 아래 한 단계씩 들여 쓴다
+        public static List<GameObject> FindSceneUiPrefabs()
+        {
+            var result = new List<GameObject>();
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded)
+                    continue;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                {
+                    foreach (RectTransform rt in root.GetComponentsInChildren<RectTransform>(true))
+                    {
+                        if (rt.hideFlags != HideFlags.None || !PrefabUtility.IsAnyPrefabInstanceRoot(rt.gameObject))
+                            continue;
+                        var asset = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(rt.gameObject));
+                        if (asset != null && asset.transform is RectTransform)
+                            result.Add(rt.gameObject);
+                    }
+                }
+            }
+            return result;
+        }
+
+        private static int PrefabDepth(Transform t)
+        {
+            int depth = 0;
+            for (Transform up = t.parent; up != null; up = up.parent)
+            {
+                if (PrefabUtility.IsAnyPrefabInstanceRoot(up.gameObject))
+                    depth++;
+            }
+            return depth;
+        }
+
+        private static void DrawSceneUiList()
+        {
+            if (sceneUiRows == null)
+            {
+                List<GameObject> found = FindSceneUiPrefabs();
+                sceneUiRows = new List<SceneUiRow>();
+                for (int i = 0; i < found.Count; i++)
+                {
+                    GameObject go = found[i];
+                    int depth = PrefabDepth(go.transform);
+                    string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(go);
+                    var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    sceneUiRows.Add(new SceneUiRow
+                    {
+                        instance = go,
+                        path = path,
+                        depth = depth,
+                        hasChildren = i + 1 < found.Count && found[i + 1].transform.IsChildOf(go.transform),
+                        flexible = asset != null && asset.GetComponent<FlexibleLayout>() != null
+                    });
+                }
+            }
+            sceneUiRows.RemoveAll(r => r.instance == null);
+            if (sceneUiRows.Count == 0)
+                return;
+
+            // 접힌 프리팹의 안쪽은 건너뛴다
+            var shown = new List<SceneUiRow>();
+            Transform folded = null;
+            foreach (SceneUiRow row in sceneUiRows)
+            {
+                if (folded != null && row.instance.transform.IsChildOf(folded))
+                    continue;
+                folded = null;
+                shown.Add(row);
+                if (row.hasChildren && !sceneUiExpanded.Contains(row.instance.GetInstanceID()))
+                    folded = row.instance.transform;
+            }
+
+            EditorGUILayout.Space(8f);
+            GUILayout.Label(T("UI prefabs in this scene"), EditorStyles.boldLabel);
+            if (sceneUiLabel == null)
+                sceneUiLabel = new GUIStyle(EditorStyles.label) { padding = new RectOffset(2, 2, 0, 0) };
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                bool scroll = shown.Count > ViewMaxRows;
+                if (scroll)
+                    sceneUiScroll = EditorGUILayout.BeginScrollView(sceneUiScroll, GUILayout.Height(ViewMaxRows * ViewRowHeight + 4f));
+                Rect area = GUILayoutUtility.GetRect(10f, shown.Count * ViewRowHeight, GUILayout.ExpandWidth(true));
+                for (int i = 0; i < shown.Count; i++)
+                {
+                    var rect = new Rect(area.x, area.y + i * ViewRowHeight, area.width, ViewRowHeight);
+                    if (DrawSceneUiRow(shown[i], rect))
+                    {
+                        if (scroll)
+                            EditorGUILayout.EndScrollView();
+                        GUIUtility.ExitGUI();
+                    }
+                }
+                if (scroll)
+                    EditorGUILayout.EndScrollView();
+            }
+        }
+
+        // 줄 하나: 펼침 화살표 · 아이콘과 이름(누르면 선택, 두 번 누르면 열기) · ✔ · 「열기」. 열었으면 true
+        private static bool DrawSceneUiRow(SceneUiRow row, Rect rect)
+        {
+            GameObject go = row.instance;
+            if (Selection.gameObjects.Contains(go))
+                EditorGUI.DrawRect(rect, new Color(FlexibleGui.Accent.r, FlexibleGui.Accent.g, FlexibleGui.Accent.b, 0.25f));
+
+            float x = rect.x + row.depth * ViewIndent;
+            int id = go.GetInstanceID();
+            if (row.hasChildren)
+            {
+                bool expanded = sceneUiExpanded.Contains(id);
+                if (EditorGUI.Foldout(new Rect(x, rect.y, ViewIndent, rect.height), expanded, GUIContent.none, true) != expanded)
+                {
+                    if (expanded)
+                        sceneUiExpanded.Remove(id);
+                    else
+                        sceneUiExpanded.Add(id);
+                }
+            }
+            x += ViewIndent;
+
+            const float buttonWidth = 52f;
+            const float markWidth = 16f;
+            var labelRect = new Rect(x, rect.y, Mathf.Max(10f, rect.xMax - x - buttonWidth - markWidth - 4f), rect.height);
+            Transform parent = go.transform.parent;
+            var content = new GUIContent(go.name, AssetPreview.GetMiniThumbnail(go), parent != null ? FlexiblePathUtility.GetPath(parent.root, go.transform) : go.name);
+            Color old = GUI.contentColor;
+            if (!go.activeInHierarchy)
+                GUI.contentColor = new Color(old.r, old.g, old.b, 0.5f);
+            GUI.Label(labelRect, content, sceneUiLabel);
+            GUI.contentColor = old;
+            if (row.flexible)
+                GUI.Label(new Rect(labelRect.xMax + 2f, rect.y, markWidth, rect.height), $"<color=#{ColorUtility.ToHtmlStringRGB(FlexibleGui.Good)}>✔</color>", FlexibleGui.WrapLabel);
+
+            Event e = Event.current;
+            if (e.type == EventType.MouseDown && e.button == 0 && labelRect.Contains(e.mousePosition))
+            {
+                Selection.activeGameObject = go;
+                EditorGUIUtility.PingObject(go);
+                bool open = e.clickCount == 2;
+                e.Use();
+                if (open)
+                {
+                    PrefabStageUtility.OpenPrefab(row.path);
+                    return true;
+                }
+            }
+
+            var buttonRect = new Rect(rect.xMax - buttonWidth, rect.y + 1f, buttonWidth, rect.height - 2f);
+            if (GUI.Button(buttonRect, new GUIContent(T("Open"), row.path), EditorStyles.miniButton))
+            {
+                PrefabStageUtility.OpenPrefab(row.path);
+                return true;
+            }
+            return false;
         }
 
         // 지금 선택에서 열 수 있는 UI 프리팹: Project 창의 프리팹 파일, 또는 씬에서 고른 프리팹 인스턴스.
@@ -558,18 +1196,21 @@ namespace FlexibleUITool.EditorTools
         private static List<string> scenePrefabs;
         private static List<RectTransform> sceneLoose;
         private static readonly Dictionary<int, bool> looseChoice = new Dictionary<int, bool>();
-        private static double sceneCheckedAt;
+        // 씬 UI를 프리팹으로 저장할 폴더 (기본은 씬에 이미 있는 UI 프리팹의 폴더, 「바꾸기」로 고른다)
+        private static string prefabFolder;
+        // 마지막 씬 준비 결과 (확인창 대신 창 안에 보여 준다)
+        private static string sceneSetupResult;
+        private static string sceneSetupScene;
 
         // 열린 씬에 아직 Flexible UI가 아닌 UI가 있으면 한 번에 바꾸는 버튼을 보여 준다
         // (최상위 캔버스의 크기 맞춤 교체 + 화면을 꽉 채우는 UI 프리팹을 Flexible UI로)
         private static void DrawSceneCanvasCheck()
         {
-            if (sceneCanvases == null || EditorApplication.timeSinceStartup - sceneCheckedAt > 1.0)
+            if (sceneCanvases == null)
             {
                 sceneCanvases = FlexibleLayoutInspector.FindCanvasesToConvert();
                 scenePrefabs = FindScenePrefabsToMake();
                 sceneLoose = FindLooseSceneUi();
-                sceneCheckedAt = EditorApplication.timeSinceStartup;
             }
             sceneCanvases.RemoveAll(c => c == null);
             sceneLoose.RemoveAll(r => r == null);
@@ -577,7 +1218,15 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             EditorGUILayout.Space(4f);
-            EditorGUILayout.HelpBox(F("The open scene has UI that is not ready for portrait / square / landscape yet: {0} canvases that do not use Flexible Canvas Scaler, {1} full-screen prefabs that are not Flexible UI, {2} UI groups that are not prefabs.", sceneCanvases.Count, scenePrefabs.Count, sceneLoose.Count), MessageType.Warning);
+            // 0개인 항목은 빼고 할 일만 적는다
+            var parts = new List<string>();
+            if (sceneCanvases.Count > 0)
+                parts.Add(F("{0} canvases without Flexible Canvas Scaler", sceneCanvases.Count));
+            if (scenePrefabs.Count > 0)
+                parts.Add(F("{0} full-screen prefabs that are not Flexible UI", scenePrefabs.Count));
+            if (sceneLoose.Count > 0)
+                parts.Add(F("{0} UI groups that are not prefabs", sceneLoose.Count));
+            EditorGUILayout.HelpBox(F("Not ready for portrait / square / landscape yet: {0}.", string.Join(", ", parts)), MessageType.Warning);
             showSceneList = EditorGUILayout.Foldout(showSceneList, T("Show the list"), true);
             if (showSceneList)
             {
@@ -599,10 +1248,28 @@ namespace FlexibleUITool.EditorTools
                     }
                 }
             }
+            // 새 프리팹 폴더는 미리 골라 두고, 원하면 바꾼다 (누를 때 따로 묻지 않는다)
+            if (sceneLoose.Count > 0)
+            {
+                // 기본 폴더는 아직 없어도 된다 (저장할 때 만든다). 고른 폴더가 지워졌으면 기본으로 돌린다
+                if (string.IsNullOrEmpty(prefabFolder) || (prefabFolder != DefaultPrefabFolder && !AssetDatabase.IsValidFolder(prefabFolder)))
+                    prefabFolder = DefaultPrefabFolder;
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.Label(new GUIContent(F("New prefabs go to {0}", prefabFolder), T("UI placed straight in the scene is saved as prefabs in this folder.")), EditorStyles.miniLabel);
+                    if (GUILayout.Button(T("Change..."), EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
+                    {
+                        string picked = PickPrefabFolder(prefabFolder);
+                        if (picked != null)
+                            prefabFolder = picked;
+                        GUIUtility.ExitGUI();
+                    }
+                }
+            }
             if (GUILayout.Button(T("Make the scene's UI Flexible UI"), FlexibleGui.BigButton, GUILayout.Height(30f)))
             {
                 List<RectTransform> chosenLoose = sceneLoose.Where(r => !looseChoice.TryGetValue(r.GetInstanceID(), out bool c) || c).ToList();
-                SetUpScene(sceneCanvases, scenePrefabs, chosenLoose, true);
+                SetUpScene(sceneCanvases, scenePrefabs, chosenLoose, true, prefabFolder);
                 sceneCanvases = null;
                 GUIUtility.ExitGUI();
             }
@@ -649,6 +1316,7 @@ namespace FlexibleUITool.EditorTools
         public static string SaveAsPrefab(RectTransform rt, string folder)
         {
             MakeScreenContainer(rt);
+            FlexibleSettingsUtility.EnsureFolder(folder);
             string name = string.Join("_", rt.name.Split(Path.GetInvalidFileNameChars())).Trim();
             string path = AssetDatabase.GenerateUniqueAssetPath(folder + "/" + (name.Length > 0 ? name : "UI") + ".prefab");
             return PrefabUtility.SaveAsPrefabAssetAndConnect(rt.gameObject, path, InteractionMode.UserAction) != null ? path : null;
@@ -682,22 +1350,17 @@ namespace FlexibleUITool.EditorTools
             rt.offsetMax = Vector2.zero;
         }
 
-        // 새 프리팹을 둘 폴더: 씬에 이미 있는 UI 프리팹의 폴더를 기본으로 묻는다. 취소하면 null
-        private static string PickPrefabFolder(List<RectTransform> loose)
+        // 새 프리팹을 둘 기본 폴더 (없으면 저장할 때 만든다)
+        private const string DefaultPrefabFolder = FlexibleSettingsUtility.DataFolder + "/Prefabs";
+
+        // 폴더를 고른다 (Assets 안만). 취소하면 null
+        private static string PickPrefabFolder(string start)
         {
-            string start = "Assets";
-            foreach (RectTransform rt in loose)
-            {
-                Graphic inPrefab = rt.parent.GetComponentsInChildren<Graphic>(true).FirstOrDefault(g => PrefabUtility.IsPartOfPrefabInstance(g));
-                string path = inPrefab != null ? PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(inPrefab) : null;
-                if (!string.IsNullOrEmpty(path))
-                {
-                    start = Path.GetDirectoryName(path).Replace('\\', '/');
-                    break;
-                }
-            }
             string projectRoot = Path.GetDirectoryName(Application.dataPath).Replace('\\', '/');
-            string picked = EditorUtility.SaveFolderPanel(T("Folder for the new prefabs"), Path.Combine(projectRoot, start), "");
+            // 아직 없는 폴더면 있는 데까지 올라가서 연다
+            while (!string.IsNullOrEmpty(start) && start != "Assets" && !AssetDatabase.IsValidFolder(start))
+                start = Path.GetDirectoryName(start)?.Replace('\\', '/');
+            string picked = EditorUtility.SaveFolderPanel(T("Folder for the new prefabs"), Path.Combine(projectRoot, string.IsNullOrEmpty(start) ? "Assets" : start), "");
             if (string.IsNullOrEmpty(picked))
                 return null;
             picked = picked.Replace('\\', '/');
@@ -737,6 +1400,29 @@ namespace FlexibleUITool.EditorTools
             return paths;
         }
 
+        // 열린 씬에서 이 프리팹 파일들의 인스턴스 루트
+        private static List<GameObject> SceneInstancesOf(List<string> paths)
+        {
+            var result = new List<GameObject>();
+            if (paths.Count == 0)
+                return result;
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded)
+                    continue;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                {
+                    foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject) && paths.Contains(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(t.gameObject)))
+                            result.Add(t.gameObject);
+                    }
+                }
+            }
+            return result;
+        }
+
         // 화면을 꽉 채우는지: 화면 공간의 최상위 캔버스까지 올라가며 모두 늘이기(앵커 0~1, 여백 0)인지 본다 (꺼진 오브젝트도 판단 가능)
         public static bool IsFullScreen(RectTransform target)
         {
@@ -763,7 +1449,7 @@ namespace FlexibleUITool.EditorTools
             // 목록은 창의 「목록 보기」에 있다 (확인창은 길면 잘리므로 개수만)
             string text = F("This gets the UI in the open scene ready for portrait / square / landscape: {0} canvases switch to Flexible Canvas Scaler (phones in portrait look the same), and {1} full-screen prefabs become Flexible UI (their current look becomes the portrait layout; the prefab files are changed).\n\nSee \"Show the list\" in the window for the names.", canvases.Count, prefabs.Count);
             if (loose.Count > 0)
-                text += "\n\n" + F("{0} UI groups placed straight in the scene are saved as new prefabs (you pick the folder next) and become Flexible UI. They look the same as now.", loose.Count);
+                text += "\n\n" + F("{0} UI groups placed straight in the scene are saved as new prefabs in {1} and become Flexible UI. They look the same as now.", loose.Count, folder ?? DefaultPrefabFolder);
 
             int choice = 0;
             if (ask)
@@ -776,11 +1462,7 @@ namespace FlexibleUITool.EditorTools
             if (choice == 1)
                 return;
             if (choice == 0 && loose.Count > 0 && folder == null)
-            {
-                folder = PickPrefabFolder(loose);
-                if (folder == null)
-                    return;
-            }
+                folder = DefaultPrefabFolder;
 
             // 바꾸기 전에 저장돼 있던 씬만 끝에 저장한다 (다른 미저장 작업을 같이 저장하지 않도록)
             var cleanScenes = new List<UnityEngine.SceneManagement.Scene>();
@@ -794,6 +1476,7 @@ namespace FlexibleUITool.EditorTools
             bool unsaved = canvases.Count > 0 && FlexibleLayoutInspector.ConvertCanvases(canvases);
             int made = 0;
             var newPrefabs = new List<string>();
+            var newInstances = new List<GameObject>();
             if (choice == 0)
             {
                 foreach (RectTransform rt in loose)
@@ -804,7 +1487,10 @@ namespace FlexibleUITool.EditorTools
                         unsaved = true;
                     string path = SaveAsPrefab(rt, folder);
                     if (path != null && MakeFlexible(path))
+                    {
                         newPrefabs.Add(path);
+                        newInstances.Add(rt.gameObject);
+                    }
                 }
                 foreach (string path in prefabs)
                 {
@@ -823,11 +1509,27 @@ namespace FlexibleUITool.EditorTools
             string done = F("Done: {0} canvases, {1} prefabs.", canvases.Count, made + newPrefabs.Count);
             if (newPrefabs.Count > 0)
                 done += "\n" + F("New prefabs in {0}: {1}", folder, string.Join(", ", newPrefabs.Select(Path.GetFileNameWithoutExtension)));
-            if (made + newPrefabs.Count > 0)
-                done += "\n" + T("Next, open each prefab and make its square and landscape layouts (select it in the scene and press Open).");
+            // 바뀐 것을 Hierarchy에서 펼쳐 골라 둔다 (새 프리팹 → Flexible UI가 된 프리팹 → 캔버스 순)
+            List<GameObject> changed = newInstances.Count > 0 ? newInstances : SceneInstancesOf(prefabs);
+            if (changed.Count == 0)
+                changed = canvases.Where(c => c != null).Select(c => c.gameObject).ToList();
+            if (changed.Count > 0)
+            {
+                Selection.objects = changed.Cast<Object>().ToArray();
+                EditorGUIUtility.PingObject(changed[0]);
+            }
+            if (newInstances.Count > 0)
+            {
+                // 새 프리팹은 캔버스 안에 있다. 골라 두었으니 바로 아래 열기 버튼이 나온다
+                done += "\n" + T("The new prefabs are inside the canvas and selected in the Hierarchy (the canvas itself stays as it is). Press Open below to make their square and landscape layouts.");
+            }
+            else if (made > 0)
+                done += "\n" + T("The prefabs that became Flexible UI are selected in the Hierarchy. Press Open below to make their square and landscape layouts.");
             if (unsaved)
                 done += "\n" + T("The scene had other unsaved changes, so it was not saved. Save it with Ctrl+S.");
-            EditorUtility.DisplayDialog("Flexible UI", done, T("OK"));
+            // 결과는 확인창 대신 창 안에 남긴다
+            sceneSetupResult = done;
+            sceneSetupScene = EditorSceneManager.GetActiveScene().path;
         }
 
         // ───────── 준비 체크리스트 ─────────
@@ -850,20 +1552,11 @@ namespace FlexibleUITool.EditorTools
             // 스케일러가 있는 캔버스(= 화면 최상위로 쓰는 캔버스)만 따진다. 다른 캔버스 안에 들어가는 캔버스는 스케일러가 동작하지 않는다
             CanvasScaler rootScaler = root.GetComponent<CanvasScaler>();
             bool scalerOk = canvas == null || rootScaler == null || rootScaler is FlexibleCanvasScaler;
-            CheckRow(layout != null, T("Has the Flexible Layout component"));
-            CheckRow(layout != null && layout.Settings != null, T("Uses the project's screen settings"));
-            if (canvas != null)
-            {
-                CheckRow(true, T("It is a canvas, so it fills the screen"));
-                if (rootScaler != null)
-                    CheckRow(scalerOk, T("The canvas uses Flexible Canvas Scaler (the same size rule on every screen)"));
-            }
-            else
-            {
-                CheckRow(stretch, T("Fills the whole screen (anchors stretch, offsets 0)"));
-                if (!stretch)
-                    GUILayout.Label(T("A panel shown inside another prefab does not have to fill the screen. It still follows the screen (portrait / square / landscape)."), EditorStyles.wordWrappedMiniLabel);
-            }
+            // 버튼이 알아서 하는 내부 항목(컴포넌트·설정 연결)은 적지 않고, 이 프리팹에서 실제로 바뀌는 것만 알린다
+            if (canvas != null && rootScaler != null && !scalerOk)
+                CheckRow(false, T("The canvas uses Flexible Canvas Scaler (the same size rule on every screen)"));
+            if (canvas == null && !stretch)
+                CheckRow(false, T("Fills the whole screen (anchors stretch, offsets 0)"));
 
             EditorGUILayout.Space(4f);
             if (GUILayout.Button(T("Set up this prefab"), FlexibleGui.BigButton, GUILayout.Height(34f)))
@@ -928,16 +1621,18 @@ namespace FlexibleUITool.EditorTools
 
         private static void DrawScreens(PrefabStage stage, FlexibleLayout layout)
         {
-            FlexibleProfileSettings settings = layout.Settings;
-            string active = FlexibleScreenSession.GetActiveProfileId(stage);
-            FlexibleProfile profile = settings.Find(active);
-            FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
-
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.Label(Path.GetFileNameWithoutExtension(stage.assetPath), FlexibleGui.Title);
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button(T("Save (Ctrl+S)"), GUILayout.Height(22f), GUILayout.Width(110f)))
+                // 저장할 게 없으면 「저장됨」으로 보여 눌렀는지·저장됐는지 헷갈리지 않게 한다
+                bool unsaved = stage.scene.isDirty;
+                Color previousColor = GUI.backgroundColor;
+                if (unsaved)
+                    GUI.backgroundColor = new Color(1f, 0.85f, 0.4f);
+                bool savePressed = GUILayout.Button(new GUIContent(unsaved ? T("Save (Ctrl+S)") : T("Saved ✓"), unsaved ? T("There are unsaved changes.") : T("Everything is saved.")), GUILayout.Height(22f), GUILayout.Width(110f));
+                GUI.backgroundColor = previousColor;
+                if (savePressed)
                 {
                     FlexibleScreenSession.Save(stage);
                     GUIUtility.ExitGUI();
@@ -945,14 +1640,8 @@ namespace FlexibleUITool.EditorTools
                 FlexibleGui.Mark("save");
             }
 
-            GUILayout.Label(T("Which screen are you editing?"), EditorStyles.miniBoldLabel);
+            GUILayout.Label(T("Which screen are you editing?"), EditorStyles.miniLabel);
             DrawScreenButtons(stage, layout, 40f);
-
-            EditorGUILayout.Space(2f);
-            string message = active == settings.BaseProfileId
-                ? F("<b>{0}</b> is the base screen. What you build here is used by every screen. To change only another screen, press its button.", Name(profile))
-                : F("You are adjusting only the <b>{0}</b> screen. Move, resize, show or hide blocks freely. Blocks you do not touch stay the same as {1}.", Name(profile), Name(baseProfile));
-            GUILayout.Label(message, FlexibleGui.Bubble);
             DrawShapeCheck(stage);
             DrawScalerCheck(stage);
             DrawScreenChanges(stage);
@@ -965,17 +1654,18 @@ namespace FlexibleUITool.EditorTools
 
         private static bool showChanged;
         private static string infoStage;
-        private static double infoAt;
         private static List<RectTransform> changedCache = new List<RectTransform>();
         private static List<RectTransform> outsideCache = new List<RectTransform>();
 
         // 1초마다 다시 센다 (블록 수가 많아도 창이 무거워지지 않게)
         private static void RefreshScreenInfo(PrefabStage stage)
         {
-            if (infoStage == stage.assetPath && EditorApplication.timeSinceStartup - infoAt < 1.0)
+            // 1초마다가 아니라 무언가 바뀌었을 때만 다시 센다 (큰 프리팹에서 한 번에 약 0.1초)
+            HookChanges();
+            string infoKey = stage.assetPath + "#" + FlexibleScreenSession.GetActiveProfileId(stage) + "#" + changeStamp + "#" + FlexibleScreenSession.SaveCount;
+            if (infoStage == infoKey)
                 return;
-            infoStage = stage.assetPath;
-            infoAt = EditorApplication.timeSinceStartup;
+            infoStage = infoKey;
             changedCache = FlexibleScreenSession.ChangedBlocks(stage);
             outsideCache.Clear();
             // 기준 화면에서는 경고하지 않고, 세로에서도 화면 밖이던 것(일부러 밖에 둔 것)은 빼고 알린다
@@ -1017,7 +1707,7 @@ namespace FlexibleUITool.EditorTools
 
         public static void RefreshScreenInfoNow()
         {
-            infoAt = 0;
+            infoStage = null;
         }
 
         // 화면 밖 경고는 보기 목록 아래에 둔다 (목록에서 블록을 켜고 끄면 경고가 생겼다 없어져, 위에 있으면 목록이 밀린다)
@@ -1028,24 +1718,26 @@ namespace FlexibleUITool.EditorTools
 
             if (outsideCache.Count > 0)
             {
-                EditorGUILayout.HelpBox(F("{0} blocks stick out of the screen: {1}", outsideCache.Count, string.Join(", ", outsideCache.Take(5).Select(t => t.name)) + (outsideCache.Count > 5 ? ", …" : "")), MessageType.Warning);
+                EditorGUILayout.HelpBox(F("{0} objects stick out of the screen: {1}", outsideCache.Count, string.Join(", ", outsideCache.Take(5).Select(t => t.name)) + (outsideCache.Count > 5 ? ", …" : "")), MessageType.Warning);
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button(T("Fit them all into the screen"), GUILayout.Height(24f)))
+                    if (GUILayout.Button(new GUIContent(T("Fit them all into the screen"), T("Fitting shrinks each object evenly until it fits, then moves it inside. Check the result and adjust by hand if needed.")), GUILayout.Height(24f)))
                     {
                         var root = (RectTransform)stage.prefabContentsRoot.transform;
                         Undo.IncrementCurrentGroup();
                         int group = Undo.GetCurrentGroup();
-                        foreach (RectTransform target in outsideCache)
+                        List<RectTransform> fitted = outsideCache.ToList();
+                        foreach (RectTransform target in fitted)
                             FlexibleLayoutInspector.FitToScreen(root, target);
                         Undo.CollapseUndoOperations(group);
+                        // 경고가 사라진 뒤에도 무엇이 바뀌었는지 보이게 골라 둔다
+                        Selection.objects = fitted.Select(t => (Object)t.gameObject).ToArray();
                         RefreshScreenInfoNow();
                         SceneView.RepaintAll();
                     }
                     if (GUILayout.Button(T("Select them"), GUILayout.Width(100f), GUILayout.Height(24f)))
                         Selection.objects = outsideCache.Select(t => (Object)t.gameObject).ToArray();
                 }
-                GUILayout.Label(T("Fitting shrinks each block evenly until it fits, then moves it inside. Check the result and adjust by hand if needed."), EditorStyles.wordWrappedMiniLabel);
             }
             DrawReservedOver(stage);
             DrawExtraIssues(stage);
@@ -1059,8 +1751,18 @@ namespace FlexibleUITool.EditorTools
             List<FlexibleReservedArea> areas = FlexibleReservedAreas.FromOthers(settings, guid);
             if (areas.Count == 0)
                 return;
+            // 이 프리팹의 버튼과 겹치는 자리(또는 이미 끈 자리)만 보여 준다. 상관없는 프리팹에는 나오지 않는다 (1초마다 다시 센다)
+            string key = stage.assetPath + "#" + FlexibleScreenSession.GetActiveProfileId(stage);
+            if (key != reservedKey || EditorApplication.timeSinceStartup - reservedAt > 1.0)
+            {
+                reservedKey = key;
+                reservedAt = EditorApplication.timeSinceStartup;
+                reservedRelevant = FindRelevantAreas(stage, settings, guid, areas);
+            }
             foreach (FlexibleReservedArea area in areas)
             {
+                if (!reservedRelevant.Contains(area))
+                    continue;
                 bool shown = FlexibleReservedAreas.IsShownOver(area, guid);
                 EditorGUI.BeginChangeCheck();
                 shown = EditorGUILayout.ToggleLeft(new GUIContent(F("{0} is shown over this prefab", FlexibleReservedAreas.Label(area)),
@@ -1068,6 +1770,25 @@ namespace FlexibleUITool.EditorTools
                 if (EditorGUI.EndChangeCheck())
                     FlexibleReservedAreas.SetShownOver(settings, area, guid, shown);
             }
+        }
+
+        private static string reservedKey;
+        private static double reservedAt;
+        private static HashSet<FlexibleReservedArea> reservedRelevant = new HashSet<FlexibleReservedArea>();
+
+        private static HashSet<FlexibleReservedArea> FindRelevantAreas(PrefabStage stage, FlexibleProfileSettings settings, string guid, List<FlexibleReservedArea> areas)
+        {
+            var result = new HashSet<FlexibleReservedArea>(areas.Where(a => !FlexibleReservedAreas.IsShownOver(a, guid)));
+            var root = (RectTransform)stage.prefabContentsRoot.transform;
+            List<Rect> buttons = root.GetComponentsInChildren<Selectable>(false)
+                .Select(b => FlexiblePreviewRenderer.GetRectInRoot(root, (RectTransform)b.transform)).ToList();
+            foreach ((FlexibleReservedArea area, Rect rect) in FlexibleReservedAreas.ForScreen(settings, guid, FlexibleScreenSession.GetActiveProfileId(stage), root.rect))
+            {
+                if (buttons.Any(r => Mathf.Min(r.xMax, rect.xMax) - Mathf.Max(r.xMin, rect.xMin) > 2f && Mathf.Min(r.yMax, rect.yMax) - Mathf.Max(r.yMin, rect.yMin) > 2f
+                    && !(r.xMin <= rect.xMin && r.xMax >= rect.xMax && r.yMin <= rect.yMin && r.yMax >= rect.yMax)))
+                    result.Add(area);
+            }
+            return result;
         }
 
         // ───────── 보이지 않는 곳의 문제 (숨긴 패널·뒤집힌 크기·목록 잘림·다른 프리팹 자리) ─────────
@@ -1088,17 +1809,22 @@ namespace FlexibleUITool.EditorTools
 
         // 사본을 만들어 검사하므로 무겁다: 내용·화면·보기가 바뀌고 편집이 1초 멈춘 뒤에만 다시 구한다 (끄는 동안 멈칫하지 않게).
         // 목록이 그리는 도중 바뀌지 않도록 Layout 때만 구한다
+        // 프리팹·씬에 무언가 바뀔 때마다 번호를 올린다 (검사 결과를 다시 구할지 정하는 데 쓴다)
+        private static void HookChanges()
+        {
+            if (changeHooked)
+                return;
+            changeHooked = true;
+            ObjectChangeEvents.changesPublished += (ref ObjectChangeEventStream stream) =>
+            {
+                changeStamp++;
+                lastChangeAt = EditorApplication.timeSinceStartup;
+            };
+        }
+
         private static void RefreshExtraIssues(PrefabStage stage)
         {
-            if (!changeHooked)
-            {
-                changeHooked = true;
-                ObjectChangeEvents.changesPublished += (ref ObjectChangeEventStream stream) =>
-                {
-                    changeStamp++;
-                    lastChangeAt = EditorApplication.timeSinceStartup;
-                };
-            }
+            HookChanges();
             if (Event.current != null && Event.current.type != EventType.Layout)
                 return;
             if (FlexibleScreenSession.IsBaseView(stage))
@@ -1134,13 +1860,23 @@ namespace FlexibleUITool.EditorTools
 
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             HashSet<string> onBase = BaseExtra(stage);
-            using (var renderer = new FlexiblePreviewRenderer())
+            // 렌더러는 다시 쓰고(미리보기 씬을 매번 만들지 않는다) 사본만 새로 만든다. 필요한 종류만 검사한다
+            if (extraRenderer == null)
             {
-                renderer.Prepare(stage.prefabContentsRoot, null, root.rect.size, new Rect(0f, 0f, 1f, 1f), profileId);
-                extraCache = renderer.CollectIssueList(new Rect(0f, 0f, 1f, 1f))
-                    .Where(i => FlexibleIssue.IsExtra(i.code) && !onBase.Contains(IssueKey(i))).ToList();
+                extraRenderer = new FlexiblePreviewRenderer();
+                AssemblyReloadEvents.beforeAssemblyReload += () =>
+                {
+                    extraRenderer?.Dispose();
+                    extraRenderer = null;
+                };
             }
+            extraRenderer.Dirty = true;
+            extraRenderer.Prepare(stage.prefabContentsRoot, null, root.rect.size, new Rect(0f, 0f, 1f, 1f), profileId);
+            extraCache = extraRenderer.CollectIssueList(new Rect(0f, 0f, 1f, 1f), true)
+                .Where(i => FlexibleIssue.IsExtra(i.code) && !onBase.Contains(IssueKey(i))).ToList();
         }
+
+        private static FlexiblePreviewRenderer extraRenderer;
 
         // 창이 가만히 있어도 잠시 뒤 다시 그려 검사가 돌게 한다
         private static void RepaintLater(double seconds)
@@ -1198,8 +1934,8 @@ namespace FlexibleUITool.EditorTools
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUILayout.Label(F("⚠ {0} problems you cannot see right now", extraCache.Count), EditorStyles.boldLabel);
-                GUILayout.Label(T("Found in panels the game opens later, in lists, and in places other prefabs take. Show a hidden panel to edit it on this screen."), EditorStyles.wordWrappedMiniLabel);
+                GUILayout.Label(new GUIContent(F("⚠ {0} problems you cannot see right now", extraCache.Count),
+                    T("Found in panels the game opens later, in lists, and in places other prefabs take. Show a hidden panel to edit it on this screen.")), EditorStyles.boldLabel);
                 foreach (FlexibleIssue issue in extraCache.Take(ExtraShown))
                 {
                     Transform target = FlexiblePathUtility.FindByPath(root, issue.blocks[0]);
@@ -1245,13 +1981,13 @@ namespace FlexibleUITool.EditorTools
 
             if (FlexibleScreenSession.IsBaseView(stage))
                 return;
-            showChanged = EditorGUILayout.Foldout(showChanged, F("Blocks with their own layout on this screen ({0})", changedCache.Count), true);
+            showChanged = EditorGUILayout.Foldout(showChanged, F("Objects with their own layout on this screen ({0})", changedCache.Count), true);
             if (!showChanged)
                 return;
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 if (changedCache.Count == 0)
-                    GUILayout.Label(T("None yet. Move, resize or hide a block to give this screen its own layout."), EditorStyles.wordWrappedMiniLabel);
+                    GUILayout.Label(T("None yet. Move, resize or hide an object to give this screen its own layout."), EditorStyles.wordWrappedMiniLabel);
                 foreach (RectTransform target in changedCache.ToList())
                 {
                     using (new EditorGUILayout.HorizontalScope())
@@ -1286,8 +2022,11 @@ namespace FlexibleUITool.EditorTools
                     string sub = p.id == settings.BaseProfileId ? T("base")
                         : on ? F("{0} changed", LiveChangedCount(stage))
                         : F("{0} changed", FlexibleScreenSession.CountRecords(layout, p.id));
-                    var content = new GUIContent($"{Name(p)}\n<size=10>{sub}</size>",
-                        F("Edit the {0} screen ({1:0}x{2:0}). Switching screens saves the prefab.", Name(p), p.workResolution.x, p.workResolution.y));
+                    // 기준 화면은 모든 화면에, 다른 화면은 그 화면에만 반영된다는 것을 툴팁으로 알린다
+                    string tip = p.id == settings.BaseProfileId
+                        ? F("Edit the {0} screen ({1:0}x{2:0}). Changes here apply to every screen. Switching screens saves the prefab.", Name(p), p.workResolution.x, p.workResolution.y)
+                        : F("Edit the {0} screen ({1:0}x{2:0}). Only this screen changes; untouched objects stay as in {3}. Switching screens saves the prefab.", Name(p), p.workResolution.x, p.workResolution.y, Name(settings.Find(settings.BaseProfileId)));
+                    var content = new GUIContent($"{Name(p)}\n<size=10>{sub}</size>", tip);
                     Color previous = GUI.backgroundColor;
                     if (on)
                         GUI.backgroundColor = FlexibleGui.Accent;
@@ -1325,17 +2064,56 @@ namespace FlexibleUITool.EditorTools
             return string.IsNullOrEmpty(profile.displayName) ? profile.id : T(profile.displayName);
         }
 
-        // ───────── 선택한 블록 ─────────
+        // ───────── 선택한 오브젝트 ─────────
+
+        // 안쪽 Flexible 프리팹 안의 오브젝트: 그 프리팹 것이면 그 프리팹에서 배치하도록 안내하고(true), 이 프리팹에서 추가한 것이면 여기서 배치된다고 알린다
+        private static bool DrawNestedOwner(PrefabStage stage, RectTransform root, RectTransform target)
+        {
+            Transform nested = null;
+            for (Transform c = target.parent; c != null && c != root; c = c.parent)
+            {
+                if (c.GetComponent<FlexibleLayout>() != null)
+                {
+                    nested = c;
+                    break;
+                }
+            }
+            if (nested == null)
+                return false;
+            string nestedPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(nested.gameObject);
+            string nestedName = string.IsNullOrEmpty(nestedPath) ? nested.name : Path.GetFileNameWithoutExtension(nestedPath);
+            if (!FlexiblePathUtility.IsOwnedByNested(target, root))
+            {
+                GUILayout.Label(F("Added inside \"{0}\" by this prefab, so its layout is kept here.", nestedName), EditorStyles.wordWrappedMiniLabel);
+                return false;
+            }
+            GUILayout.Label(F("Part of \"{0}\". Its layout is kept in that prefab.", nestedName), EditorStyles.wordWrappedMiniLabel);
+            if (!string.IsNullOrEmpty(nestedPath) && GUILayout.Button(F("Open \"{0}\"", nestedName)))
+            {
+                OpenNestedPrefab(nestedPath, stage);
+                GUIUtility.ExitGUI();
+            }
+            return true;
+        }
+
+        private static bool showSelected = true;
 
         private static void DrawSelected(PrefabStage stage, FlexibleLayout layout)
         {
             var root = (RectTransform)stage.prefabContentsRoot.transform;
             FlexibleProfileSettings settings = layout.Settings;
-            FlexibleGui.Section(T("Selected block"));
+            EditorGUILayout.Space(4f);
+            bool open = showSelected || FlexibleTutorial.Active;
+            EditorGUI.BeginChangeCheck();
+            open = EditorGUILayout.Foldout(open, T("Selected object"), true, EditorStyles.foldoutHeader);
+            if (EditorGUI.EndChangeCheck())
+                showSelected = open;
+            if (!open)
+                return;
             List<RectTransform> targets = GetSelectedBlocks(root);
             if (targets.Count == 0)
             {
-                GUILayout.Label(T("Click a block in the Hierarchy or the Scene view."), EditorStyles.wordWrappedMiniLabel);
+                GUILayout.Label(T("Select an object to edit."), EditorStyles.wordWrappedMiniLabel);
                 return;
             }
 
@@ -1344,38 +2122,30 @@ namespace FlexibleUITool.EditorTools
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    GUILayout.Label(targets.Count == 1 ? targets[0].name : F("{0} blocks selected", targets.Count), EditorStyles.boldLabel);
-                    // 안쪽 프리팹(또는 그 안)을 골랐으면 그 프리팹을 바로 열 수 있게 한다
-                    GameObject instanceRoot = targets.Count == 1 ? PrefabUtility.GetNearestPrefabInstanceRoot(targets[0].gameObject) : null;
-                    if (instanceRoot != null)
-                    {
-                        string nestedPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(instanceRoot);
-                        GUILayout.FlexibleSpace();
-                        if (!string.IsNullOrEmpty(nestedPath) && GUILayout.Button(F("Open \"{0}\"", Path.GetFileNameWithoutExtension(nestedPath)), EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
-                        {
-                            OpenNestedPrefab(nestedPath, stage);
-                            GUIUtility.ExitGUI();
-                        }
-                    }
+                    GUILayout.Label(targets.Count == 1 ? targets[0].name : F("{0} objects selected", targets.Count), EditorStyles.boldLabel);
                 }
                 if (targets.Count > 1)
                     GUILayout.Label(Shorten(string.Join(", ", targets.Select(t => t.name)), 120), EditorStyles.wordWrappedMiniLabel);
+                if (targets.Count == 1 && DrawNestedOwner(stage, root, targets[0]))
+                    return;
 
                 // 여러 개면 상태가 모두 같을 때만 그 안내를 보이고, 다르면 화면마다 따로 둔 블록 수를 알린다
                 List<FlexibleBlockStatus> statuses = targets.Select(t => FlexibleScreenSession.GetStatus(stage, t)).ToList();
                 List<RectTransform> own = targets.Where((t, i) => statuses[i] == FlexibleBlockStatus.Own).ToList();
                 bool same = statuses.All(s => s == statuses[0]);
                 if (same && statuses[0] == FlexibleBlockStatus.BaseScreen)
-                    GUILayout.Label(T("Base screen: changes here apply to every screen (except where a screen has its own layout)."), EditorStyles.wordWrappedMiniLabel);
+                {
+                    // 기준 화면 안내는 위 화면 설명과 같아서 적지 않는다
+                }
                 else if (same && statuses[0] == FlexibleBlockStatus.SameAsBase)
                     GUILayout.Label(F("○ Same as {0}. Move it to give this screen its own layout.", Name(baseProfile)), FlexibleGui.WrapLabel);
                 else if (same && statuses[0] == FlexibleBlockStatus.NotSavedYet)
-                    GUILayout.Label(T("New block (not saved yet). After saving it appears on every screen."), EditorStyles.wordWrappedMiniLabel);
+                    GUILayout.Label(T("New object (not saved yet). After saving it appears on every screen."), EditorStyles.wordWrappedMiniLabel);
                 else if (own.Count > 0)
                 {
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        string text = own.Count == targets.Count ? T("Has its own layout on this screen") : F("{0} of {1} blocks have their own layout on this screen", own.Count, targets.Count);
+                        string text = own.Count == targets.Count ? T("Has its own layout on this screen") : F("{0} of {1} objects have their own layout on this screen", own.Count, targets.Count);
                         GUILayout.Label($"<color=#{ColorUtility.ToHtmlStringRGB(FlexibleGui.Good)}>●</color> " + text, FlexibleGui.WrapLabel);
                         if (GUILayout.Button(F("Back to {0}", Name(baseProfile)), GUILayout.Width(130f)))
                         {
@@ -1426,7 +2196,7 @@ namespace FlexibleUITool.EditorTools
                 bool anyOutside = targets.Any(t => FlexiblePreviewRenderer.FindOutside(root, new List<RectTransform> { t }).Count > 0);
                 using (new EditorGUI.DisabledScope(!anyOutside))
                 {
-                    if (GUILayout.Button(new GUIContent(T("Fit into the screen"), T("Shrinks the block evenly until it fits the screen, then moves it inside.")), EditorStyles.miniButton, GUILayout.Width(130f)))
+                    if (GUILayout.Button(new GUIContent(T("Fit into the screen"), T("Shrinks the object evenly until it fits the screen, then moves it inside.")), EditorStyles.miniButton, GUILayout.Width(130f)))
                     {
                         Undo.IncrementCurrentGroup();
                         int group = Undo.GetCurrentGroup();
@@ -1498,7 +2268,7 @@ namespace FlexibleUITool.EditorTools
         {
             EditorGUILayout.Space(6f);
             EditorGUI.BeginChangeCheck();
-            showGrid = EditorGUILayout.Foldout(showGrid, T("Place on a grid"), true, EditorStyles.foldoutHeader);
+            showGrid = EditorGUILayout.Foldout(showGrid, new GUIContent(T("Place on a grid"), T("Select an object, then drag over the blue cells in the Scene view, or type the cells below. The object snaps to those cells.")), true, EditorStyles.foldoutHeader);
             if (EditorGUI.EndChangeCheck())
                 SceneView.RepaintAll();
             FlexibleGui.Mark("grid");
@@ -1516,17 +2286,30 @@ namespace FlexibleUITool.EditorTools
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUILayout.Label(T("Select a block, then drag over the blue cells in the Scene view. The block snaps to those cells."), EditorStyles.wordWrappedMiniLabel);
-                DrawGridSettings(layout, profile);
-                // 그리드를 바꿨을 수 있으므로 칸 계산은 그 뒤에 한다
-                var context = new FlexibleGridContext(root, layout.GetGrid(profile.id), settings.GetSafeInsets(profileIndex));
+                // 자주 쓰는 배치 칸을 위에, 거의 바꾸지 않는 그리드 설정은 접어서 아래에 둔다
+                FlexibleGrid grid = layout.GetGrid(profile.id);
+                var context = new FlexibleGridContext(root, grid, settings.GetSafeInsets(profileIndex));
                 List<BlockInput> inputs = context.grid.IsValid
                     ? GetSelectedBlocks(root).Select(t => GetInput(t, session, context)).ToList()
                     : new List<BlockInput>();
                 DrawStalePlacements(context, session);
                 DrawPlacement(context, session, inputs);
+
+                EditorGUILayout.Space(4f);
+                bool open = showGridSettings || FlexibleTutorial.Active || !grid.IsValid;
+                EditorGUI.BeginChangeCheck();
+                string gridTitle = layout.UseOwnGrid
+                    ? F("Grid settings ({0} x {1}, this prefab only)", grid.columns, grid.rows)
+                    : F("Grid settings ({0} x {1}, project)", grid.columns, grid.rows);
+                open = EditorGUILayout.Foldout(open, gridTitle, true);
+                if (EditorGUI.EndChangeCheck())
+                    showGridSettings = open;
+                if (open)
+                    DrawGridSettings(layout, profile);
             }
         }
+
+        [SerializeField] private bool showGridSettings;
 
         // 프리팹 모양은 Game 뷰 해상도를 따른다. 지금 화면과 모양이 다르면 알리고 맞추는 버튼을 준다
         private static void DrawShapeCheck(PrefabStage stage)
@@ -1534,7 +2317,7 @@ namespace FlexibleUITool.EditorTools
             if (FlexibleScreenSession.IsShapeMatching(stage, out FlexibleProfile profile))
                 return;
 
-            EditorGUILayout.HelpBox(F("The prefab is not drawn in a {0} shape, because Unity's Game view has a different size. Press the button to set it to {1:0}x{2:0}.", Name(profile), profile.workResolution.x, profile.workResolution.y), MessageType.Warning);
+            EditorGUILayout.HelpBox(F("The prefab is not drawn at the {0} work size ({1:0}x{2:0}), because Unity's Game view has a different size. Changes made now would be measured at that other size. Press the button to fix it.", Name(profile), profile.workResolution.x, profile.workResolution.y), MessageType.Warning);
             if (GUILayout.Button(T("Fix the Game view size"), GUILayout.Height(26f)))
                 FlexibleScreenSession.SelectWorkResolution(profile);
         }
@@ -1570,9 +2353,10 @@ namespace FlexibleUITool.EditorTools
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                GUILayout.Label(layout.UseOwnGrid
-                    ? F("This prefab's own grid for the {0} screen. Other prefabs are not affected.", Name(profile))
-                    : F("Project grid for the {0} screen, used by every prefab without its own grid. Change it in Project grids, or turn on the option above.", Name(profile)), EditorStyles.wordWrappedMiniLabel);
+                if (!layout.UseOwnGrid)
+                    GUILayout.Label(F("Project grid for the {0} screen, used by every prefab without its own grid. Change it in Project grids, or turn on the option above.", Name(profile)), EditorStyles.wordWrappedMiniLabel);
+                else
+                    GUILayout.FlexibleSpace();
                 if (GUILayout.Button(T("Project grids..."), EditorStyles.miniButton, GUILayout.Width(110f)))
                     FlexibleProjectGridWindow.Open();
             }
@@ -1589,9 +2373,12 @@ namespace FlexibleUITool.EditorTools
             if (stale.Count == 0)
                 return;
 
-            EditorGUILayout.HelpBox(F("{0} grid blocks would move if placed again with the current grid or screen size. (Manually adjusted blocks are excluded.)", stale.Count), MessageType.Info);
-            if (GUILayout.Button(F("Re-place grid blocks ({0})", stale.Count)))
+            EditorGUILayout.HelpBox(F("{0} grid objects would move if placed again with the current grid or screen size. (Manually adjusted objects are excluded.)", stale.Count), MessageType.Info);
+            if (GUILayout.Button(F("Re-place grid objects ({0})", stale.Count)))
+            {
                 FlexibleGridPlacementService.ReapplyStale(session, stale);
+                Selection.objects = stale.Where(s => s.placement.target != null).Select(s => (Object)s.placement.target.gameObject).ToArray();
+            }
         }
 
         private void DrawPlacement(FlexibleGridContext context, FlexibleWorkspace session, List<BlockInput> inputs)
@@ -1603,7 +2390,7 @@ namespace FlexibleUITool.EditorTools
             }
             if (inputs.Count == 0)
             {
-                GUILayout.Label(T("Select the block to place."), EditorStyles.miniBoldLabel);
+                GUILayout.Label(T("Select the object to place."), EditorStyles.miniLabel);
                 return;
             }
 
@@ -1647,23 +2434,32 @@ namespace FlexibleUITool.EditorTools
                     || FlexibleGridMath.ResolveY(i.modeY, i.cell, context.grid) != FlexibleAxisMode.Stretch);
                 using (new EditorGUI.DisabledScope(!anyFixed))
                 {
-                    if (GUILayout.Button(new GUIContent(T("Use its own size"), T("Sticking to an edge or centering keeps the size of the cells. This puts back the size the block has on the portrait screen.")), EditorStyles.miniButton))
+                    if (GUILayout.Button(new GUIContent(T("Use its own size"), T("Sticking to an edge or centering keeps the size of the cells. This puts back the size the object has on the portrait screen.")), EditorStyles.miniButton))
                         PlaceAll(context, session, inputs, i => { i.ownSize = true; return i; });
                 }
                 bool shownFit = inputs[0].fit;
+                // 내용에 맞춰 크기가 정해지는 블록은 칸 크기를 따를 수 없으므로 늘 줄여서 놓는다 (끌 수 없게 하고 이유를 보인다)
+                bool contentSized = inputs.Exists(i => FlexibleGridPlacementService.IsContentSized(i.target));
                 EditorGUI.showMixedValue = inputs.Exists(i => i.fit != shownFit);
                 EditorGUI.BeginChangeCheck();
-                bool fit = EditorGUILayout.ToggleLeft(new GUIContent(T("Shrink to fit the cells"),
-                    T("Keeps the portrait size and shape, and scales the block down on every screen size so it fits the cells (big pictures, popups, button rows).")), shownFit);
+                bool fit;
+                using (new EditorGUI.DisabledScope(contentSized && inputs.Count == 1))
+                {
+                    fit = EditorGUILayout.ToggleLeft(new GUIContent(T("Shrink to fit the cells"),
+                        T("Keeps the portrait size and shape, and scales the object down on every screen size so it fits the cells (big pictures, popups, button rows).")), shownFit);
+                }
                 EditorGUI.showMixedValue = false;
                 if (EditorGUI.EndChangeCheck())
-                    PlaceAll(context, session, inputs, i => { i.fit = fit; i.ownSize = fit; return i; });
+                    PlaceAll(context, session, inputs, i => { i.fit = fit || FlexibleGridPlacementService.IsContentSized(i.target); i.ownSize = i.fit; return i; });
             }
+            if (inputs.Count == 1)
+                DrawSizeMismatch(context, session, inputs[0]);
 
             // 모서리에 붙이기: 안전 영역의 그 모서리에서 세로 화면과 같은 거리·크기
             using (new EditorGUILayout.HorizontalScope())
             {
-                GUILayout.Label(new GUIContent(T("Pin to"), T("Puts the block at the same distance from that corner or edge of the safe area as on the portrait screen, with its portrait size. Good for bars, corner buttons and centered popups.")), GUILayout.Width(EditorGUIUtility.labelWidth));
+                var pinLabel = new GUIContent(T("Pin to"), T("Puts the object at the same distance from that corner or edge of the safe area as on the portrait screen, with its portrait size. Good for bars, corner buttons and centered popups."));
+                GUILayout.Label(pinLabel, GUILayout.Width(Mathf.Max(EditorGUIUtility.labelWidth, EditorStyles.label.CalcSize(pinLabel).x + 4f)));
                 using (new EditorGUILayout.VerticalScope(GUILayout.Width(84f)))
                 {
                     for (int row = 0; row < 3; row++)
@@ -1684,12 +2480,20 @@ namespace FlexibleUITool.EditorTools
 
             // SafeArea도 블록마다의 값이다. 바꾸면 고른 블록 전부를 그 값으로 바로 다시 놓는다 (칸에 안 놓인 블록은 지금 덮고 있는 칸에)
             bool shownSafe = inputs[0].insideSafeArea;
+            // 이 화면의 대표 기기에 노치·홈 바 자리가 없으면 체크가 아무 효과도 없다. 헷갈리지 않게 끄고 이유를 보인다
+            bool noInsets = context.safeInsets.sqrMagnitude < 0.0000001f;
             EditorGUI.showMixedValue = inputs.Exists(i => i.insideSafeArea != shownSafe);
             EditorGUI.BeginChangeCheck();
-            bool inside = EditorGUILayout.ToggleLeft(new GUIContent(T("Keep the selected blocks inside the safe area (red = notch / home bar)"),
-                T("Turn it off for backgrounds and bars that should reach the screen edge.") + "\n"
-                + F("SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}", context.safeInsets.x, context.safeInsets.y, context.safeInsets.z, context.safeInsets.w)), shownSafe);
+            bool inside;
+            using (new EditorGUI.DisabledScope(noInsets))
+            {
+                inside = EditorGUILayout.ToggleLeft(new GUIContent(T("Keep the selected objects inside the safe area (red = notch / home bar)"),
+                    T("Turn it off for backgrounds and bars that should reach the screen edge.") + "\n"
+                    + F("SafeArea insets of the reference device: left {0:P1} · right {1:P1} · top {2:P1} · bottom {3:P1}", context.safeInsets.x, context.safeInsets.y, context.safeInsets.z, context.safeInsets.w)), shownSafe);
+            }
             EditorGUI.showMixedValue = false;
+            if (noInsets)
+                GUILayout.Label(T("This screen's reference device has no notch or home bar, so the whole screen is the safe area."), EditorStyles.wordWrappedMiniLabel);
             if (EditorGUI.EndChangeCheck())
             {
                 // 마지막으로 고른 값은 다음에 새로 놓는 블록의 기본값이 된다
@@ -1698,9 +2502,7 @@ namespace FlexibleUITool.EditorTools
                 PlaceAll(context, session, inputs, i => { i.insideSafeArea = inside; return i; });
             }
             EditorGUIUtility.labelWidth = labelWidth;
-            GUILayout.Label(inputs.Count == 1
-                ? T("Changes here move the selected block right away. Save keeps them.")
-                : T("Changes here apply to all selected blocks right away. Save keeps them. Dragging in the Scene view works with one block at a time."), EditorStyles.wordWrappedMiniLabel);
+            // 바꾸면 바로 움직이므로 따로 안내하지 않는다
         }
 
         private static string Describe(FlexibleGridPlacement placement)
@@ -1709,7 +2511,7 @@ namespace FlexibleUITool.EditorTools
                 return T("Not placed on the grid");
             string where = placement.insideSafeArea ? T(", inside SafeArea") : "";
             if (FlexibleWorkspaceService.IsUntouchedPlacement(placement))
-                return F("Grid block {0}{1}", placement.cell, where);
+                return F("Grid object {0}{1}", placement.cell, where);
             if (FlexibleGridPlacementService.TryGetAdjustment(placement, out FlexibleGridAdjustment adjustment))
                 return F("Grid {0}{1} + adjustment ({2})", placement.cell, where, adjustment);
             return F("Manually adjusted (anchors or pivot changed from grid {0}{1}; excluded from templates)", placement.cell, where);
@@ -1719,7 +2521,7 @@ namespace FlexibleUITool.EditorTools
 
         private void DrawTemplates(PrefabStage stage, FlexibleLayout layout)
         {
-            showTemplates = EditorGUILayout.Foldout(showTemplates, T("Templates"), true, EditorStyles.foldoutHeader);
+            showTemplates = EditorGUILayout.Foldout(showTemplates, new GUIContent(T("Templates"), T("Save where each role (Header, Main, ...) sits on the grid of a screen, and reuse it on other prefabs.")), true, EditorStyles.foldoutHeader);
             FlexibleGui.Mark("templates");
             if (!showTemplates)
                 return;
@@ -1736,10 +2538,9 @@ namespace FlexibleUITool.EditorTools
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUILayout.Label(F("Save where each role (Header, Main, ...) sits on the grid of the {0} screen, and reuse it on other prefabs.", Name(profile)), EditorStyles.wordWrappedMiniLabel);
                 // 템플릿은 칸 번호로 저장되므로, 전용 그리드를 쓰면 다른 프리팹과 크기가 달라질 수 있다
                 if (layout.UseOwnGrid)
-                    EditorGUILayout.HelpBox(T("This prefab uses its own grid. Templates keep cell numbers, so blocks may come out a different size than in other prefabs."), MessageType.Info);
+                    EditorGUILayout.HelpBox(T("This prefab uses its own grid. Templates keep cell numbers, so objects may come out a different size than in other prefabs."), MessageType.Info);
                 List<FlexibleTemplate> templates = settings.Templates.Where(t => t.profileId == profile.id).ToList();
                 if (templates.Count > 0)
                 {
@@ -1782,14 +2583,16 @@ namespace FlexibleUITool.EditorTools
         {
             var skipped = new List<string>();
             FlexibleTemplate template = FlexibleGridPlacementService.CreateTemplate(session, layout, profile.id, templateName.Trim(), skipped);
-            string skippedText = skipped.Count > 0 ? "\n\n" + T("Excluded blocks:") + "\n· " + string.Join("\n· ", skipped) : "";
+            string skippedText = skipped.Count > 0 ? "\n\n" + T("Excluded objects:") + "\n· " + string.Join("\n· ", skipped) : "";
             if (template.slots.Count == 0)
             {
-                EditorUtility.DisplayDialog(T("Save template"), T("Nothing to save. Only blocks that have a role and were placed on the grid go into a template.") + skippedText, T("OK"));
+                EditorUtility.DisplayDialog(T("Save template"), T("Nothing to save. Only objects that have a role and were placed on the grid go into a template.") + skippedText, T("OK"));
                 return;
             }
 
             FlexibleGridPlacementService.SaveTemplate(settings, template);
+            // 방금 저장한 템플릿을 목록에서 골라 둔다
+            templateIndex = Mathf.Max(0, settings.Templates.Where(t => t.profileId == profile.id).ToList().FindIndex(t => t.name == template.name));
             IEnumerable<string> saved = template.slots.Select(s => s.HasAdjustment ? F("{0} (with adjustment)", s.role) : s.role);
             EditorUtility.DisplayDialog(T("Save template"), F("Saved {1} roles to '{0}'.", template.name, template.slots.Count) + $"\n{string.Join(", ", saved)}{skippedText}", T("OK"));
             templateName = "";
@@ -1799,7 +2602,7 @@ namespace FlexibleUITool.EditorTools
         {
             var missing = new List<string>();
             int applied = FlexibleGridPlacementService.ApplyTemplate(context, session, layout, template, missing);
-            string message = F("Placed {0} blocks.", applied);
+            string message = F("Placed {0} objects.", applied);
             if (missing.Count > 0)
                 message += "\n" + F("Roles missing in this prefab: {0}", string.Join(", ", missing));
             EditorUtility.DisplayDialog(T("Apply template"), message, T("OK"));
@@ -1825,8 +2628,8 @@ namespace FlexibleUITool.EditorTools
                     int count = FlexibleScreenSession.CountRecords(layout, p.id);
                     using (new EditorGUI.DisabledScope(count == 0))
                     {
-                        if (GUILayout.Button(F("Undo all {0} changes ({1} blocks)", Name(p), count))
-                            && EditorUtility.DisplayDialog(T("Undo all changes"), F("Make every block of the {0} screen the same as {1} again? This cannot be undone.", Name(p), Name(settings.Find(settings.BaseProfileId))), T("Yes"), T("Cancel")))
+                        if (GUILayout.Button(F("Undo all {0} changes ({1} objects)", Name(p), count))
+                            && EditorUtility.DisplayDialog(T("Undo all changes"), F("Make every object of the {0} screen the same as {1} again? This cannot be undone.", Name(p), Name(settings.Find(settings.BaseProfileId))), T("Yes"), T("Cancel")))
                         {
                             FlexibleScreenSession.ClearProfile(stage, p.id);
                             GUIUtility.ExitGUI();
@@ -2046,8 +2849,15 @@ namespace FlexibleUITool.EditorTools
                         GUIUtility.hotControl = 0;
                         dragging = false;
                         e.Use();
-                        // 드래그로 칸을 새로 정하면 손으로 옮긴 보정은 버린다 (모드·SafeArea는 유지)
-                        FlexibleGridPlacementService.Apply(context, session, input.target, dragCell, input.modeX, input.modeY, input.insideSafeArea, default, input.fit);
+                        // 드래그로 칸을 새로 정하면 손으로 바꾼 위치·크기·스케일은 버린다 (모드·SafeArea는 유지).
+                        // 스케일도 원래 값으로 돌려야 블록이 드래그한 범위와 같은 크기로 보인다
+                        BlockInput dragged = input;
+                        dragged.cell = dragCell;
+                        dragged.placement = null;
+                        PlaceAll(context, session, new List<BlockInput> { dragged }, i => i);
+                        // 드래그한 범위와 다르게 놓였으면 Scene 뷰에서 바로 알린다 (고르는 버튼은 창에 있다)
+                        if (TryGetSizeMismatch(context, session.FindPlacement(input.target), out _, out _))
+                            SceneView.lastActiveSceneView?.ShowNotification(new GUIContent(T("It is not the size you dragged. Choose what to do in the Flexible UI window.")), 4.0);
                     }
                     break;
             }
@@ -2078,6 +2888,12 @@ namespace FlexibleUITool.EditorTools
                 DrawRect(root, Rect.MinMaxRect(full.xMin, safe.yMin, safe.xMin, safe.yMax), fill, none);
             if (safe.xMax < full.xMax)
                 DrawRect(root, Rect.MinMaxRect(safe.xMax, safe.yMin, full.xMax, safe.yMax), fill, none);
+
+            // 경계는 늘 그린다 (노치가 없는 화면에서도 안전 영역이 어디인지 보이게)
+            DrawRect(root, safe, none, new Color(0.3f, 0.9f, 0.4f, 0.9f));
+            bool whole = safe == full;
+            var style = new GUIStyle(EditorStyles.miniBoldLabel) { normal = { textColor = new Color(0.3f, 0.9f, 0.4f, 1f) } };
+            Handles.Label(root.TransformPoint(new Vector3(safe.xMin, safe.yMax)), whole ? T("Safe area = whole screen") : T("Safe area"), style);
         }
 
         private static void DrawRect(RectTransform root, Rect rect, Color fill, Color outline)

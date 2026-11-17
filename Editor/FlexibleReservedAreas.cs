@@ -29,6 +29,9 @@ namespace FlexibleUITool.EditorTools
                 {
                     if (path.EndsWith(".prefab", System.StringComparison.OrdinalIgnoreCase))
                         OnPrefabChanged(AssetDatabase.AssetPathToGUID(path));
+                    // 화면 설정(화면 종류·작업 해상도)이 바뀌면 모든 자리를 다시 구한다
+                    else if (AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(FlexibleProfileSettings))
+                        OnSettingsChanged(path);
                 }
             }
         }
@@ -73,9 +76,33 @@ namespace FlexibleUITool.EditorTools
             SceneView.RepaintAll();
         }
 
+        private static void OnSettingsChanged(string path)
+        {
+            measured.Clear();
+            if (measureRenderer != null)
+                measureRenderer.Dirty = true;
+            EditorApplication.delayCall += () =>
+            {
+                var settings = AssetDatabase.LoadAssetAtPath<FlexibleProfileSettings>(path);
+                if (settings == null || settings.ReservedAreas.Count == 0)
+                    return;
+                string before = JsonUtility.ToJson(settings);
+                foreach (FlexibleReservedArea area in settings.ReservedAreas)
+                    Recompute(settings, area);
+                // 바뀐 것이 없으면 저장하지 않는다 (저장 → 다시 가져오기 → 다시 계산의 반복을 막는다)
+                if (JsonUtility.ToJson(settings) != before)
+                    AssetDatabase.SaveAssetIfDirty(settings);
+                else
+                    EditorUtility.ClearDirty(settings);
+            };
+        }
+
         // 화면 전환 저장처럼 연달아 와도 한 번만 다시 구한다
         private static void OnPrefabChanged(string guid)
         {
+            measured.Clear();
+            if (measureRenderer != null)
+                measureRenderer.Dirty = true;
             // 가져오기 도중에는 에셋을 만들거나 읽지 않고, 끝난 뒤에 확인한다
             if (string.IsNullOrEmpty(guid))
                 return;
@@ -132,7 +159,8 @@ namespace FlexibleUITool.EditorTools
             EditorUtility.SetDirty(settings);
         }
 
-        // 이 프리팹 밖에서 온 자리들 (지금 화면에서 보이는 것만, 루트 좌표로)
+        // 이 프리팹 밖에서 온 자리들 (지금 화면에서 보이는 것만, 루트 좌표로).
+        // 같은 화면 종류라도 비율에 따라 자리 크기가 다르므로(아래에 고정된 200 높이의 바 등) 그 화면 크기로 그 프리팹을 놓아 보고 잰다
         public static List<(FlexibleReservedArea area, Rect rect)> ForScreen(FlexibleProfileSettings settings, string prefabGuid, string profileId, Rect screen)
         {
             var result = new List<(FlexibleReservedArea, Rect)>();
@@ -140,11 +168,55 @@ namespace FlexibleUITool.EditorTools
             {
                 if (area.prefabGuid == prefabGuid || (area.hiddenFor != null && area.hiddenFor.Contains(prefabGuid)))
                     continue;
-                Rect? n = area.Find(profileId);
+                Rect? n = TryMeasure(area, profileId, screen.size, out Rect? exact) ? exact : area.Find(profileId);
                 if (n.HasValue)
                     result.Add((area, new Rect(screen.xMin + n.Value.x * screen.width, screen.yMin + n.Value.y * screen.height, n.Value.width * screen.width, n.Value.height * screen.height)));
             }
             return result;
+        }
+
+        // 화면 크기별로 잰 자리 (아래 기준 정규화 좌표). 그 화면에서 안 보이면 Rect.zero 를 기억한다
+        private static readonly Dictionary<string, Rect> measured = new Dictionary<string, Rect>();
+        private static FlexiblePreviewRenderer measureRenderer;
+
+        // 잴 수 있으면 true (그 화면에서 안 보이면 exact 가 null). 프리팹을 못 찾으면 false 라서 저장된 값을 쓴다
+        private static bool TryMeasure(FlexibleReservedArea area, string profileId, Vector2 size, out Rect? exact)
+        {
+            exact = null;
+            string key = area.prefabGuid + "|" + area.path + "|" + profileId + "|" + Mathf.RoundToInt(size.x) + "x" + Mathf.RoundToInt(size.y);
+            if (measured.TryGetValue(key, out Rect cached))
+            {
+                exact = cached == Rect.zero ? (Rect?)null : cached;
+                return true;
+            }
+
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(area.prefabGuid));
+            if (asset == null || !(asset.transform is RectTransform) || size.x <= 0f || size.y <= 0f)
+                return false;
+            if (measureRenderer == null)
+            {
+                measureRenderer = new FlexiblePreviewRenderer();
+                AssemblyReloadEvents.beforeAssemblyReload += () =>
+                {
+                    measureRenderer?.Dispose();
+                    measureRenderer = null;
+                };
+            }
+            Rect result = Rect.zero;
+            if (measureRenderer.Prepare(asset, profileId, size, new Rect(0f, 0f, 1f, 1f)))
+            {
+                var root = (RectTransform)measureRenderer.Instance.transform;
+                var target = FlexiblePathUtility.FindByPath(root, area.path) as RectTransform;
+                if (target != null && target.gameObject.activeInHierarchy)
+                {
+                    Rect r = FlexiblePreviewRenderer.GetRectInRoot(root, target);
+                    Rect screen = root.rect;
+                    result = new Rect((r.xMin - screen.xMin) / screen.width, (r.yMin - screen.yMin) / screen.height, r.width / screen.width, r.height / screen.height);
+                }
+            }
+            measured[key] = result;
+            exact = result == Rect.zero ? (Rect?)null : result;
+            return true;
         }
 
         // 다른 프리팹에서 온 자리 전부 (이 프리팹에서 숨긴 것 포함)

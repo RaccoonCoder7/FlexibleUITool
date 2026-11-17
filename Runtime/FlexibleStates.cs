@@ -158,6 +158,12 @@ namespace FlexibleUITool
         public Vector2 fitAnchorMin;
         public Vector2 fitAnchorMax;
         public float fitMaxScale = 1f;
+        // 이 화면에서 바꾼 Content Size Fitter 설정 (칸 크기를 쓰려고 끈 경우 등)
+        public bool controlSizeFitter;
+        public ContentSizeFitter.FitMode fitterHorizontal;
+        public ContentSizeFitter.FitMode fitterVertical;
+        // 칸과 보이는 크기가 달라도 이대로 두기로 한 그리드 블록 (다시 묻지 않는다)
+        public bool gridSizeKept;
 
         // 블록이 칸 영역에 다 들어가는 가장 큰 배율(최대 fitMaxScale)로 맞춘다
         public void ApplyFit(RectTransform target)
@@ -165,14 +171,62 @@ namespace FlexibleUITool
             if (!fit || !(target.parent is RectTransform parent))
                 return;
             Vector2 room = Vector2.Scale(parent.rect.size, fitAnchorMax - fitAnchorMin);
-            Vector2 size = target.rect.size;
+            Vector2 size = FitSize(target);
             if (room.x <= 0f || room.y <= 0f || size.x <= 0f || size.y <= 0f)
                 return;
             float scale = Mathf.Min(fitMaxScale, room.x / size.x, room.y / size.y);
             target.localScale = new Vector3(scale, scale, target.localScale.z);
         }
 
+        // 맞출 크기 (배율 1 기준): 블록 자신과, 그 밖으로 나가 보이는 자식(펼친 화살표·아래 버튼 등)까지 덮는 크기.
+        // 배율은 피벗을 중심으로 바뀌므로 피벗에서 더 먼 쪽 거리의 두 배로 잡는다. 마스크 안쪽은 마스크 칸까지만 본다
+        public static Vector2 FitSize(RectTransform target)
+        {
+            Rect own = target.rect;
+            Vector2 min = own.min;
+            Vector2 max = own.max;
+            bool outside = false;
+            foreach (Transform child in target)
+                Grow(target, child as RectTransform, ref min, ref max, ref outside);
+            if (!outside)
+                return own.size;
+            return new Vector2(2f * Mathf.Max(-min.x, max.x), 2f * Mathf.Max(-min.y, max.y));
+        }
+
+        private static void Grow(RectTransform target, RectTransform rt, ref Vector2 min, ref Vector2 max, ref bool outside)
+        {
+            if (rt == null || !rt.gameObject.activeSelf)
+                return;
+            var graphic = rt.GetComponent<Graphic>();
+            // TMP가 글자용으로 만드는 보조 오브젝트는 칸이 실제 글자와 무관하다
+            if (graphic != null && graphic.GetType().Name.StartsWith("TMP_SubMesh"))
+                return;
+            bool clips = rt.GetComponent<Mask>() != null || rt.GetComponent<RectMask2D>() != null;
+            if (clips || (graphic != null && graphic.enabled && graphic.color.a > 0.01f))
+            {
+                var corners = new Vector3[4];
+                rt.GetWorldCorners(corners);
+                foreach (Vector3 corner in corners)
+                {
+                    Vector2 p = target.InverseTransformPoint(corner);
+                    if (p.x < min.x - 0.5f || p.y < min.y - 0.5f || p.x > max.x + 0.5f || p.y > max.y + 0.5f)
+                        outside = true;
+                    min = Vector2.Min(min, p);
+                    max = Vector2.Max(max, p);
+                }
+            }
+            if (clips)
+                return;
+            foreach (Transform child in rt)
+                Grow(target, child as RectTransform, ref min, ref max, ref outside);
+        }
+
         public static FlexibleProfileState Capture(FlexibleLayoutEntry entry, string profileId, bool controlActive, bool controlLayoutGroup)
+        {
+            return Capture(entry, profileId, controlActive, controlLayoutGroup, false);
+        }
+
+        public static FlexibleProfileState Capture(FlexibleLayoutEntry entry, string profileId, bool controlActive, bool controlLayoutGroup, bool controlSizeFitter)
         {
             var state = new FlexibleProfileState
             {
@@ -186,6 +240,13 @@ namespace FlexibleUITool
             if (state.controlLayoutGroup)
                 state.layoutGroup = FlexibleLayoutGroupState.Capture(entry.layoutGroup);
 
+            if (controlSizeFitter && entry.sizeFitter != null)
+            {
+                state.controlSizeFitter = true;
+                state.fitterHorizontal = entry.sizeFitter.horizontalFit;
+                state.fitterVertical = entry.sizeFitter.verticalFit;
+            }
+
             return state;
         }
 
@@ -198,6 +259,14 @@ namespace FlexibleUITool
         // 그래야 다른 프로필이 바꿔 둔 값(예: 가로에서 숨김)이 이 프로필로 돌아왔을 때 남지 않는다
         public void ApplyTo(FlexibleLayoutEntry entry, FlexibleProfileState fallback)
         {
+            // 피터를 먼저 바꿔야 그 뒤 크기 계산(칸에 맞춰 줄이기)이 바뀐 설정을 따른다
+            FlexibleProfileState fitter = controlSizeFitter ? this : fallback;
+            if (fitter != null && fitter.controlSizeFitter && entry.sizeFitter != null)
+            {
+                entry.sizeFitter.horizontalFit = fitter.fitterHorizontal;
+                entry.sizeFitter.verticalFit = fitter.fitterVertical;
+            }
+
             rect.ApplyTo(entry.target);
             ApplyFit(entry.target);
 
@@ -217,10 +286,12 @@ namespace FlexibleUITool
     {
         public RectTransform target;
         public LayoutGroup layoutGroup;
+        public ContentSizeFitter sizeFitter;
         public List<FlexibleProfileState> states = new List<FlexibleProfileState>();
 
         public bool ControlsActive => states.Exists(s => s.controlActive);
         public bool ControlsLayoutGroup => layoutGroup != null && states.Exists(s => s.controlLayoutGroup);
+        public bool ControlsSizeFitter => sizeFitter != null && states.Exists(s => s.controlSizeFitter);
 
         public FlexibleProfileState Find(string profileId)
         {
