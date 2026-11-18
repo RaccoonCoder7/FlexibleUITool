@@ -208,7 +208,7 @@ namespace FlexibleUITool.EditorTools
                 case Step.Square:
                     return T("Tablets use the <b>Square</b> screen. It works the same way.\nPress the <b>Square</b> button. Objects you don't touch keep the portrait layout.");
                 case Step.Preview:
-                    return T("Open the <b>Preview</b> tab. Drag the window edge to make it wide, then let go and make it narrow.\nWhen the screen name at the bottom changes, you're done.");
+                    return T("Open the <b>Preview</b> tab. Drag the window edge (or the border next to it, if the window is docked) to make it wide, then let go and make it narrow.\nWhen the screen name at the bottom changes, you're done.");
                 case Step.Check:
                     return T("Last one: the <b>Check</b> tab shows the prefab on many phones and tablets at once.\nOpen it and press <b>Run check</b>.");
                 case Step.Finish:

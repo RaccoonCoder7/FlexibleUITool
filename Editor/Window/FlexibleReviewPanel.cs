@@ -47,6 +47,11 @@ namespace FlexibleUITool.EditorTools
         private string targetPrefab; // 지정되면 이 프리팹만 검수 (CLI review -Prefab)
         private Vector2 scroll;
         private readonly List<Row> rows = new List<Row>();
+        // 「열린 프리팹만」으로 검수한 프리팹 (다른 프리팹을 열면 그 결과는 지운다)
+        private string checkedOpen;
+
+        // 「문제 보기」 뒤 편집 탭으로 옮긴다 (창이 넣어 준다)
+        [System.NonSerialized] public System.Action ShowEditTab;
 
         // 검수를 돌린 횟수 (튜토리얼 확인용)
         public int RunCount { get; private set; }
@@ -89,6 +94,12 @@ namespace FlexibleUITool.EditorTools
             FlexibleProfileSettings settings = FlexibleSettingsUtility.GetOrCreateDefault();
             EnsurePresetFlags(settings);
             string open = OpenPrefabPath();
+            // 지난번에 검수한 것과 다른 프리팹이 열려 있으면 그 결과는 이 프리팹의 것이 아니다
+            if (checkedOpen != null && open != null && open != checkedOpen)
+            {
+                ReleaseRows();
+                checkedOpen = null;
+            }
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -102,12 +113,12 @@ namespace FlexibleUITool.EditorTools
                 {
                     using (new EditorGUI.DisabledScope(open == null))
                     {
-                        if (GUILayout.Toggle(scope == Scope.OpenPrefab && open != null, T("Only the open prefab"), EditorStyles.miniButtonLeft, GUILayout.ExpandWidth(false)))
+                        if (Toggle(scope == Scope.OpenPrefab && open != null, new GUIContent(T("Only the open prefab")), EditorStyles.miniButtonLeft, GUILayout.ExpandWidth(false)))
                             scope = Scope.OpenPrefab;
                     }
-                    if (GUILayout.Toggle(scope == Scope.Scene || (scope == Scope.OpenPrefab && open == null), new GUIContent(T("This scene"), T("Prefabs placed in the open scene (nested ones too).")), EditorStyles.miniButtonMid, GUILayout.ExpandWidth(false)))
+                    if (Toggle(scope == Scope.Scene || (scope == Scope.OpenPrefab && open == null), new GUIContent(T("This scene"), T("Prefabs placed in the open scene (nested ones too).")), EditorStyles.miniButtonMid, GUILayout.ExpandWidth(false)))
                         scope = Scope.Scene;
-                    if (GUILayout.Toggle(scope == Scope.Folder, T("Folder"), EditorStyles.miniButtonRight, GUILayout.ExpandWidth(false)))
+                    if (Toggle(scope == Scope.Folder, new GUIContent(T("Folder")), EditorStyles.miniButtonRight, GUILayout.ExpandWidth(false)))
                         scope = Scope.Folder;
                     if (scope == Scope.Folder)
                         folder = (DefaultAsset)EditorGUILayout.ObjectField(folder, typeof(DefaultAsset), false, GUILayout.Width(160f));
@@ -123,6 +134,7 @@ namespace FlexibleUITool.EditorTools
                         targetPrefab = open;
                         Run(settings);
                         targetPrefab = null;
+                        checkedOpen = open;
                     }
                     else
                     {
@@ -146,7 +158,7 @@ namespace FlexibleUITool.EditorTools
                         float width = EditorStyles.miniButton.CalcSize(content).x + 4f;
                         if (used > 0f && used + width > available)
                             break;
-                        presetEnabled[index] = GUILayout.Toggle(presetEnabled[index], content, EditorStyles.miniButton, GUILayout.Width(width));
+                        presetEnabled[index] = Toggle(presetEnabled[index], content, EditorStyles.miniButton, GUILayout.Width(width));
                         used += width;
                         index++;
                     } while (index < settings.PreviewPresets.Count);
@@ -155,9 +167,9 @@ namespace FlexibleUITool.EditorTools
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                includeEdges = GUILayout.Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size objects overflow there first.")), EditorStyles.miniButton);
-                onlyIssues = GUILayout.Toggle(onlyIssues, T("Only issues"), EditorStyles.miniButton);
-                hideBaseIssues = GUILayout.Toggle(hideBaseIssues, new GUIContent(T("Hide base screen issues"), T("Issues on the base (portrait) screen come from the original design. Hide them to focus on the screens you made.")), EditorStyles.miniButton);
+                includeEdges = Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size objects overflow there first.")), EditorStyles.miniButton);
+                onlyIssues = Toggle(onlyIssues, new GUIContent(T("Only issues")), EditorStyles.miniButton);
+                hideBaseIssues = Toggle(hideBaseIssues, new GUIContent(T("Hide base screen issues"), T("Issues on the base (portrait) screen come from the original design. Hide them to focus on the screens you made.")), EditorStyles.miniButton);
                 GUILayout.Label(T("Thumbnail"), GUILayout.ExpandWidth(false));
                 thumbnailHeight = GUILayout.HorizontalSlider(thumbnailHeight, 100f, 400f, GUILayout.Width(100f));
                 GUILayout.FlexibleSpace();
@@ -187,6 +199,17 @@ namespace FlexibleUITool.EditorTools
                 DrawRow(row);
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        // 켜고 끄는 버튼. 꺼진 것은 흐리게 그려 켜진 것과 바로 구분되게 한다
+        private static bool Toggle(bool on, GUIContent content, GUIStyle style, params GUILayoutOption[] options)
+        {
+            Color previous = GUI.color;
+            if (!on)
+                GUI.color = new Color(previous.r, previous.g, previous.b, previous.a * 0.45f);
+            bool result = GUILayout.Toggle(on, content, style, options);
+            GUI.color = previous;
+            return result;
         }
 
         private static string OpenPrefabPath()
@@ -245,21 +268,30 @@ namespace FlexibleUITool.EditorTools
                     List<string> names = g.Select(i => i.BlockNames).Distinct().ToList();
                     return $"{FlexibleIssue.Title(g.Key)} ×{g.Count()}: {string.Join(", ", names.Take(3))}{(names.Count > 3 ? ", …" : "")}";
                 }).ToList();
-                string text = visible.Count > 0 ? string.Join("\n", lines)
-                    : cell.issues.Count > 0 ? F("Base screen issues hidden ({0})", cell.issues.Count)
-                    : T("No issues");
-                GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(Mathf.Max(width, 120f)));
-                if (visible.Count > 0 && GUILayout.Button(new GUIContent(T("Show the problem"), T("Opens the prefab on this screen and selects the objects with the problem.")), EditorStyles.miniButton, GUILayout.Width(Mathf.Max(width, 120f))))
+                if (visible.Count == 0 && cell.issues.Count > 0)
                 {
-                    FlexibleEditPanel.SetProblem(row.path, cell.profile.id, cell.ScreenName, visible);
-                    ShowProblem(row.path, cell.profile.id, visible);
+                    if (GUILayout.Button(new GUIContent(F("Base screen issues hidden ({0})", cell.issues.Count), T("Click to show them.")), EditorStyles.linkLabel, GUILayout.Width(Mathf.Max(width, 120f))))
+                        hideBaseIssues = false;
+                }
+                else
+                {
+                    string text = visible.Count > 0 ? string.Join("\n", lines) : T("No issues");
+                    GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(Mathf.Max(width, 120f)));
+                }
+                if (visible.Count > 0 && GUILayout.Button(new GUIContent(T("Show the problem"), T("Opens the prefab on this screen in the Edit tab and selects the objects with the problem.")), EditorStyles.miniButton, GUILayout.Width(Mathf.Max(width, 120f))))
+                {
+                    if (ShowProblem(row.path, cell.profile.id, visible))
+                    {
+                        FlexibleEditPanel.SetProblem(row.path, cell.profile.id, cell.ScreenName, visible);
+                        ShowEditTab?.Invoke();
+                    }
                     GUIUtility.ExitGUI();
                 }
             }
         }
 
         // 문제가 난 화면으로 프리팹을 열고 그 블록을 골라 둔다 (열고 나서 직접 찾지 않아도 되게)
-        private static void ShowProblem(string path, string profileId, List<FlexibleIssue> issues)
+        private static bool ShowProblem(string path, string profileId, List<FlexibleIssue> issues)
         {
             string[] blockPaths = issues.Where(i => i.blocks != null).SelectMany(i => i.blocks).Distinct().ToArray();
             PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
@@ -271,7 +303,7 @@ namespace FlexibleUITool.EditorTools
             else
             {
                 if (!FlexibleScreenSession.PrepareToOpen(path))
-                    return;
+                    return false;
                 FlexibleScreenSession.OpenNextOn(path, profileId);
                 PrefabStageUtility.OpenPrefab(path);
             }
@@ -287,6 +319,7 @@ namespace FlexibleUITool.EditorTools
                 Selection.objects = found;
                 EditorGUIUtility.PingObject(found[0]);
             };
+            return true;
         }
 
         // 기준 화면 문제를 숨기면, 다른 화면에서도 기준 화면에 이미 있던 같은 문제(원래 디자인·일부러 밖에 둔 것)는 뺀다
@@ -310,6 +343,8 @@ namespace FlexibleUITool.EditorTools
         {
             RunCount++;
             ReleaseRows();
+            checkedOpen = null;
+            FlexibleEditPanel.ClearProblem();
             EnsurePresetFlags(settings);
             List<string> paths = !string.IsNullOrEmpty(targetPrefab) ? new List<string> { targetPrefab }
                 : scope == Scope.Folder ? FindTargets(folder != null ? AssetDatabase.GetAssetPath(folder) : "Assets")

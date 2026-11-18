@@ -79,6 +79,12 @@ namespace FlexibleUITool.EditorTools
             edit ??= new FlexibleEditPanel();
             preview ??= new FlexiblePreviewPanel();
             review ??= new FlexibleReviewPanel();
+            // 문제 상자가 화면 버튼 바로 아래에 있으므로 맨 위부터 보여 준다
+            review.ShowEditTab = () =>
+            {
+                scroll = Vector2.zero;
+                ShowTab(Tab.Edit);
+            };
             edit.OnEnable();
             preview.OnEnable();
 

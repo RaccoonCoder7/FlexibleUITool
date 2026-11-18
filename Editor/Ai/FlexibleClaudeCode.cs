@@ -34,6 +34,9 @@ namespace FlexibleUITool.EditorTools
 
         public static Status Current { get; private set; } = Status.Unknown;
         public static string Detail { get; private set; } = "";
+        // 로그인 방식 ("claude.ai" = Claude 구독, 그 밖 = API 키 등). 확인 전이면 빈 값
+        public static string AuthMethod { get; private set; } = "";
+        public static bool UsesSubscription => AuthMethod == "claude.ai";
 
         // 연결을 한 번 확인한 PC인지 (창을 열 때마다 확인하지 않도록)
         public static bool Connected
@@ -104,12 +107,14 @@ namespace FlexibleUITool.EditorTools
             {
                 Status status;
                 string detail;
+                string method = "";
                 try
                 {
                     string version = Run(exe, "--version", 20000, out _).Trim();
                     string json = Run(exe, "auth status", 20000, out _);
                     var auth = JsonUtility.FromJson<AuthStatus>(ExtractJson(json));
                     status = auth != null && auth.loggedIn ? Status.Ready : Status.NotLoggedIn;
+                    method = auth != null && auth.loggedIn ? auth.authMethod ?? "" : "";
                     detail = auth != null && auth.loggedIn
                         ? $"{version} · {(string.IsNullOrEmpty(auth.email) ? auth.authMethod : auth.email)}"
                         : version;
@@ -122,6 +127,7 @@ namespace FlexibleUITool.EditorTools
                 EditorApplication.delayCall += () =>
                 {
                     Connected = status == Status.Ready;
+                    AuthMethod = method;
                     SetStatus(status, detail);
                 };
             });

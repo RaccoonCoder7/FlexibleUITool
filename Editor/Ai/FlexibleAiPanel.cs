@@ -172,9 +172,13 @@ namespace FlexibleUITool.EditorTools
                 FlexibleGui.Mark("ai:start");
             }
 
+            // 연결을 기억한 PC에서는 이번 실행에서 아직 확인하지 않았으므로, 계정 표시를 위해 한 번 확인한다
+            if (FlexibleClaudeCode.Current == FlexibleClaudeCode.Status.Unknown)
+                FlexibleClaudeCode.CheckAsync();
             using (new EditorGUILayout.HorizontalScope())
             {
-                GUILayout.Label(FlexibleClaudeCode.Detail, EditorStyles.miniLabel);
+                GUILayout.Label(new GUIContent(T("✔ Connected to Claude Code"), FlexibleClaudeCode.Detail), EditorStyles.miniBoldLabel, GUILayout.ExpandWidth(false));
+                GUILayout.Label(FlexibleClaudeCode.Detail, EditorStyles.miniLabel, GUILayout.MinWidth(0f));
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button(T("Disconnect"), EditorStyles.miniButton, GUILayout.Width(90f)))
                 {

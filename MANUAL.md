@@ -5,6 +5,10 @@ You build the portrait screen as usual, then press **Landscape** (or **Square**)
 
 **You do not need to read this manual.** In Unity, open `Tools > FlexibleUITool > Tutorial`. A short tutorial inside the tool window walks you through everything in about 2 minutes, with buttons that light up where to click. No AI is needed.
 
+**Where to start**
+- **New to the tool**: [install it](#0-installation), then run the tutorial.
+- **Your project already has UI**: after the tutorial, read [Setup](#2-setup-programmers) once. It turns your scene's canvases and screens into Flexible UI; then follow the [Quick start](#1-quick-start).
+
 - **Language**: the tool is shown in English, Korean or Japanese. Change it with the dropdown at the top right of the Flexible UI window (or `Tools > FlexibleUITool > Language`). `Auto` follows the Unity editor language. This manual quotes the English labels.
 - **Coding agents** (Claude Code and others) can also do the work for you: see [section 5](#5-working-with-an-agent-cli).
 
@@ -25,7 +29,7 @@ You build the portrait screen as usual, then press **Landscape** (or **Square**)
 
 The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unity 6.3. It needs `com.unity.ugui`, which Package Manager installs with it.
 
-1. Open `Window > Package Manager`, press `+`, choose `Add package from git URL...`, and paste `https://github.com/RaccoonCoder7/FlexibleUITool.git` (add `#<tag>` at the end to pin a version).
+1. Open `Window > Package Management > Package Manager`, press `+`, choose `Install package from git URL...`, and paste the URL from the [README](README.md) (`https://github.com/RaccoonCoder7/FlexibleUITool.git` with the latest version tag such as `#v1.0.8` at the end; without a tag you get the newest commit). Older Unity versions call these `Window > Package Manager` and `Add package from git URL...`.
 2. Or add it to `Packages/manifest.json`:
 
    ```json
@@ -151,14 +155,14 @@ To see the result at runtime: open `SampleScene` in the sample folder, drop the 
 
 The Edit tab has an **Auto-layout with AI (Claude Code)** box under the screen buttons. It makes the landscape and square layouts of the open prefab for you. No terminal needed.
 
-1. Press `Connect AI` once. The tool checks Claude Code on your PC:
+1. Press `Connect AI` once (if Claude Code is already set up on this PC, the box shows `✔ Connected to Claude Code` instead). The tool checks Claude Code on your PC:
    - Not installed: press `Install Claude Code`. A window runs the official installer (about a minute). Then press `Check again`.
    - Not logged in: press `Log in`. A window and your browser open; log in with your Claude account (Pro, Max, Team or Enterprise; the free plan does not include Claude Code). Then press `Check again`.
 2. Choose the screens to make (`Landscape`, `Square`), the `Model` and the `Effort` level, and press `Auto-layout with AI`.
    - `Model`: Sonnet (recommended) is balanced. Opus and Fable are smarter but use more of your Claude usage; Haiku is the fastest and uses the least. Some models may not be available on every plan.
    - `Effort`: Medium (recommended). Higher levels think longer and use more; Low is the fastest.
    - `Extra instructions (optional)`: write what you want in plain words, for example "In landscape, put the menu buttons on the right. Hide the banner on the square screen." The AI follows it before its own design rules. Leave it empty and the AI decides by itself. The text is kept for each prefab; `Clear` empties it. The AI still cannot change roles, grid settings, the portrait layout or other files, even if you ask.
-   - When it finishes, the result box shows how many tokens the run used. Every run is also logged in `Library/FlexibleUITool/ai-runs.log`.
+   - When it finishes, the result box shows how many tokens the run used. The dollar amount is the API price of those tokens: when Claude Code is logged in with a Claude subscription, the run counts toward your subscription usage and is not charged separately. Every run is also logged in `Library/FlexibleUITool/ai-runs.log`.
    - The prefab is saved and closed, and a copy is kept as a backup. The box at the top of the window shows what the AI is doing.
    - The AI sees the same `View while editing` as you: hide popups that cover the main screen (shop, notice ...) before you start, and the AI lays out the screen behind them. The view comes back when the prefab opens again.
    - The AI gets the parts inside full-screen containers (not only the containers), and moves a row or column made by a layout group as one object.
@@ -213,7 +217,7 @@ Canvas units: the **short side of the screen is always 1080**. Landscape 16:9 is
 
 ### Checks
 
-Preview, Check, and the CLI report the same issues. In the Check tab, `Show the problem` under a thumbnail opens the prefab on that screen and selects the objects with the issue. The Edit tab then shows the problem with buttons that fit it: `Move inside the safe area` for a notch problem (an object placed on the grid is kept inside the safe area instead), and `Pin to the nearest edge` or `Shrink to fit its cells` for objects that leave a shorter or longer screen or overlap there. On the portrait screen such a fix changes every portrait device. Run the check again to confirm:
+Preview, Check, and the CLI report the same issues. In the Check tab, `Show the problem` under a thumbnail opens the prefab on that screen and selects the objects with the issue. The window switches to the Edit tab, which shows the problem under the screen buttons (`Select them` selects the objects again, `×` closes it). Fix it with the usual tools (drag, `Place on a grid`, `Pin to`), then run the check again; a new check or closing the prefab clears the problem. On the portrait screen a fix changes every portrait device:
 
 | Issue | CLI code | Meaning |
 |---|---|---|

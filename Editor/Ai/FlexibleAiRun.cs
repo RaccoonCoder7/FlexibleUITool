@@ -295,8 +295,12 @@ namespace FlexibleUITool.EditorTools
             if (data.type == "result")
             {
                 resultLine = line;
-                Usage = data.usage == null ? "" : F("Tokens: new input {0:N0} · cache write {1:N0} · cache read {2:N0} · output {3:N0} · {4} turns · API price about ${5:0.00}",
-                    data.usage.input_tokens, data.usage.cache_creation_input_tokens, data.usage.cache_read_input_tokens, data.usage.output_tokens, data.num_turns, data.total_cost_usd);
+                // 구독으로 로그인했으면 금액은 API 요금으로 친 값일 뿐 따로 청구되지 않는다
+                Usage = data.usage == null ? "" : F("Tokens: new input {0:N0} · cache write {1:N0} · cache read {2:N0} · output {3:N0} · {4} turns",
+                    data.usage.input_tokens, data.usage.cache_creation_input_tokens, data.usage.cache_read_input_tokens, data.usage.output_tokens, data.num_turns)
+                    + "\n" + (FlexibleClaudeCode.UsesSubscription
+                        ? F("Counted in your Claude subscription usage, no separate charge (about ${0:0.00} at API prices)", data.total_cost_usd)
+                        : F("API price about ${0:0.00}", data.total_cost_usd));
                 resultText = data.result;
                 resultIsError = data.is_error || (data.subtype != null && data.subtype != "success");
                 return;
@@ -376,7 +380,7 @@ namespace FlexibleUITool.EditorTools
             else
             {
                 Current = State.Succeeded;
-                Summary = resultText.Trim();
+                Summary = KeepLanguage(resultText.Trim());
             }
 
             WriteLog();
@@ -397,6 +401,22 @@ namespace FlexibleUITool.EditorTools
             {
                 Debug.LogWarning("[FlexibleUITool] " + e.Message);
             }
+        }
+
+        // AI가 요약 앞에 영어 상태 문장을 붙이는 일이 있어, 창 언어의 글자가 없는 앞 문단은 뺀다 (창 언어 글자가 뒤에 있을 때만)
+        private static string KeepLanguage(string text)
+        {
+            System.Func<char, bool> native;
+            switch (FlexibleText.Current)
+            {
+                case FlexibleLanguage.Korean: native = c => c >= '\uAC00' && c <= '\uD7A3'; break;
+                case FlexibleLanguage.Japanese: native = c => (c >= '\u3040' && c <= '\u30FF') || (c >= '\u4E00' && c <= '\u9FFF'); break;
+                default: return text;
+            }
+            List<string> paragraphs = text.Replace("\r", "").Split(new[] { "\n\n" }, StringSplitOptions.None).ToList();
+            while (paragraphs.Count > 1 && !paragraphs[0].Any(native) && paragraphs.Skip(1).Any(p => p.Any(native)))
+                paragraphs.RemoveAt(0);
+            return string.Join("\n\n", paragraphs).Trim();
         }
 
         // 자주 나는 실패는 할 일을 알려 준다

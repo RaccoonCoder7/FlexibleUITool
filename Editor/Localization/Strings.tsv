@@ -50,14 +50,12 @@ Delete the template '{0}'? (shared by the project)	'{0}' 템플릿을 삭제할�
 No templates for this screen yet.	이 화면의 템플릿은 아직 없습니다.	この画面のテンプレートはまだありません。
 Save current layout as template	현재 배치를 템플릿으로 저장	現在の配置をテンプレートとして保存
 Excluded objects:	제외된 오브젝트:	除外されたオブジェクト:
-Save template	템플릿 저장	テンプレートを保存
 Nothing to save. Only objects that have a role and were placed on the grid go into a template.	저장할 오브젝트가 없습니다. 역할이 있고 그리드로 배치한 오브젝트만 템플릿에 들어갑니다.	保存するオブジェクトがありません。役割があり、グリッドで配置したオブジェクトだけがテンプレートに入ります。
 OK	확인	OK
 {0} (with adjustment)	{0} (보정 포함)	{0}（補正あり）
 Saved {1} roles to '{0}'.	'{0}'에 역할 {1}개를 저장했습니다.	'{0}' に役割を {1} 個保存しました。
 Placed {0} objects.	오브젝트 {0}개를 배치했습니다.	オブジェクトを {0} 個配置しました。
 Roles missing in this prefab: {0}	이 프리팹에 없는 역할: {0}	このプレハブにない役割: {0}
-Apply template	템플릿 적용	テンプレートを適用
 Out of screen: {0}	화면 밖: {0}	画面外: {0}
 Overlap: {0} ↔ {1}	겹침: {0} ↔ {1}	重なり: {0} ↔ {1}
 Control outside SafeArea: {0}	SafeArea 밖 조작 요소: {0}	SafeArea 外の操作要素: {0}
@@ -107,7 +105,6 @@ Fills the whole screen (anchors stretch, offsets 0)	화면 전체를 채움 (앵
 Set up this prefab	이 프리팹을 Flexible UI로 만들기	このプレハブを Flexible UI にする
 Save (Ctrl+S)	저장 (Ctrl+S)	保存 (Ctrl+S)
 Which screen are you editing?	어느 화면을 편집할까요?	どの画面を編集する？
-● Unsaved changes. Save with Ctrl+S (switching screens also saves).	● 저장 안 한 변경이 있어요. Ctrl+S로 저장하세요 (화면을 바꿔도 저장됩니다).	● 未保存の変更があります。Ctrl+S で保存してね（画面を切り替えても保存されます）。
 base	기준	基準
 {0} changed	{0}개 변경	{0}個 変更
 Edit the {0} screen ({1:0}x{2:0}). Changes here apply to every screen. Switching screens saves the prefab.	{0} 화면을 편집해요 ({1:0}x{2:0}). 기준 화면이라 여기서 바꾸면 모든 화면에 적용돼요. 화면을 바꾸면 프리팹이 저장돼요.	{0} 画面を編集します（{1:0}x{2:0}）。基準画面なので、ここでの変更はすべての画面に反映されます。画面を切り替えるとプレハブが保存されます。
@@ -165,7 +162,7 @@ Nice! Now save with <b>Ctrl+S</b> (or the Save button).	좋아요! 이제 <b>Ctr
 Press the <b>Portrait</b> button.\nMain goes back to its portrait position. The two screens are separate!	<b>세로</b> 버튼을 눌러 보세요.\nMain이 세로 화면 위치로 돌아가요. 두 화면은 따로따로예요!	<b>縦</b>ボタンを押してみよう。\nMain が縦画面の位置に戻るよ。2つの画面は別々なんだ！
 Press <b>Landscape</b> again.\nYour landscape layout is still there.	다시 <b>가로</b>를 눌러 보세요.\n가로 화면 배치가 그대로 남아 있어요.	もう一度<b>横</b>を押してみよう。\n横画面の配置がちゃんと残っているよ。
 (Optional) For neat alignment, open <b>Place on a grid</b>, select an object and drag over the blue cells in the Scene view.	(선택) 깔끔하게 맞추고 싶으면 <b>그리드에 맞춰 놓기</b>를 열고, 오브젝트를 선택한 뒤 Scene 뷰의 파란 칸 위를 드래그해 보세요.	（任意）きれいに揃えたいときは<b>グリッドに合わせて置く</b>を開いて、オブジェクトを選んで Scene ビューの青いマスの上をドラッグしてみよう。
-Open the <b>Preview</b> tab. Drag the window edge to make it wide, then let go and make it narrow.\nWhen the screen name at the bottom changes, you're done.	<b>미리보기</b> 탭을 여세요. 창 가장자리를 끌어 넓게 만들고, 손을 뗀 다음 좁게 만들어 보세요.\n아래쪽 화면 이름이 바뀌면 성공이에요.	<b>プレビュー</b>タブを開いてね。ウィンドウの端をドラッグして横長にして、手を離してから縦長にしてみよう。\n下の画面名が変わったら成功だよ。
+Open the <b>Preview</b> tab. Drag the window edge (or the border next to it, if the window is docked) to make it wide, then let go and make it narrow.\nWhen the screen name at the bottom changes, you're done.	<b>미리보기</b> 탭을 여세요. 창 가장자리(창이 붙어 있으면 옆 창과의 경계선)를 끌어 넓게 만들고, 손을 뗀 다음 좁게 만들어 보세요.\n아래쪽 화면 이름이 바뀌면 성공이에요.	<b>プレビュー</b>タブを開いてね。ウィンドウの端（ドッキングしているなら隣のウィンドウとの境目）をドラッグして横長にして、手を離してから縦長にしてみよう。\n下の画面名が変わったら成功だよ。
 Tablets use the <b>Square</b> screen. It works the same way.\nPress the <b>Square</b> button. Objects you don't touch keep the portrait layout.	태블릿은 <b>정사각</b> 화면을 써요. 쓰는 법은 똑같아요.\n<b>정사각</b> 버튼을 눌러 보세요. 손대지 않은 오브젝트는 세로 화면 배치를 따라가요.	タブレットは<b>正方形</b>画面を使うよ。使い方は同じ。\n<b>正方形</b>ボタンを押してみよう。触らなかったオブジェクトは縦画面の配置のままだよ。
 All done! In the check, a red bar on a thumbnail means a problem on that device.\nJust remember: 1. Press a screen button  2. Move objects  3. Ctrl+S\nShall I delete the practice prefab?	끝! 검수에서 썸네일에 빨간 줄이 있으면 그 기기에서 문제가 있다는 뜻이에요.\n이것만 기억하세요: 1. 화면 버튼 누르기  2. 오브젝트 옮기기  3. Ctrl+S\n연습용 프리팹은 지울까요?	おしまい！チェックでサムネイルに赤い線があれば、その機種で問題があるという意味だよ。\n覚えるのはこれだけ：1. 画面ボタンを押す  2. オブジェクトを動かす  3. Ctrl+S\n練習用のプレハブは削除する？
 Last one: the <b>Check</b> tab shows the prefab on many phones and tablets at once.\nOpen it and press <b>Run check</b>.	마지막! <b>검수</b> 탭은 여러 폰·태블릿에서 프리팹이 어떻게 보이는지 한 번에 보여 줘요.\n검수 탭을 열고 <b>검수 시작</b>을 눌러 보세요.	最後！<b>チェック</b>タブでは、たくさんのスマホ・タブレットでの見え方を一度に確認できるよ。\nチェックタブを開いて<b>チェック開始</b>を押してみよう。
@@ -263,7 +260,7 @@ Your Claude usage limit has been reached. Try again later.	Claude 사용 한도�
 Claude Code stopped without a result.	Claude Code가 결과 없이 끝났어요.	Claude Code が結果なしで終了しました。
 The AI could not finish.	AI가 작업을 끝내지 못했어요.	AIが作業を完了できませんでした。
 The AI is thinking. This can take a minute or two; it has not stopped.	AI가 생각하는 중이에요. 1~2분 걸릴 수 있어요. 멈춘 게 아니에요.	AIが考え中です。1〜2分かかることがあります。止まったわけではありません。
-Tokens: new input {0:N0} · cache write {1:N0} · cache read {2:N0} · output {3:N0} · {4} turns · API price about ${5:0.00}	토큰: 새 입력 {0:N0} · 캐시 쓰기 {1:N0} · 캐시 읽기 {2:N0} · 출력 {3:N0} · {4}턴 · API 요금 환산 약 ${5:0.00}	トークン：新規入力 {0:N0}・キャッシュ書き込み {1:N0}・キャッシュ読み込み {2:N0}・出力 {3:N0}・{4}ターン・API料金換算 約 ${5:0.00}
+Tokens: new input {0:N0} · cache write {1:N0} · cache read {2:N0} · output {3:N0} · {4} turns	토큰: 새 입력 {0:N0} · 캐시 쓰기 {1:N0} · 캐시 읽기 {2:N0} · 출력 {3:N0} · {4}턴	トークン：新規入力 {0:N0}・キャッシュ書き込み {1:N0}・キャッシュ読み込み {2:N0}・出力 {3:N0}・{4}ターン
 Model	모델	モデル
 This model cannot be used with your Claude plan. Choose another model.	내 Claude 요금제에서는 이 모델을 쓸 수 없어요. 다른 모델을 고르세요.	このモデルは自分の Claude プランでは使えません。別のモデルを選んでね。
 Claude Code default	Claude Code 기본 설정	Claude Code の既定
@@ -399,11 +396,11 @@ Grid settings ({0} x {1}, project)	그리드 설정 ({0} x {1}, 프로젝트 공
 Save where each role (Header, Main, ...) sits on the grid of a screen, and reuse it on other prefabs.	역할(Header, Main 등)이 화면 그리드의 어디에 있는지 저장해 다른 프리팹에 다시 써요.	各役割（Header、Main など）が画面のグリッドのどこにあるかを保存し、ほかのプレハブで使い回します。
 The new prefabs are inside the canvas and selected in the Hierarchy (the canvas itself stays as it is). Press Open below to make their square and landscape layouts.	새 프리팹은 캔버스 안에 있고, Hierarchy에서 선택해 두었어요 (캔버스 자체는 그대로예요). 아래 열기 버튼을 눌러 정사각·가로 배치를 만드세요.	新しいプレハブはキャンバスの中にあり、Hierarchy で選択してあります（キャンバス自体はそのままです）。下の開くボタンを押して正方形・横の配置を作ってね。
 Saved ✓	저장됨 ✓	保存済み ✓
-There are unsaved changes.	저장하지 않은 변경이 있어요.	未保存の変更があります。
+There are unsaved changes. Switching screens also saves them.	저장하지 않은 변경이 있어요. 화면을 바꿔도 저장됩니다.	未保存の変更があります。画面を切り替えても保存されます。
 Everything is saved.	모두 저장됐어요.	すべて保存されています。
 The prefabs that became Flexible UI are selected in the Hierarchy. Press Open below to make their square and landscape layouts.	Flexible UI가 된 프리팹을 Hierarchy에서 선택해 두었어요. 아래 열기 버튼을 눌러 정사각·가로 배치를 만드세요.	Flexible UI になったプレハブを Hierarchy で選択してあります。下の開くボタンを押して正方形・横の配置を作ってね。
 Show the problem	문제 보기	問題を見る
-Opens the prefab on this screen and selects the objects with the problem.	이 화면으로 프리팹을 열고 문제가 있는 오브젝트를 선택해요.	この画面でプレハブを開き、問題のあるオブジェクトを選択します。
+Opens the prefab on this screen in the Edit tab and selects the objects with the problem.	편집 탭에서 이 화면으로 프리팹을 열고 문제가 있는 오브젝트를 선택해요.	編集タブでこの画面のプレハブを開き、問題のあるオブジェクトを選択します。
 This screen's reference device has no notch or home bar, so the whole screen is the safe area.	이 화면의 대표 기기에는 노치·홈 바 자리가 없어서 화면 전체가 안전 영역이에요.	この画面の代表機種にはノッチ・ホームバーの場所がないので、画面全体が安全領域です。
 Safe area = whole screen	안전 영역 = 화면 전체	安全領域 = 画面全体
 Safe area	안전 영역	安全領域
@@ -430,13 +427,6 @@ Text outside SafeArea	SafeArea 밖 글자	SafeArea 外の文字
 Don't save	저장 안 함	保存しない
 Problem on {0}	{0}에서 난 문제	{0} で出た問題
 This is the base (portrait) screen: a fix here changes every portrait device.	기준(세로) 화면입니다. 여기서 고치면 모든 세로 기기에 적용됩니다.	基準(縦)画面です。ここで直すとすべての縦の機種に反映されます。
-Move inside the safe area	안전 영역 안으로 옮기기	安全領域の中へ移す
-Moves the object just enough to leave the notch / home bar area (green frame). An object placed on the grid keeps its cells and is kept inside the safe area instead.	노치·홈 바 자리(초록 틀 밖)에서 벗어날 만큼만 옮깁니다. 그리드에 놓인 오브젝트는 칸을 그대로 두고 안전 영역 안에 두도록 바꿉니다.	ノッチ・ホームバーの場所 (緑の枠の外) から出る分だけ移します。グリッドに置いたオブジェクトはマスはそのままで、安全領域の中に置くよう切り替えます。
-Pin to the nearest edge	가까운 가장자리에 붙이기	近い端に固定
-Keeps the object at the same distance from the nearest edge of the safe area as on the portrait screen, so on shorter or longer screens it follows that edge instead of the middle.	안전 영역의 가까운 가장자리에서 세로 화면과 같은 거리에 둡니다. 더 짧거나 긴 화면에서도 가운데가 아니라 그 가장자리를 따라갑니다.	安全領域の近い端から縦画面と同じ距離に置きます。短い画面や長い画面でも、真ん中ではなくその端についていきます。
-Shrink to fit its cells	지금 칸에 맞춰 줄이기	今のマスに合わせて縮める
-Keeps the shape and scales the object down to the cells it covers now, on every screen size of this screen.	모양을 지킨 채 지금 차지한 칸에 맞춰 줄입니다. 이 화면의 모든 크기에서 다시 맞춥니다.	形を保ったまま、今かかっているマスに合わせて縮めます。この画面のどのサイズでも合わせ直します。
-Run the check again to confirm.	검수를 다시 돌려 확인하세요.	もう一度チェックして確認してください。
 Canvases	캔버스	キャンバス
 Move them together	함께 옮기기	まとめて動かす
 The selected objects move and shrink as one group and keep their places to each other, like pieces of one popup. Drag over the cells in the Scene view or use Pin to.	고른 오브젝트들을 한 팝업의 조각처럼 서로의 자리를 지킨 채 한 덩어리로 옮기고 줄입니다. Scene 뷰에서 칸을 드래그하거나 붙이기를 쓰세요.	選んだオブジェクトを、ひとつのポップアップの部品のように互いの位置を保ったまま、まとめて動かし縮めます。Scene ビューでマスをドラッグするか、固定を使ってください。
@@ -444,3 +434,9 @@ Puts the group at the same distance from that corner or edge of the safe area as
 This scene	이 씬	このシーン
 Prefabs placed in the open scene (nested ones too).	열린 씬에 놓인 프리팹 (안쪽 프리팹 포함).	開いているシーンに置かれたプレハブ (中のプレハブも)。
 {0} issues	문제 {0}개	問題 {0} 件
+✔ Connected to Claude Code	✔ Claude Code에 연결됨	✔ Claude Code に接続済み
+Counted in your Claude subscription usage, no separate charge (about ${0:0.00} at API prices)	Claude 구독 사용량에서 차감되며 따로 청구되지 않아요 (API 요금으로 치면 약 ${0:0.00})	Claude のサブスクリプションの使用量に含まれ、別途請求はありません（API 料金なら約 ${0:0.00}）
+API price about ${0:0.00}	API 요금 약 ${0:0.00}	API 料金 約 ${0:0.00}
+Not placed on the grid (now covers {0})	그리드 배치 안 함 (지금 덮고 있는 칸 {0})	グリッド配置なし（今かかっているマス {0}）
+This scene has no UI prefabs yet. Build the UI under a Canvas in the scene, or double-click a UI prefab in the Project window.	이 씬에는 아직 UI 프리팹이 없어요. 씬의 Canvas 아래에 UI를 만들거나, Project 창에서 UI 프리팹을 더블클릭하세요.	このシーンにはまだ UI プレハブがありません。シーンの Canvas の下に UI を作るか、Project ウィンドウで UI プレハブをダブルクリックしてね。
+Click to show them.	누르면 보여 줘요.	クリックすると表示します。

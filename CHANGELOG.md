@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+- `Show the problem` in the Check tab switches to the Edit tab, which shows the problem under the screen buttons (`Select them` selects the objects again, `x` closes it). The fix buttons of 1.0.8 are gone: they used the portrait layout and threw away what you had made on that screen. A new check or closing the prefab clears the problem, and `Only the open prefab` no longer shows the results of another prefab.
+- The `Unsaved changes` line under the screen buttons is gone (it pushed the fields down while you typed); the yellow `Save` button shows it.
+- Dragging over the grid shows the size in cells. Section headers show their explanation only while closed, so it does not cover the fields. An object not placed on the grid shows which cells it covers now.
+- AI: the box shows `Connected to Claude Code` with the version and account; with a Claude subscription the result says the run is not charged separately (the dollar amount is the API price); an English status line before the summary is left out in Korean and Japanese.
+- Docs: install steps use the Unity 6.3 menu names.
+- Results that only inform (template saved or applied, prefabs made Flexible UI) appear in the window under the screen buttons instead of a dialog (on Windows those dialogs always showed a warning icon).
+- Check tab: buttons that are off are drawn dimmed. `Base screen issues hidden (N)` under a thumbnail shows them when clicked.
+- With no prefab open and no UI prefab in the scene, the Edit tab says how to start instead of pointing to an empty list.
+- Manual: a short "Where to start" for new users and for projects that already have UI.
+
 ## [1.0.8]
 
 - Check accuracy: duplicate and false issues are left out (parts of an inner Flexible prefab, objects with nothing visible, objects covering the whole screen, text whose real letters stay inside, scroll bar parts, decorations that overlap, overlaps split by a full-screen dim). Text components that inherit from TextMeshPro are recognized as text. Places other prefabs take are measured at each device size.
