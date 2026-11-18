@@ -26,6 +26,7 @@ namespace FlexibleUITool.EditorTools
                     case "OUT_OF_SCREEN": return F("Out of screen: {0}", Name(0));
                     case "OVERLAP": return F("Overlap: {0} ↔ {1}", Name(0), Name(1));
                     case "OUTSIDE_SAFE_AREA": return F("Control outside SafeArea: {0}", Name(0));
+                    case "TEXT_OUTSIDE_SAFE_AREA": return F("Text outside SafeArea (check it can be read): {0}", Name(0));
                     case "HIDDEN_OUT_OF_SCREEN": return F("Out of screen when shown: {0}", Name(0));
                     case "COLLAPSED": return F("Squashed to a negative size: {0}", Name(0));
                     case "CLIPPED_IN_LIST": return F("Items cut off across a list: {0}", Name(0));
@@ -44,6 +45,7 @@ namespace FlexibleUITool.EditorTools
                 case "OUT_OF_SCREEN": return T("Out of screen");
                 case "OVERLAP": return T("Overlap");
                 case "OUTSIDE_SAFE_AREA": return T("Control outside SafeArea");
+                case "TEXT_OUTSIDE_SAFE_AREA": return T("Text outside SafeArea");
                 case "HIDDEN_OUT_OF_SCREEN": return T("Out of screen when shown");
                 case "COLLAPSED": return T("Squashed");
                 case "CLIPPED_IN_LIST": return T("Cut off in a list");
@@ -53,10 +55,16 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
+        // 약한 경고: 꼭 고칠 문제는 아니고 확인만 하면 되는 것 (노치 밑 글자는 장식일 수도 있다)
+        public static bool IsWeak(string code)
+        {
+            return code == "TEXT_OUTSIDE_SAFE_AREA";
+        }
+
         // 화면에 보이는 블록만 보는 기존 검사가 놓치던 것 (숨긴 패널·뒤집힌 크기·목록 잘림·다른 프리팹 자리)
         public static bool IsExtra(string code)
         {
-            return code != "OUT_OF_SCREEN" && code != "OVERLAP" && code != "OUTSIDE_SAFE_AREA";
+            return code != "OUT_OF_SCREEN" && code != "OVERLAP" && code != "OUTSIDE_SAFE_AREA" && code != "TEXT_OUTSIDE_SAFE_AREA";
         }
 
         // 관련 블록 이름 (겹침이면 「A ↔ B」)
@@ -179,6 +187,7 @@ namespace FlexibleUITool.EditorTools
                         nested.ApplyForScreen(screen);
                 }
             }
+            viewHidden.Clear();
             if (view != null && view.Count > 0)
                 ApplyView(view);
 
@@ -300,6 +309,26 @@ namespace FlexibleUITool.EditorTools
                     issues.Add(Issue("OUTSIDE_SAFE_AREA", root, (RectTransform)selectable.transform));
             }
 
+            // 노치 밑 글자 (버튼 안 글자는 위에서 버튼으로 본다). 실제 글자 범위로 보고, 화면 밖으로 나간 것은 화면 밖 검사가 본다
+            foreach (Graphic graphic in instance.GetComponentsInChildren<Graphic>(false))
+            {
+                if (!graphic.enabled || !IsText(graphic) || graphic.color.a <= 0.01f || IsUnderHiddenCanvas(graphic.transform, root))
+                    continue;
+                Selectable owner = graphic.GetComponentInParent<Selectable>();
+                if (owner != null && !Contains(GetRectInRoot(root, (RectTransform)owner.transform), safeRect))
+                    continue;
+                RectTransform rt = graphic.rectTransform;
+                Rect r;
+                if (!TryGetTextRect(root, rt, out r))
+                {
+                    if (!(graphic is Text legacy) || string.IsNullOrEmpty(legacy.text))
+                        continue;
+                    r = GetRectInRoot(root, rt);
+                }
+                if (!IsOutside(r, rootRect) && IsOutside(r, safeRect))
+                    issues.Add(Issue("TEXT_OUTSIDE_SAFE_AREA", root, rt));
+            }
+
             CollectReserved(root, blocks, issues);
             CollectHiddenAndCollapsed(root, issues);
             return FilterIssues(root, issues);
@@ -411,7 +440,18 @@ namespace FlexibleUITool.EditorTools
 
         private static bool IsText(Graphic graphic)
         {
-            return graphic is Text || graphic.GetType().Name.StartsWith("TextMeshPro") || graphic.GetType().Name == "TMP_Text";
+            return graphic is Text || IsTmp(graphic);
+        }
+
+        // TMP 글자 (TextMeshProUGUI와 그것을 상속한 프로젝트 글자 컴포넌트까지, TMP 직접 참조 없이)
+        private static bool IsTmp(Graphic graphic)
+        {
+            for (System.Type type = graphic.GetType(); type != null && type != typeof(MaskableGraphic); type = type.BaseType)
+            {
+                if (type.Name == "TMP_Text")
+                    return true;
+            }
+            return false;
         }
 
         // 글자 블록은 칸 대신 실제 글자 범위로 겹침을 본다
@@ -433,7 +473,7 @@ namespace FlexibleUITool.EditorTools
         {
             rect = default;
             Graphic graphic = target.GetComponent<Graphic>();
-            if (graphic == null || !graphic.GetType().Name.StartsWith("TextMeshPro"))
+            if (graphic == null || !IsTmp(graphic))
                 return false;
             if (!(graphic.GetType().GetProperty("textBounds")?.GetValue(graphic) is Bounds bounds) || bounds.size.x <= 0f || bounds.size.y <= 0f)
                 return false;
@@ -587,7 +627,7 @@ namespace FlexibleUITool.EditorTools
         {
             var hiddenRoots = new List<RectTransform>();
             var shown = new List<GameObject>();
-            FindHidden(root, root, false, hiddenRoots, shown);
+            FindHidden(root, root, false, viewHidden, hiddenRoots, shown);
             foreach (GameObject go in shown)
                 go.SetActive(true);
             try
@@ -619,13 +659,13 @@ namespace FlexibleUITool.EditorTools
 
         // 숨긴 패널: Canvas가 꺼진 것, 꺼져 있고 화면에서 큰 자리를 차지하는 것(목록 칸·버튼 안 표시 같은 작은 것은 빼고).
         // 마스크 안(목록 견본)과 레이아웃 그룹 안(켜면 옆 칸이 밀림)의 꺼진 것은 켜지 않는다
-        private static void FindHidden(RectTransform root, Transform parent, bool masked, List<RectTransform> hiddenRoots, List<GameObject> shown)
+        private static void FindHidden(RectTransform root, Transform parent, bool masked, HashSet<GameObject> skip, List<RectTransform> hiddenRoots, List<GameObject> shown)
         {
             bool childMasked = masked || parent.GetComponent<Mask>() != null || parent.GetComponent<RectMask2D>() != null;
             bool grouped = parent.GetComponent<LayoutGroup>() != null;
             foreach (Transform child in parent)
             {
-                if (!(child is RectTransform rt))
+                if (!(child is RectTransform rt) || skip.Contains(child.gameObject))
                     continue;
                 if (!child.gameObject.activeSelf)
                 {
@@ -638,7 +678,7 @@ namespace FlexibleUITool.EditorTools
                 {
                     hiddenRoots.Add(rt);
                 }
-                FindHidden(root, rt, childMasked, hiddenRoots, shown);
+                FindHidden(root, rt, childMasked, skip, hiddenRoots, shown);
             }
         }
 
@@ -796,6 +836,9 @@ namespace FlexibleUITool.EditorTools
             }
         }
 
+        // 보기에서 일부러 끈 오브젝트 (「나중에 열리는 패널」 검사가 다시 켜서 보고하지 않게)
+        private readonly HashSet<GameObject> viewHidden = new HashSet<GameObject>();
+
         private void ApplyView(IDictionary<string, bool> view)
         {
             var map = new Dictionary<string, Transform>();
@@ -814,10 +857,21 @@ namespace FlexibleUITool.EditorTools
                 if (map.TryGetValue(pair.Key, out Transform target))
                 {
                     target.gameObject.SetActive(pair.Value);
+                    if (!pair.Value)
+                    {
+                        viewHidden.Add(target.gameObject);
+                        continue;
+                    }
+                    // 켜는 것은 위쪽의 꺼진 오브젝트·Canvas도 켠다 (꺼진 페이지 안의 하위 페이지만 골라 켜도 보이게, 창의 보기와 같게).
                     // 코드가 Canvas를 꺼서 숨기는 패널도 보이게
-                    var canvas = target.GetComponent<Canvas>();
-                    if (pair.Value && canvas != null)
-                        canvas.enabled = true;
+                    for (Transform t = target; t != null && t != instance.transform; t = t.parent)
+                    {
+                        if (!t.gameObject.activeSelf && (t == target || !view.TryGetValue(FlexiblePathUtility.GetPath(instance.transform, t), out bool keep) || keep))
+                            t.gameObject.SetActive(true);
+                        var canvas = t.GetComponent<Canvas>();
+                        if (canvas != null && !canvas.enabled)
+                            canvas.enabled = true;
+                    }
                 }
             }
         }

@@ -489,6 +489,8 @@ namespace FlexibleUITool.EditorTools
                 CreatePractice();
                 return;
             }
+            if (!FlexibleScreenSession.PrepareToOpen(PracticePath))
+                return;
             PrefabStageUtility.OpenPrefab(PracticePath);
             EditorApplication.delayCall += SelectMain;
         }

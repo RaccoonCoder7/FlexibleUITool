@@ -20,7 +20,11 @@ namespace FlexibleUITool.EditorTools
 
             var reports = new List<FlexibleCommitReport>();
             foreach (FlexibleSpecProfile specProfile in spec.profiles)
-                reports.Add(ApplyProfile(prefabPath, specProfile, settings, dryRun));
+            {
+                reports.Add(specProfile.profile == settings.BaseProfileId
+                    ? ApplyBaseFits(prefabPath, specProfile, settings, dryRun)
+                    : ApplyProfile(prefabPath, specProfile, settings, dryRun));
+            }
             return reports;
         }
 
@@ -43,12 +47,14 @@ namespace FlexibleUITool.EditorTools
                     errors.Add($"profile '{specProfile.profile}' not found (available: {string.Join(", ", settings.Profiles.Select(p => p.id))})");
                     continue;
                 }
-                if (specProfile.profile == settings.BaseProfileId)
+                // 기준 화면은 프리팹 자체라 「칸에 맞춰 줄이기」(cell 또는 pin + fit)만 받는다 (짧은·긴 세로 화면에서 다시 줄이도록 칸 영역을 기록)
+                bool isBase = specProfile.profile == settings.BaseProfileId;
+                if (isBase && (specProfile.blocks ?? Array.Empty<FlexibleSpecBlock>()).Any(b => !b.fit || b.reset || b.HasRect || b.HasFollow || !string.IsNullOrEmpty(b.visible)))
                 {
-                    errors.Add($"profile '{specProfile.profile}' is the base profile (the prefab itself); edit the prefab directly");
+                    errors.Add($"profile '{specProfile.profile}' is the base profile (the prefab itself): only fit blocks (cell or pin with fit: true) are allowed there; edit anything else in the prefab directly");
                     continue;
                 }
-                if (FlexibleWorkspaceService.WorkspaceExists(prefabPath, specProfile.profile))
+                if (!isBase && FlexibleWorkspaceService.WorkspaceExists(prefabPath, specProfile.profile))
                     errors.Add($"profile '{specProfile.profile}' has an open GUI workspace; commit or cancel it first (WORKSPACE_EXISTS)");
 
                 foreach (FlexibleSpecBlock block in specProfile.blocks ?? Array.Empty<FlexibleSpecBlock>())
@@ -128,6 +134,42 @@ namespace FlexibleUITool.EditorTools
             finally
             {
                 AssetDatabase.DeleteAsset(workspacePath);
+            }
+        }
+
+        // 기준 화면의 칸 맞춤: 프리팹 자체를 칸에 맞춰 줄이고, 칸 영역·최대 배율을 기준 화면 기록으로 남긴다 (창에서 기준 화면에 「칸에 맞춰 줄이기」를 한 것과 같다)
+        private static FlexibleCommitReport ApplyBaseFits(string prefabPath, FlexibleSpecProfile specProfile, FlexibleProfileSettings settings, bool dryRun)
+        {
+            var report = new FlexibleCommitReport { sourcePath = prefabPath, profileId = specProfile.profile, dryRun = dryRun };
+            placeWarnings.Clear();
+            GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var layout = root.GetComponent<FlexibleLayout>();
+                if (layout == null)
+                {
+                    report.warnings.Add("The prefab has no FlexibleLayout.");
+                    return report;
+                }
+                // 기존 기준 화면 맞춤은 남기고 이번 블록을 더한다 (작업 표식은 계산에만 쓰고 저장하지 않는다)
+                var workspace = root.AddComponent<FlexibleWorkspace>();
+                workspace.sourceGuid = AssetDatabase.AssetPathToGUID(prefabPath);
+                workspace.profileId = specProfile.profile;
+                workspace.inPlace = true;
+                FlexibleScreenSession.RestoreBasePlacements(layout, workspace, specProfile.profile);
+                PlaceBlocks(root, prefabPath, specProfile, settings);
+                FlexibleScreenSession.RecordBaseFits(layout, workspace, specProfile.profile);
+                UnityEngine.Object.DestroyImmediate(workspace);
+                report.recorded = layout.Entries.Count(e => e.target != null && e.Find(specProfile.profile) != null);
+                report.warnings.AddRange(placeWarnings);
+                if (!dryRun)
+                    PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                report.success = true;
+                return report;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
             }
         }
 

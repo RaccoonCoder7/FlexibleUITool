@@ -158,7 +158,7 @@ The user reviews in Unity, where the thumbnails are easier to read than images i
 ## Model
 
 - **Profiles**: `portrait` (base), `square`, `landscape`. Run `profiles` for the real list and aspect ranges.
-  - The **base profile is the prefab itself**. You cannot change it through a spec. Edit the prefab normally.
+  - The **base profile is the prefab itself**. A spec can only add `fit` blocks to it (`cell` or `pin` with `"fit": true`): the prefab itself is scaled to fit those cells and shrinks again on shorter or longer portrait screens. Anything else on the base profile: edit the prefab normally.
   - Every other profile stores per-block overrides in the `FlexibleLayout` component on the prefab root.
   - At runtime the profile is chosen from the root's aspect ratio (width / height).
 - **Blocks** are RectTransforms identified by **path** from the prefab root, e.g. `Header` or `Main/Title`.
@@ -202,7 +202,7 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
   - If the editor is closed, you get `EDITOR_NOT_RUNNING`. Ask the user to open it.
   - If the editor is in Play Mode, you get `EDITOR_PLAYING`. Ask the user to exit Play Mode. Only `ping` and `game-view` work during Play Mode.
   - While the editor is compiling, the script waits.
-- Options: `-Prefab <name or Assets/...prefab>`, `-Profile <id>`, `-Preset <index|name|profile id|edges>` (several: comma-separated, e.g. `-Preset 1,portrait`; `edges` = each profile's edge ratios), `-Aspect <width/height>` (any ratio, e.g. `-Aspect 1.3`; several: comma-separated), `-Spec <file>`, `-Out <file or folder>`, `-Folder <Assets/...>`, `-Path <block path>`, `-Role <role>`, `-Scene <Assets/...unity>`, `-Hide <paths>` / `-Show <paths>` (comma-separated block paths turned off / on only for `describe`, `render` and `check`, e.g. popups the game opens by code that cover the screen; the prefab is not changed), `-DryRun`, `-All`, `-Timeout <sec>`, `-Project <path>` (only if not run from the project folder).
+- Options: `-Prefab <name or Assets/...prefab>`, `-Profile <id>`, `-Preset <index|name|profile id|edges|target name>` (several: comma-separated, e.g. `-Preset 1,portrait`; `edges` = each profile's edge ratios; a target name from `check` / `review` such as `landscape@1.24` or `aspect@1.30` works too), `-Aspect <width/height>` (any ratio, e.g. `-Aspect 1.3`; several: comma-separated), `-Spec <file>`, `-Out <file or folder>`, `-Folder <Assets/...>`, `-Path <block path>`, `-Role <role>`, `-Scene <Assets/...unity>`, `-Hide <paths>` / `-Show <paths>` (comma-separated block paths turned off / on only for `describe`, `render` and `check`, e.g. popups the game opens by code that cover the screen; the prefab is not changed. `-Show` also turns on the hidden objects above that path, so a sub page inside a hidden page can be shown alone. Panels you `-Hide` are not checked as `HIDDEN_OUT_OF_SCREEN`), `-DryRun`, `-All`, `-Timeout <sec>`, `-Project <path>` (only if not run from the project folder).
 
 ## Commands
 
@@ -214,7 +214,7 @@ powershell -ExecutionPolicy Bypass -File Library/FlexibleUITool/flexui.ps1 <comm
 | `describe` | see where every block is, per profile | `-Prefab`, optional `-Profile`, `-All` for every RectTransform |
 | `render` | get PNG images | `-Prefab`, `-Preset` (default: one per profile), `-Aspect`. Look at the returned `path`. |
 | `check` | find layout problems | `-Prefab` (or all prefabs), `-Preset`, `-Aspect`. Default: all device presets **plus each profile's edge ratios** (targets named like `landscape@1.24`). |
-| `review` | open the Check tab of the Flexible UI window and run the check, so the user sees thumbnails | optional `-Prefab` or `-Folder`. Same checks and screens as `check`. Returns `results[]` (only screens with problems; `issues` are English sentences), `prefabCount`, `issueCount`. |
+| `review` | open the Check tab of the Flexible UI window and run the check, so the user sees thumbnails | optional `-Prefab` or `-Folder`. Same checks and screens as `check`. Returns `results[]` (only screens with problems; `issues` are English sentences; `target` uses the same names as `check`), `prefabCount`, `issueCount`. Counts the same way as the window: while its `Hide base screen issues` is on (`hideBaseIssues: true`), issues the portrait screen already has are left out and counted in `hiddenBaseIssues`. |
 | `export-spec` | dump current profile data as a spec | `-Prefab`, optional `-Profile`, `-Out file.json` |
 | `apply-spec` | change layouts | `-Spec file.json`, `-DryRun` to preview changes |
 | `set-role` | label a block | `-Prefab -Path -Role` (`-Role ''` clears; `-Role` is required) |
@@ -251,6 +251,7 @@ Without `-All`, the list has the root's direct children, plus the blocks inside 
 | `OUT_OF_SCREEN` | The block leaves the screen. |
 | `OVERLAP` | Two blocks overlap. A block fully inside another is ignored only if it is also inside it in the portrait (base) layout, because that is intentional layering. |
 | `OUTSIDE_SAFE_AREA` | A button or other Selectable is under a notch or home indicator. A backdrop button covering the whole screen is ignored. |
+| `TEXT_OUTSIDE_SAFE_AREA` | Weak warning: text (not in a button) is under a notch or home indicator. It may be decoration; fix it if it must be readable. |
 | `HIDDEN_OUT_OF_SCREEN` | Something inside a hidden panel (Canvas off, or a large object saved turned off) leaves the screen once the game shows it. Place that block or its panel. |
 | `COLLAPSED` | A stretched block got a negative size: its fixed margins are larger than this screen. Place it (or its parent) on cells. |
 | `CLIPPED_IN_LIST` | A list that scrolls one way cuts its items off the other way. Make the list wider/taller. |
@@ -314,7 +315,7 @@ Without `-All`, the list has the root's direct children, plus the blocks inside 
 | `PREFAB_NOT_FOUND`, `AMBIGUOUS_PREFAB` | Pass the full `Assets/...prefab` path. |
 | `TARGET_EXISTS` | The `duplicate` target already exists. Reuse it or choose another name. |
 | `NOT_PRACTICE_COPY` | `cleanup-tutorial` only removes tutorial practice copies. Never retry it on another prefab. |
-| `BASE_PROFILE` | The base profile is the prefab itself. Edit the prefab directly. |
+| `BASE_PROFILE` | The base profile is the prefab itself. Edit the prefab directly (a spec may only add `fit` blocks to it). |
 | `PROFILE_NOT_FOUND`, `PRESET_NOT_FOUND`, `TARGET_NOT_FOUND` | Check the name with `profiles` / `describe`. |
 | `BRIDGE_NOT_RESPONDING` | The editor is open but has compile errors or is stuck. |
 | `TIMEOUT` | The editor is busy. |

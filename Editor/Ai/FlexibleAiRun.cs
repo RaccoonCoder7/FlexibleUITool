@@ -420,7 +420,8 @@ namespace FlexibleUITool.EditorTools
         // showTarget: AI가 만든 화면(첫 대상)을 보여 준다
         private static void ReopenPrefab(bool showTarget = true)
         {
-            if (string.IsNullOrEmpty(PrefabPath) || AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null)
+            if (string.IsNullOrEmpty(PrefabPath) || AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null
+                || !FlexibleScreenSession.PrepareToOpen(PrefabPath))
                 return;
             PrefabStageUtility.OpenPrefab(PrefabPath);
             FlexibleCommandRunner.SetView(null, null);
@@ -573,7 +574,7 @@ Portrait image (`render -Preset portrait`); open its `path` once to see the desi
 - Keep top and bottom bars as full-width bars. Bars touching the edge use `safeArea: false`.
 - Turn a vertical stack into columns: primary content left and large, secondary content right.
 - Keep the reading order. Use `stretch` for content areas; fixed modes for icons and buttons.
-- Keep buttons inside the safe area. Do not let blocks overlap. A block may sit fully inside another only if it already does in portrait (like a title on a bar); `check` reports any other overlap.
+- Keep buttons inside the safe area (`TEXT_OUTSIDE_SAFE_AREA` is only a weak warning about text: move it if the text must be readable). Do not let blocks overlap. A block may sit fully inside another only if it already does in portrait (like a title on a bar); `check` reports any other overlap.
 - `reserved` in `describe` lists places another prefab draws on top of this one on that screen (for example a menu bar). Keep buttons and main content out of them (`UNDER_RESERVED`), and do not let a panel half cover them (`COVERS_RESERVED`).
 - `check` also looks at panels the game opens later (`HIDDEN_OUT_OF_SCREEN`), blocks whose fixed margins no longer fit and became negative (`COLLAPSED`), and lists whose items are cut off across the scroll direction (`CLIPPED_IN_LIST`). Fix them by placing that block or its parent panel too.
 - Square screens are between portrait and landscape: fewer columns, secondary content can go below or beside.

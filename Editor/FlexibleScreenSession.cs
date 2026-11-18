@@ -241,6 +241,33 @@ namespace FlexibleUITool.EditorTools
             return Commit(stage, GetActiveProfileId(stage), null);
         }
 
+        // 툴이 다른 프리팹을 열기 전에 부른다. 열린 프리팹에 저장 안 한 변경이 있으면, Unity의 Prefab Mode 자동 저장이
+        // 묻지 않고 저장해 버리므로 먼저 묻는다 (저장 / 취소 / 저장 안 함). 열어도 되면 true
+        public static bool PrepareToOpen(string nextPath)
+        {
+            PrefabStage stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage == null || stage.assetPath == nextPath || !stage.scene.isDirty)
+                return true;
+            if (Application.isBatchMode)
+                return false;
+            int choice = EditorUtility.DisplayDialogComplex("Flexible UI",
+                F("\"{0}\" has unsaved changes. Save them before opening \"{1}\"?", System.IO.Path.GetFileNameWithoutExtension(stage.assetPath), System.IO.Path.GetFileNameWithoutExtension(nextPath)),
+                T("Save"), T("Cancel"), T("Don't save"));
+            if (choice == 1)
+                return false;
+            if (choice == 2)
+            {
+                stage.ClearDirtiness();
+                return true;
+            }
+            if (IsReady(stage, out _))
+                return Save(stage);
+            bool saved = PrefabUtility.SaveAsPrefabAsset(stage.prefabContentsRoot, stage.assetPath) != null;
+            if (saved)
+                stage.ClearDirtiness();
+            return saved;
+        }
+
         // 한 화면의 기록을 모두 지운다 (그 화면은 기준 화면과 같아진다)
         public static bool ClearProfile(PrefabStage stage, string profileId)
         {
@@ -664,7 +691,7 @@ namespace FlexibleUITool.EditorTools
 
         // 기준 화면에서 칸에 맞춰 줄인 블록. 기준 화면은 프리팹 자체라 줄이기 정보(칸 영역·최대 배율)를 따로 기록해야
         // 실행 중·미리보기에서 화면 크기(같은 세로 안의 다른 비율)에 맞춰 다시 줄인다. 바뀌었으면 true
-        private static bool RecordBaseFits(FlexibleLayout layout, FlexibleWorkspace session, string baseId)
+        internal static bool RecordBaseFits(FlexibleLayout layout, FlexibleWorkspace session, string baseId)
         {
             string before = RecordsOf(layout, baseId);
             foreach (FlexibleLayoutEntry entry in layout.Entries)
@@ -694,7 +721,7 @@ namespace FlexibleUITool.EditorTools
         }
 
         // 기록해 둔 기준 화면의 칸 배치를 되살린다 (프리팹을 다시 열어도 칸·줄이기 설정이 남게)
-        private static void RestoreBasePlacements(FlexibleLayout layout, FlexibleWorkspace session, string baseId)
+        internal static void RestoreBasePlacements(FlexibleLayout layout, FlexibleWorkspace session, string baseId)
         {
             foreach (FlexibleLayoutEntry entry in layout.Entries)
             {

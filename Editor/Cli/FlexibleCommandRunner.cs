@@ -755,18 +755,22 @@ namespace FlexibleUITool.EditorTools
                 throw new FlexibleCommandException("BAD_REQUEST", $"Folder '{command.folder}' not found.");
 
             FlexibleReviewPanel window = FlexibleWindow.OpenAndReview(command.folder, prefabPath);
+            // 창의 Check 탭과 같은 기준으로 센다 (「기준 화면 문제 숨기기」가 켜져 있으면 세로 원본에 이미 있던 문제는 빼고 hiddenBaseIssues 로 따로)
             int total = 0;
+            int hidden = 0;
             var prefabs = new HashSet<string>();
             json.BeginArray("results");
-            foreach (var (prefab, screen, profile, issues) in window.Results)
+            foreach (var (prefab, screen, profile, issues, hiddenHere) in window.Results)
             {
                 prefabs.Add(prefab);
                 total += issues.Count;
+                hidden += hiddenHere;
                 if (issues.Count == 0)
                     continue;
                 json.BeginObject().Value("prefab", prefab).Value("target", screen).Value("profile", profile).Strings("issues", issues).EndObject();
             }
-            json.EndArray().Value("prefabCount", prefabs.Count).Value("issueCount", total);
+            json.EndArray().Value("prefabCount", prefabs.Count).Value("issueCount", total)
+                .Value("hideBaseIssues", window.HidesBaseIssues).Value("hiddenBaseIssues", hidden);
         }
 
         // 에디터 모드에서 Game 뷰 해상도를 바꾼다. 플레이 중에는 브리지가 FlexibleGameViewShots로 차례 전환·캡처한다
@@ -950,6 +954,24 @@ namespace FlexibleUITool.EditorTools
                 {
                     targets.AddRange(EdgeTargets(settings));
                     continue;
+                }
+
+                // check·review 결과의 화면 이름도 그대로 받는다: landscape@1.24 (그 프로필의 경계 비율), aspect@1.30
+                int at = key.LastIndexOf('@');
+                if (at > 0 && float.TryParse(key.Substring(at + 1), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float named))
+                {
+                    string left = key.Substring(0, at);
+                    if (string.Equals(left, "aspect", StringComparison.OrdinalIgnoreCase))
+                    {
+                        targets.Add(new ScreenTarget { name = $"aspect@{named:0.00}", aspect = named, safeArea = settings.GetSafeArea(settings.SelectProfile(named, -1)), profileIndex = -1 });
+                        continue;
+                    }
+                    int namedIndex = settings.IndexOf(left);
+                    if (namedIndex >= 0)
+                    {
+                        targets.Add(new ScreenTarget { name = $"{settings.Profiles[namedIndex].id}@{named:0.00}", aspect = named, safeArea = settings.GetSafeArea(namedIndex), profileIndex = namedIndex });
+                        continue;
+                    }
                 }
 
                 FlexibleProfile profile = settings.Find(key);

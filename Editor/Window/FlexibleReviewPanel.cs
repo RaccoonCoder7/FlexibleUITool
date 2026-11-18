@@ -22,6 +22,8 @@ namespace FlexibleUITool.EditorTools
             public List<FlexibleIssue> issues;
 
             public string ScreenName => presetName != null ? T(presetName) : F("Edge {0:0.00}", aspect);
+            // CLI에 넘기는 이름 (check·render의 -Preset 이 그대로 받는 이름)
+            public string CliName => presetName ?? $"{profile.id}@{aspect:0.00}";
             public List<string> Messages => issues.ConvertAll(i => i.Message);
         }
 
@@ -37,7 +39,9 @@ namespace FlexibleUITool.EditorTools
         // 기준(세로) 화면의 문제는 원래 디자인 문제라 기본으로 숨긴다 (새로 만든 화면의 문제에 집중)
         [SerializeField] private bool hideBaseIssues = true;
         [SerializeField] private bool includeEdges = true;
-        [SerializeField] private bool onlyOpenPrefab = true;
+        // 검수 범위: 열린 프리팹 / 열린 씬에 놓인 프리팹 / 폴더
+        private enum Scope { OpenPrefab, Scene, Folder }
+        [SerializeField] private Scope scope = Scope.OpenPrefab;
         private float renderedHeight; // 마지막 검수 때 썸네일을 그린 높이 (화면 단위)
         private bool[] presetEnabled;
         private string targetPrefab; // 지정되면 이 프리팹만 검수 (CLI review -Prefab)
@@ -52,9 +56,15 @@ namespace FlexibleUITool.EditorTools
             ReleaseRows();
         }
 
-        // 검수 결과 요약 (프리팹, 화면 이름, 프로필 id, 문제 문장). 문장은 부르는 시점의 언어
-        public IEnumerable<(string prefab, string screen, string profile, List<string> issues)> Results =>
-            rows.SelectMany(r => r.cells.Select(c => (r.path, c.ScreenName, c.profile.id, c.Messages)));
+        // 검수 결과 요약 (프리팹, 화면 이름, 프로필 id, 창에 보이는 문제 문장, 기준 화면 문제라 숨긴 수). 창의 건수와 같은 기준으로 센다
+        public IEnumerable<(string prefab, string screen, string profile, List<string> issues, int hidden)> Results =>
+            rows.SelectMany(r => r.cells.Select(c =>
+            {
+                List<FlexibleIssue> visible = Visible(c);
+                return (r.path, c.CliName, c.profile.id, visible.ConvertAll(i => i.Message), c.issues.Count - visible.Count);
+            }));
+
+        public bool HidesBaseIssues => hideBaseIssues;
 
         // 바로 검수한다 (CLI review). 프리팹을 주면 그것만, 아니면 폴더(비우면 Assets 전체)
         public void RunFor(string folderPath, string prefabPath)
@@ -62,8 +72,10 @@ namespace FlexibleUITool.EditorTools
             folder = string.IsNullOrEmpty(folderPath) ? null : AssetDatabase.LoadAssetAtPath<DefaultAsset>(folderPath);
             targetPrefab = string.IsNullOrEmpty(prefabPath) ? null : prefabPath;
             onlyIssues = false;
-            onlyOpenPrefab = false;
+            Scope previous = scope;
+            scope = Scope.Folder;
             Run(FlexibleSettingsUtility.GetOrCreateDefault());
+            scope = previous;
         }
 
         private void EnsurePresetFlags(FlexibleProfileSettings settings)
@@ -89,17 +101,21 @@ namespace FlexibleUITool.EditorTools
                 else
                 {
                     using (new EditorGUI.DisabledScope(open == null))
-                        onlyOpenPrefab = GUILayout.Toggle(onlyOpenPrefab && open != null, T("Only the open prefab"), EditorStyles.miniButton, GUILayout.ExpandWidth(false));
-                    if (!(onlyOpenPrefab && open != null))
                     {
-                        GUILayout.Label(T("Folder"), GUILayout.ExpandWidth(false));
-                        folder = (DefaultAsset)EditorGUILayout.ObjectField(folder, typeof(DefaultAsset), false, GUILayout.Width(160f));
+                        if (GUILayout.Toggle(scope == Scope.OpenPrefab && open != null, T("Only the open prefab"), EditorStyles.miniButtonLeft, GUILayout.ExpandWidth(false)))
+                            scope = Scope.OpenPrefab;
                     }
+                    if (GUILayout.Toggle(scope == Scope.Scene || (scope == Scope.OpenPrefab && open == null), new GUIContent(T("This scene"), T("Prefabs placed in the open scene (nested ones too).")), EditorStyles.miniButtonMid, GUILayout.ExpandWidth(false)))
+                        scope = Scope.Scene;
+                    if (GUILayout.Toggle(scope == Scope.Folder, T("Folder"), EditorStyles.miniButtonRight, GUILayout.ExpandWidth(false)))
+                        scope = Scope.Folder;
+                    if (scope == Scope.Folder)
+                        folder = (DefaultAsset)EditorGUILayout.ObjectField(folder, typeof(DefaultAsset), false, GUILayout.Width(160f));
                 }
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button(new GUIContent(T("Run check"), T("Shows your prefabs on many phones and tablets at once, and finds objects that stick out of the screen, overlap, or sit under the notch. Panels the game opens later, lists, and places other prefabs take (such as a menu bar) are checked too.")), GUILayout.Width(100f), GUILayout.Height(22f)))
                 {
-                    if (onlyOpenPrefab && open != null && string.IsNullOrEmpty(targetPrefab))
+                    if (scope == Scope.OpenPrefab && open != null && string.IsNullOrEmpty(targetPrefab))
                     {
                         UnityEditor.SceneManagement.PrefabStage stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
                         if (stage != null && stage.scene.isDirty)
@@ -186,10 +202,11 @@ namespace FlexibleUITool.EditorTools
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     EditorGUILayout.LabelField(Path.GetFileNameWithoutExtension(row.path), EditorStyles.boldLabel, GUILayout.Width(220f));
-                    EditorGUILayout.LabelField(Summarize(AssetDatabase.LoadAssetAtPath<GameObject>(row.path), FlexibleSettingsUtility.GetOrCreateDefault()), EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField(Summarize(row, FlexibleSettingsUtility.GetOrCreateDefault()), EditorStyles.miniLabel);
                     if (GUILayout.Button(T("Open"), GUILayout.Width(60f)))
                     {
-                        UnityEditor.SceneManagement.PrefabStageUtility.OpenPrefab(row.path);
+                        if (FlexibleScreenSession.PrepareToOpen(row.path))
+                            UnityEditor.SceneManagement.PrefabStageUtility.OpenPrefab(row.path);
                         GUIUtility.ExitGUI();
                     }
                 }
@@ -215,10 +232,13 @@ namespace FlexibleUITool.EditorTools
                 Rect rect = GUILayoutUtility.GetRect(width, thumbnailHeight, GUILayout.Width(width), GUILayout.Height(thumbnailHeight));
                 GUI.DrawTexture(rect, cell.texture, ScaleMode.StretchToFill, false);
                 List<FlexibleIssue> visible = Visible(cell);
+                // 약한 경고(노치 밑 글자)만 있으면 노란색으로
+                bool strong = visible.Exists(i => !FlexibleIssue.IsWeak(i.code));
+                Color mark = strong ? new Color(1f, 0.4f, 0.3f) : new Color(0.95f, 0.8f, 0.3f);
                 if (visible.Count > 0)
-                    EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 3f), new Color(1f, 0.4f, 0.3f));
+                    EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 3f), mark);
 
-                var style = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true, normal = { textColor = visible.Count > 0 ? new Color(1f, 0.55f, 0.45f) : Color.gray } };
+                var style = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true, normal = { textColor = visible.Count > 0 ? (strong ? new Color(1f, 0.55f, 0.45f) : mark) : Color.gray } };
                 // 같은 종류는 한 줄로 묶는다: 「종류 ×개수: 블록, 블록, …」
                 List<string> lines = visible.GroupBy(i => i.code).Select(g =>
                 {
@@ -231,6 +251,7 @@ namespace FlexibleUITool.EditorTools
                 GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(Mathf.Max(width, 120f)));
                 if (visible.Count > 0 && GUILayout.Button(new GUIContent(T("Show the problem"), T("Opens the prefab on this screen and selects the objects with the problem.")), EditorStyles.miniButton, GUILayout.Width(Mathf.Max(width, 120f))))
                 {
+                    FlexibleEditPanel.SetProblem(row.path, cell.profile.id, cell.ScreenName, visible);
                     ShowProblem(row.path, cell.profile.id, visible);
                     GUIUtility.ExitGUI();
                 }
@@ -249,6 +270,8 @@ namespace FlexibleUITool.EditorTools
             }
             else
             {
+                if (!FlexibleScreenSession.PrepareToOpen(path))
+                    return;
                 FlexibleScreenSession.OpenNextOn(path, profileId);
                 PrefabStageUtility.OpenPrefab(path);
             }
@@ -288,9 +311,9 @@ namespace FlexibleUITool.EditorTools
             RunCount++;
             ReleaseRows();
             EnsurePresetFlags(settings);
-            List<string> paths = !string.IsNullOrEmpty(targetPrefab)
-                ? new List<string> { targetPrefab }
-                : FindTargets(folder != null ? AssetDatabase.GetAssetPath(folder) : "Assets");
+            List<string> paths = !string.IsNullOrEmpty(targetPrefab) ? new List<string> { targetPrefab }
+                : scope == Scope.Folder ? FindTargets(folder != null ? AssetDatabase.GetAssetPath(folder) : "Assets")
+                : FindSceneTargets();
             var screens = settings.PreviewPresets.Where((p, i) => presetEnabled[i])
                 .Select(p => (name: (string)p.name, aspect: p.Aspect, safeArea: p.NormalizedSafeArea, profileIndex: settings.SelectProfile(p.Aspect, -1)))
                 .ToList();
@@ -345,6 +368,30 @@ namespace FlexibleUITool.EditorTools
             EditorUtility.ClearProgressBar();
         }
 
+        // 열린 씬(들)에 놓인 Flexible UI 프리팹 (안쪽 프리팹도). 프리팹 모드 중이면 그 뒤의 씬을 본다
+        public static List<string> FindSceneTargets()
+        {
+            var paths = new HashSet<string>();
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded)
+                    continue;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                {
+                    foreach (FlexibleLayout layout in root.GetComponentsInChildren<FlexibleLayout>(true))
+                    {
+                        if (!PrefabUtility.IsAnyPrefabInstanceRoot(layout.gameObject))
+                            continue;
+                        string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(layout.gameObject);
+                        if (!string.IsNullOrEmpty(path) && path.EndsWith(".prefab"))
+                            paths.Add(path);
+                    }
+                }
+            }
+            return paths.OrderBy(p => p).ToList();
+        }
+
         // 프리팹을 일일이 로드하지 않도록 YAML에서 FlexibleLayout 스크립트 GUID를 찾는다
         public static List<string> FindTargets(string searchFolder)
         {
@@ -364,9 +411,11 @@ namespace FlexibleUITool.EditorTools
                 .ToList();
         }
 
-        private static string Summarize(GameObject asset, FlexibleProfileSettings settings)
+        // 화면마다 바꾼 오브젝트 수와 (검수한 화면이면) 그 화면의 문제 수
+        private string Summarize(Row row, FlexibleProfileSettings settings)
         {
-            var layout = asset.GetComponent<FlexibleLayout>();
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(row.path);
+            var layout = asset != null ? asset.GetComponent<FlexibleLayout>() : null;
             if (layout == null)
                 return "";
 
@@ -375,7 +424,14 @@ namespace FlexibleUITool.EditorTools
             {
                 if (profile.id == settings.BaseProfileId)
                     continue;
-                parts.Add(F("{0}: {1} changed", FlexibleEditPanel.Name(profile), FlexibleScreenSession.CountRecords(layout, profile.id)));
+                string part = F("{0}: {1} changed", FlexibleEditPanel.Name(profile), FlexibleScreenSession.CountRecords(layout, profile.id));
+                List<Cell> cells = row.cells.Where(c => c.profile.id == profile.id).ToList();
+                if (cells.Count > 0)
+                {
+                    int issues = cells.Sum(c => Visible(c).Count);
+                    part += " · " + (issues > 0 ? F("{0} issues", issues) : T("No issues"));
+                }
+                parts.Add(part);
             }
             return string.Join("   ", parts);
         }

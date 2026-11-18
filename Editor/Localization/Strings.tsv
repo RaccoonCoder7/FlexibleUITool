@@ -424,3 +424,23 @@ FlexibleUITool: {0} are kept out of git by {1}/.gitignore.	FlexibleUITool: {0} �
 "{0}" has its own background covering the whole portrait screen (a dim or page background). Fitting shrinks that background too, so the screen edges are left uncovered. Keep this block as it is and fit the parts inside it instead.	"{0}"에는 세로 화면 전체를 덮는 자기 배경(어두운 막이나 페이지 배경)이 있어요. 칸에 맞춰 줄이면 배경도 같이 작아져서 화면 가장자리가 드러나요. 이 오브젝트는 그대로 두고 안쪽 내용을 맞춰 주세요.	"{0}" には縦画面全体を覆う自分の背景（暗い幕やページ背景）があります。マスに合わせて縮めると背景も小さくなり、画面の端が見えてしまいます。このオブジェクトはそのままにして、中身を合わせてください。
 Added inside "{0}" by this prefab, so its layout is kept here.	이 프리팹에서 "{0}" 안에 추가한 오브젝트라, 배치는 여기에 기록돼요.	このプレハブで "{0}" の中に追加したオブジェクトなので、配置はここに記録されます。
 Part of "{0}". Its layout is kept in that prefab.	"{0}"에 속한 오브젝트예요. 배치는 그 프리팹에서 해요.	"{0}" に属するオブジェクトです。配置はそのプレハブで行います。
+Text outside SafeArea (check it can be read): {0}	SafeArea 밖 글자 (읽을 수 있는지 확인): {0}	SafeArea 外の文字 (読めるか確認): {0}
+Text outside SafeArea	SafeArea 밖 글자	SafeArea 外の文字
+"{0}" has unsaved changes. Save them before opening "{1}"?	"{0}"에 저장하지 않은 변경이 있습니다. "{1}"을(를) 열기 전에 저장할까요?	"{0}" に保存していない変更があります。"{1}" を開く前に保存しますか?
+Don't save	저장 안 함	保存しない
+Problem on {0}	{0}에서 난 문제	{0} で出た問題
+This is the base (portrait) screen: a fix here changes every portrait device.	기준(세로) 화면입니다. 여기서 고치면 모든 세로 기기에 적용됩니다.	基準(縦)画面です。ここで直すとすべての縦の機種に反映されます。
+Move inside the safe area	안전 영역 안으로 옮기기	安全領域の中へ移す
+Moves the object just enough to leave the notch / home bar area (green frame). An object placed on the grid keeps its cells and is kept inside the safe area instead.	노치·홈 바 자리(초록 틀 밖)에서 벗어날 만큼만 옮깁니다. 그리드에 놓인 오브젝트는 칸을 그대로 두고 안전 영역 안에 두도록 바꿉니다.	ノッチ・ホームバーの場所 (緑の枠の外) から出る分だけ移します。グリッドに置いたオブジェクトはマスはそのままで、安全領域の中に置くよう切り替えます。
+Pin to the nearest edge	가까운 가장자리에 붙이기	近い端に固定
+Keeps the object at the same distance from the nearest edge of the safe area as on the portrait screen, so on shorter or longer screens it follows that edge instead of the middle.	안전 영역의 가까운 가장자리에서 세로 화면과 같은 거리에 둡니다. 더 짧거나 긴 화면에서도 가운데가 아니라 그 가장자리를 따라갑니다.	安全領域の近い端から縦画面と同じ距離に置きます。短い画面や長い画面でも、真ん中ではなくその端についていきます。
+Shrink to fit its cells	지금 칸에 맞춰 줄이기	今のマスに合わせて縮める
+Keeps the shape and scales the object down to the cells it covers now, on every screen size of this screen.	모양을 지킨 채 지금 차지한 칸에 맞춰 줄입니다. 이 화면의 모든 크기에서 다시 맞춥니다.	形を保ったまま、今かかっているマスに合わせて縮めます。この画面のどのサイズでも合わせ直します。
+Run the check again to confirm.	검수를 다시 돌려 확인하세요.	もう一度チェックして確認してください。
+Canvases	캔버스	キャンバス
+Move them together	함께 옮기기	まとめて動かす
+The selected objects move and shrink as one group and keep their places to each other, like pieces of one popup. Drag over the cells in the Scene view or use Pin to.	고른 오브젝트들을 한 팝업의 조각처럼 서로의 자리를 지킨 채 한 덩어리로 옮기고 줄입니다. Scene 뷰에서 칸을 드래그하거나 붙이기를 쓰세요.	選んだオブジェクトを、ひとつのポップアップの部品のように互いの位置を保ったまま、まとめて動かし縮めます。Scene ビューでマスをドラッグするか、固定を使ってください。
+Puts the group at the same distance from that corner or edge of the safe area as on the portrait screen. If it does not fit, the whole group is scaled down.	묶음을 안전 영역의 그 모서리·가장자리에서 세로 화면과 같은 거리에 둡니다. 들어가지 않으면 묶음 전체를 줄입니다.	まとまりを安全領域のその角・端から縦画面と同じ距離に置きます。入らなければまとまり全体を縮めます。
+This scene	이 씬	このシーン
+Prefabs placed in the open scene (nested ones too).	열린 씬에 놓인 프리팹 (안쪽 프리팹 포함).	開いているシーンに置かれたプレハブ (中のプレハブも)。
+{0} issues	문제 {0}개	問題 {0} 件

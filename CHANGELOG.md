@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.8]
+
+- Check accuracy: duplicate and false issues are left out (parts of an inner Flexible prefab, objects with nothing visible, objects covering the whole screen, text whose real letters stay inside, scroll bar parts, decorations that overlap, overlaps split by a full-screen dim). Text components that inherit from TextMeshPro are recognized as text. Places other prefabs take are measured at each device size.
+- New weak warning `TEXT_OUTSIDE_SAFE_AREA` (yellow in the Check tab): text that is not in a button sits under a notch or home indicator.
+- `Show the problem` in the Check tab now shows the problem in the Edit tab with fix buttons: `Move inside the safe area`, `Pin to the nearest edge`, `Shrink to fit its cells`.
+- Several objects as one group: with several objects selected, `Move them together` places them with a Scene view drag or `Pin to` as one group, keeping their places and sizes to each other (pieces of a popup without a common parent).
+- Objects an outer prefab adds inside an inner Flexible prefab belong to the outer prefab: it places them, checks them and saves their layouts.
+- Check tab: `This scene` scope (Flexible UI prefabs placed in the open scene), and each prefab row shows per screen how many objects have their own layout and how many issues. The scene UI list shows `✔ made/other screens`.
+- `Shrink to fit the cells` covers visible parts that stick out of the object, may use the grid margin when it spans every column or row, and warns when the object's own picture covers the whole portrait screen.
+- `Flexible Preview Items` component: sample items for lists the game fills by code, drawn only in Preview, Check and `describe`.
+- Before the tool opens another prefab, unsaved changes of the open one are asked about (`Save` / `Cancel` / `Don't save`) instead of being saved by Prefab Mode auto save.
+- Switching screens no longer leaves the prefab marked as changed (faster, no needless saves), and Preview / Check no longer mark dynamic TMP font assets as changed. The Edit tab refreshes its lists on changes instead of on a timer.
+- Scene setup names new prefabs after their canvas (`HUDCanvas_Background`) and shows a progress bar.
+- `View while editing`: Shift + click selects a range of rows.
+- CLI: `review` counts like the window (`hideBaseIssues`, `hiddenBaseIssues`) and names screens like `check`; `-Preset` accepts those names (`landscape@1.24`, `aspect@1.30`); `-Show` also turns on the hidden objects above; panels hidden with `-Hide` are not checked as `HIDDEN_OUT_OF_SCREEN`; a spec may add `fit` blocks to the base profile; `describe` lists objects the prefab added inside inner Flexible prefabs.
+- The Workspace and Samples folders the tool makes are kept out of git (`Assets/FlexibleUITool/.gitignore`).
+
 ## [1.0.7]
 
 - Scene setup: with no prefab open, the Edit tab lists what in the open scene is not ready (canvases without `Flexible Canvas Scaler`, full-screen prefabs that are not Flexible UI, UI placed straight in the scene) and `Make the scene's UI Flexible UI` fixes them; loose UI groups are saved as new prefabs.
