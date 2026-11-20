@@ -29,7 +29,7 @@ You build the portrait screen as usual, then press **Landscape** (or **Square**)
 
 The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unity 6.3. It needs `com.unity.ugui`, which Package Manager installs with it.
 
-1. Open `Window > Package Management > Package Manager`, press `+`, choose `Install package from git URL...`, and paste the URL from the [README](README.md) (`https://github.com/RaccoonCoder7/FlexibleUITool.git` with the latest version tag such as `#v1.0.8` at the end; without a tag you get the newest commit). Older Unity versions call these `Window > Package Manager` and `Add package from git URL...`.
+1. Open `Window > Package Management > Package Manager`, press `+`, choose `Install package from git URL...`, and paste the URL from the [README](README.md) (`https://github.com/RaccoonCoder7/FlexibleUITool.git` with the latest version tag such as `#v1.0.9` at the end; without a tag you get the newest commit). Older Unity versions call these `Window > Package Manager` and `Add package from git URL...`.
 2. Or add it to `Packages/manifest.json`:
 
    ```json
@@ -69,6 +69,14 @@ That is all. Good to know:
 2. Make a full-screen UI prefab's root **full-stretch** (anchors 0..1, offsets 0), or make the prefab's root the canvas itself. (`Set up this prefab` in the window does this.)
    - Dropping a prefab into a scene can put the Scene-view position into the root's offsets and Pos Z. Use `Fit to parent (offsets 0, Z 0)` in the Flexible Layout inspector.
 3. Put elements that must avoid notches and home indicators under a full-stretch container with `Flexible Safe Area`.
+   - If the app must correct the safe area (for example, an Android status bar drawn over the game, which Unity leaves out of `Screen.safeArea`), set `FlexibleSafeArea.AdjustSafeArea` once at startup. It gets `Screen.safeArea` (pixels, origin bottom-left) and returns the rect to use. Every `Flexible Safe Area` follows the returned rect and applies it again when it changes; `FlexibleSafeArea.CurrentSafeArea` gives the same value to your code. It is called every frame, so only calculate in it (get the status bar height elsewhere). Leave it null to use `Screen.safeArea`. Preview and Check do not use it; they use each device's safe area from the settings.
+     ```csharp
+     FlexibleSafeArea.AdjustSafeArea = safe =>
+     {
+         float top = Mathf.Max(Screen.height - safe.yMax, statusBarHeight); // notch depth or status bar, whichever is larger
+         return Rect.MinMaxRect(safe.xMin, safe.yMin, safe.xMax, Screen.height - top);
+     };
+     ```
 4. Screen ranges, work resolutions, grids, the role list and preview devices live in `Assets/FlexibleUITool/Settings/FlexibleProfileSettings.asset`. It is shared by the whole project.
 5. Code can listen to `FlexibleLayout.ProfileChanged` to adapt non-UI things (cameras, etc.).
 6. Landscape only appears if the app may rotate: set `Player Settings > Resolution and Presentation > Default Orientation` to `Auto Rotation`. A portrait-only app still gets the square screen on foldables and tablets.

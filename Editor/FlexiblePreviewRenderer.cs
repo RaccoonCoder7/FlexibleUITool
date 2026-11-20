@@ -191,8 +191,12 @@ namespace FlexibleUITool.EditorTools
             if (view != null && view.Count > 0)
                 ApplyView(view);
 
+            // 미리보기 기기의 SafeArea로 놓고 컴포넌트는 끈다 (플레이 모드에서 실제 화면 값·앱 보정으로 다시 맞추지 않게)
             foreach (FlexibleSafeArea safeArea in instance.GetComponentsInChildren<FlexibleSafeArea>(true))
+            {
                 safeArea.ApplyNormalized(normalizedSafeArea);
+                safeArea.enabled = false;
+            }
 
             // 글자 크기는 첫 그리기에서 정해지므로, 한 번 그린 뒤 레이아웃을 다시 맞추고 한 번 더 그린다 (첫 장만 글자 크기를 모르는 채 찍히지 않게)
             Canvas.ForceUpdateCanvases();

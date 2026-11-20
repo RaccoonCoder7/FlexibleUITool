@@ -1,7 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.9]
 
+- `FlexibleSafeArea.AdjustSafeArea`: the app can correct the safe area (for example, an Android status bar drawn over the game, which Unity leaves out of `Screen.safeArea`). It gets `Screen.safeArea` and returns the rect to use; every `Flexible Safe Area` follows the corrected value and applies it again when it changes. `FlexibleSafeArea.CurrentSafeArea` returns the corrected value. Without it nothing changes.
+- Preview and Check turn off `Flexible Safe Area` on their copies after placing them with the device's safe area, so the real screen and the app's correction never overwrite the simulated one in Play Mode.
 - `Show the problem` in the Check tab switches to the Edit tab, which shows the problem under the screen buttons (`Select them` selects the objects again, `x` closes it). The fix buttons of 1.0.8 are gone: they used the portrait layout and threw away what you had made on that screen. A new check or closing the prefab clears the problem, and `Only the open prefab` no longer shows the results of another prefab.
 - The `Unsaved changes` line under the screen buttons is gone (it pushed the fields down while you typed); the yellow `Save` button shows it.
 - Dragging over the grid shows the size in cells. Section headers show their explanation only while closed, so it does not cover the fields. An object not placed on the grid shows which cells it covers now.

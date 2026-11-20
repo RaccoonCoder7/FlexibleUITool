@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -9,6 +10,13 @@ namespace FlexibleUITool
     [AddComponentMenu("Layout/Flexible Safe Area")]
     public class FlexibleSafeArea : UIBehaviour
     {
+        // 앱이 SafeArea를 고치는 곳: Screen.safeArea(픽셀, 아래 기준)를 받아 쓸 값을 돌려준다. null이면 Screen.safeArea 그대로.
+        // 컨테이너마다 매 프레임 불리므로 가볍게 (상태바 높이 같은 값은 미리 구해 두고 계산만)
+        public static Func<Rect, Rect> AdjustSafeArea;
+
+        // 보정까지 반영한 지금의 SafeArea (픽셀, 아래 기준)
+        public static Rect CurrentSafeArea => AdjustSafeArea != null ? AdjustSafeArea(Screen.safeArea) : Screen.safeArea;
+
         private Rect lastSafeArea;
         private Vector2Int lastScreenSize;
 
@@ -33,9 +41,10 @@ namespace FlexibleUITool
             rt.offsetMax = Vector2.zero;
         }
 
+        // 보정한 값이 바뀌어도 (상태바를 켜고 끄는 등) 다음 프레임에 다시 맞춘다
         private void Refresh(bool force)
         {
-            Rect safeArea = Screen.safeArea;
+            Rect safeArea = CurrentSafeArea;
             var screenSize = new Vector2Int(Screen.width, Screen.height);
             if (!force && safeArea == lastSafeArea && screenSize == lastScreenSize)
                 return;
