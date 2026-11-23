@@ -189,7 +189,7 @@ The user reviews in Unity, where the thumbnails are easier to read than images i
 - **scaleBy** [k] multiplies the portrait scale (a block saved at 0.6 with `scaleBy: 0.9` ends at 0.54). `scale` replaces it.
 - **Axis mode `keep`** (`modeX` or `modeY`, with `cell`): that axis keeps its portrait anchors, pivot, position and size. Use it for panels the game's code moves on that axis (for example a menu that slides in from the left edge to x 0), and place only the other axis.
 - **Follow**: `follow: "<path>"` (a block with the same parent) keeps the portrait relation to that block. On each axis the block stretches with the same margins when it covered at least 60% of that block, otherwise it keeps its size and its distance from the nearest edge (or the center). Use it for titles, lists and buttons placed as siblings on top of a card background (`inside` in `describe` tells you which block frames them). Follow blocks are placed after the others in the same spec.
-- **Canvas units**: the short screen side is always 1080, e.g. landscape 16:9 = 1920×1080.
+- **Canvas units**: use the `canvas` size that `describe` reports for each screen. It is the real size of the canvas that shows this prefab in the game (a project with a 1080 reference: landscape 16:9 = 1920×1080; a 720 reference: 1280×720). On a canvas converted from a `Canvas Scaler`, the portrait size can differ per device because the portrait screen keeps the old scaling rule.
 
 ## Running
 

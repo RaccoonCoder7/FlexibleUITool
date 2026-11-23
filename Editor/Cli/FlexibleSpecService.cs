@@ -188,7 +188,7 @@ namespace FlexibleUITool.EditorTools
             var canvasObject = new GameObject("FlexibleSpecCanvas", typeof(RectTransform), typeof(Canvas));
             SceneManager.MoveGameObjectToScene(canvasObject, root.scene);
             canvasObject.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
-            ((RectTransform)canvasObject.transform).sizeDelta = GetWorkSize(profile, settings);
+            ((RectTransform)canvasObject.transform).sizeDelta = GetWorkSize(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath), profile, settings);
             rootRect.SetParent(canvasObject.transform, false);
             // 맨 위가 캔버스인 프리팹은 저장된 크기·배율이 0이라 계산용으로 화면에 맞추고, 끝나면 원래 값으로 돌린다
             bool canvasRoot = root.GetComponent<Canvas>() != null;
@@ -436,7 +436,8 @@ namespace FlexibleUITool.EditorTools
             public BaseSizes(string prefabPath, FlexibleProfileSettings settings)
             {
                 FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
-                renderer.Prepare(AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath), baseProfile.id, GetWorkSize(baseProfile, settings), new Rect(0f, 0f, 1f, 1f));
+                GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                renderer.Prepare(asset, baseProfile.id, GetWorkSize(asset, baseProfile, settings), new Rect(0f, 0f, 1f, 1f));
                 root = (RectTransform)renderer.Instance.transform;
             }
 
@@ -465,6 +466,13 @@ namespace FlexibleUITool.EditorTools
         {
             float aspect = profile.workResolution.y > 0f ? profile.workResolution.x / profile.workResolution.y : 1f;
             return FlexiblePreviewRenderer.GetLogicalSize(aspect, settings.ReferenceShortSide);
+        }
+
+        // 이 프리팹을 실제로 그리는 캔버스 단위의 작업 크기
+        public static Vector2 GetWorkSize(GameObject source, FlexibleProfile profile, FlexibleProfileSettings settings)
+        {
+            float aspect = profile.workResolution.y > 0f ? profile.workResolution.x / profile.workResolution.y : 1f;
+            return FlexiblePreviewRenderer.GetLogicalSize(source, settings, profile.id, aspect);
         }
 
         private static IEnumerable<RectTransform> Resolve(FlexibleSpecBlock block, Dictionary<string, RectTransform> map, FlexibleLayout layout)

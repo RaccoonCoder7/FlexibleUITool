@@ -139,7 +139,7 @@ namespace FlexibleUITool.EditorTools
                 {
                     foreach (FlexibleProfile profile in settings.Profiles)
                     {
-                        Vector2 size = FlexiblePreviewRenderer.GetLogicalSize(profile.workResolution.x / Mathf.Max(1f, profile.workResolution.y), settings.ReferenceShortSide);
+                        Vector2 size = FlexiblePreviewRenderer.GetLogicalSize(asset, settings, profile.id, profile.workResolution.x / Mathf.Max(1f, profile.workResolution.y));
                         renderer.Prepare(asset, profile.id, size, new Rect(0f, 0f, 1f, 1f));
                         var root = (RectTransform)renderer.Instance.transform;
                         var target = FlexiblePathUtility.FindByPath(root, area.path) as RectTransform;

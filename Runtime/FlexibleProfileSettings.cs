@@ -29,6 +29,8 @@ namespace FlexibleUITool
             new FlexiblePreviewPreset("Tablet split (half)", new Vector2(1180, 1640), 0f, 0f, 0.015f, 0.024f),
         };
         [SerializeField] private List<FlexibleReservedArea> reservedAreas = new List<FlexibleReservedArea>();
+        // 안에 Canvas가 없는 프리팹이 어떤 규칙의 캔버스에 놓이는지 (프리팹 GUID별, 미리보기·검수용)
+        [SerializeField] private List<FlexibleCanvasRuleEntry> canvasRules = new List<FlexibleCanvasRuleEntry>();
 
         public string BaseProfileId => baseProfileId;
         public List<FlexibleReservedArea> ReservedAreas => reservedAreas;
@@ -46,6 +48,24 @@ namespace FlexibleUITool
                 FlexibleProfile baseProfile = Find(baseProfileId);
                 return baseProfile != null ? Mathf.Min(baseProfile.workResolution.x, baseProfile.workResolution.y) : 1080f;
             }
+        }
+
+        public bool TryGetCanvasRule(string prefabGuid, out FlexibleCanvasRule rule)
+        {
+            FlexibleCanvasRuleEntry entry = canvasRules.Find(e => e.prefabGuid == prefabGuid);
+            rule = entry != null ? entry.rule : default;
+            return entry != null;
+        }
+
+        public void SetCanvasRule(string prefabGuid, FlexibleCanvasRule rule)
+        {
+            FlexibleCanvasRuleEntry entry = canvasRules.Find(e => e.prefabGuid == prefabGuid);
+            if (entry == null)
+            {
+                entry = new FlexibleCanvasRuleEntry { prefabGuid = prefabGuid };
+                canvasRules.Add(entry);
+            }
+            entry.rule = rule;
         }
 
         public int IndexOf(string profileId)
@@ -120,6 +140,13 @@ namespace FlexibleUITool
             profiles.Sort((a, b) => a.minAspect.CompareTo(b.minAspect));
             hysteresis = Mathf.Max(0f, hysteresis);
         }
+    }
+
+    [Serializable]
+    public class FlexibleCanvasRuleEntry
+    {
+        public string prefabGuid;
+        public FlexibleCanvasRule rule;
     }
 
     // 비율 구간 하나

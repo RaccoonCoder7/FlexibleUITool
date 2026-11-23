@@ -17,9 +17,11 @@ namespace FlexibleUITool.EditorTools
 
             Vector2 value = reference.vector2Value;
             float shortSide = Mathf.Min(value.x, value.y);
-            EditorGUILayout.HelpBox(F("Scales so that the screen's short side is {0:0} units. UI has the same real size in portrait and landscape.", shortSide), MessageType.None);
-
             var scaler = (FlexibleCanvasScaler)target;
+            EditorGUILayout.HelpBox(scaler.KeepsBaseRule
+                ? F("The portrait screen keeps the scaling rule of the original Canvas Scaler. Square and landscape screens scale so that the short side is {0:0} units.", shortSide)
+                : F("Scales so that the screen's short side is {0:0} units. UI has the same real size in portrait and landscape.", shortSide), MessageType.None);
+
             var canvas = scaler.GetComponent<Canvas>();
             if (canvas != null && canvas.renderMode == RenderMode.WorldSpace)
                 EditorGUILayout.HelpBox(T("World Space canvases are not scaled."), MessageType.Info);

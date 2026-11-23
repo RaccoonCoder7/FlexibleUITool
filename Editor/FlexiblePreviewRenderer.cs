@@ -133,6 +133,26 @@ namespace FlexibleUITool.EditorTools
             return aspect >= 1f ? new Vector2(shortSide * aspect, shortSide) : new Vector2(shortSide, shortSide / aspect);
         }
 
+        // 실제 게임에서 이 프리팹을 그리는 캔버스 단위의 논리 크기 (규칙을 모르면 프로젝트 기준)
+        public static Vector2 GetLogicalSize(GameObject source, FlexibleProfileSettings settings, string profileId, float aspect)
+        {
+            FlexibleCanvasRule rule = FlexibleSettingsUtility.FindCanvasRule(source, settings);
+            if (!rule.valid)
+                return GetLogicalSize(aspect, settings.ReferenceShortSide);
+
+            // 고정 픽셀 규칙은 기기 해상도에 따라 달라지므로 같은 비율의 미리보기 기기가 있으면 그 해상도로 본다
+            Vector2 screen = GetLogicalSize(aspect, settings.ReferenceShortSide);
+            foreach (FlexiblePreviewPreset preset in settings.PreviewPresets)
+            {
+                if (Mathf.Abs(preset.Aspect - aspect) < 0.001f)
+                {
+                    screen = preset.resolution;
+                    break;
+                }
+            }
+            return rule.GetLogicalSize(screen, profileId == settings.BaseProfileId);
+        }
+
         // profileId가 null이면 사본을 그대로(편집 중인 화면 등) 그린다. 안쪽 프리팹은 screenProfileId(없으면 profileId) 화면으로 맞춘다
         public void Render(GameObject source, string profileId, Vector2 logicalSize, Vector2Int pixelSize, Rect normalizedSafeArea, string screenProfileId = null, IDictionary<string, bool> view = null)
         {
@@ -809,9 +829,7 @@ namespace FlexibleUITool.EditorTools
             FitCopy((RectTransform)instance.transform);
             // 맨 위가 꺼진 채(오브젝트 또는 Canvas) 저장된 프리팹(실행 중에 코드가 켬)도 그려 보이게 켠다
             instance.SetActive(true);
-            var rootCanvas = instance.GetComponent<Canvas>();
-            if (rootCanvas != null)
-                rootCanvas.enabled = true;
+            RemoveRootCanvas(instance);
             layout = instance.GetComponent<FlexibleLayout>();
             if (layout != null && !layout.enabled)
                 layout = null;
@@ -890,6 +908,42 @@ namespace FlexibleUITool.EditorTools
             rt.anchoredPosition = Vector2.zero;
             rt.localScale = Vector3.one;
             rt.localRotation = Quaternion.identity;
+        }
+
+        // 맨 위가 캔버스인 프리팹의 사본은 다른 캔버스 안에서 그려지지 않을 수 있어(URP), 사본에서만 캔버스와 그것을 요구하는 컴포넌트를 뗀다
+        public static void RemoveRootCanvas(GameObject copy)
+        {
+            var canvas = copy.GetComponent<Canvas>();
+            if (canvas == null)
+                return;
+
+            var removing = new List<Component> { canvas };
+            for (bool found = true; found;)
+            {
+                found = false;
+                foreach (Component component in copy.GetComponents<Component>())
+                {
+                    if (component == null || removing.Contains(component) || !RequiresAny(component.GetType(), removing))
+                        continue;
+                    removing.Add(component);
+                    found = true;
+                }
+            }
+            for (int i = removing.Count - 1; i >= 0; i--)
+                UnityEngine.Object.DestroyImmediate(removing[i]);
+        }
+
+        private static bool RequiresAny(Type type, List<Component> components)
+        {
+            foreach (RequireComponent require in type.GetCustomAttributes(typeof(RequireComponent), true))
+            {
+                foreach (Type needed in new[] { require.m_Type0, require.m_Type1, require.m_Type2 })
+                {
+                    if (needed != null && components.Exists(needed.IsInstanceOfType))
+                        return true;
+                }
+            }
+            return false;
         }
 
         private void EnsureTexture(Vector2Int size)
@@ -976,7 +1030,7 @@ namespace FlexibleUITool.EditorTools
             FlexibleProfileSettings settings = sourceLayout != null ? sourceLayout.Settings : null;
             FlexibleProfile baseProfile = settings != null ? settings.Find(settings.BaseProfileId) : null;
             Vector2 size = baseProfile != null && baseProfile.workResolution.x > 0f && baseProfile.workResolution.y > 0f
-                ? GetLogicalSize(baseProfile.workResolution.x / baseProfile.workResolution.y, settings.ReferenceShortSide)
+                ? GetLogicalSize(baseSource, settings, baseProfile.id, baseProfile.workResolution.x / baseProfile.workResolution.y)
                 : LogicalSize;
 
             var probe = new GameObject("FlexibleBaseProbe", typeof(RectTransform)) { hideFlags = HideFlags.HideAndDontSave };
@@ -1029,7 +1083,7 @@ namespace FlexibleUITool.EditorTools
             {
                 foreach (RectTransform block in blocks)
                 {
-                    if (IsOutside(GetRectInRoot(root, block), screen))
+                    if (IsVisiblyOutside(root, block, screen))
                         result.Add(block);
                     else if (block.gameObject.activeInHierarchy)
                         CollectOutsideChildren(root, screen, block, 1, result);
@@ -1049,7 +1103,7 @@ namespace FlexibleUITool.EditorTools
             {
                 if (IsHiddenByCanvas(block))
                     continue;
-                if (IsOutside(GetRectInRoot(root, block), screen))
+                if (IsVisiblyOutside(root, block, screen))
                     result.Add(block);
                 else if (block.gameObject.activeInHierarchy)
                     CollectOutsideChildren(root, screen, block, 1, result);
@@ -1071,11 +1125,42 @@ namespace FlexibleUITool.EditorTools
             {
                 if (!(child is RectTransform rt) || !child.gameObject.activeSelf)
                     continue;
-                if (IsOutside(GetRectInRoot(root, rt), screen))
+                if (IsVisiblyOutside(root, rt, screen))
                     result.Add(rt);
                 else
                     CollectOutsideChildren(root, screen, rt, depth + 1, result);
             }
+        }
+
+        // 그림이 없는 묶음은 틀만 나가고 안의 그림이 모두 화면 안이면 나간 것이 아니다
+        private static bool IsVisiblyOutside(RectTransform root, RectTransform target, Rect screen)
+        {
+            if (!IsOutside(GetRectInRoot(root, target), screen))
+                return false;
+            Graphic own = target.GetComponent<Graphic>();
+            if (own != null && own.enabled)
+                return true;
+
+            bool drawsSomething = false;
+            foreach (Graphic graphic in target.GetComponentsInChildren<Graphic>(true))
+            {
+                if (!graphic.enabled || !IsOnUnder(graphic.transform, target))
+                    continue;
+                drawsSomething = true;
+                if (IsOutside(GetRectInRoot(root, graphic.rectTransform), screen))
+                    return true;
+            }
+            return !drawsSomething;
+        }
+
+        private static bool IsOnUnder(Transform t, Transform top)
+        {
+            for (; t != top; t = t.parent)
+            {
+                if (!t.gameObject.activeSelf)
+                    return false;
+            }
+            return true;
         }
 
         private static string PairKey(string a, string b)

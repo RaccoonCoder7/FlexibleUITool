@@ -1,7 +1,10 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FlexibleUITool.EditorTools
 {
@@ -17,11 +20,107 @@ namespace FlexibleUITool.EditorTools
         private static string toolAssetPath;
         private static string toolFullPath;
         private static FlexibleProfileSettings cachedSettings;
+        // 열린 씬에 놓인 Flexible 프리팹 → 그 캔버스의 규칙 (씬이 바뀔 때만 다시 찾는다)
+        private static Dictionary<string, FlexibleCanvasRule> sceneRules;
 
         // 애셋 검색은 한 번에 수 ms 걸려서 창이 그려질 때마다 하지 않는다. 애셋이 바뀌면 다시 찾는다
         static FlexibleSettingsUtility()
         {
             EditorApplication.projectChanged += () => cachedSettings = null;
+            EditorApplication.hierarchyChanged += () =>
+            {
+                if (!EditorApplication.isPlaying && PrefabStageUtility.GetCurrentPrefabStage() == null)
+                    sceneRules = null;
+            };
+            EditorSceneManager.sceneOpened += (scene, mode) => sceneRules = null;
+            EditorSceneManager.sceneClosed += scene => sceneRules = null;
+            EditorApplication.playModeStateChanged += state => sceneRules = null;
+        }
+
+        // 이 프리팹을 실제 게임에서 그리는 캔버스의 규칙: 자기 캔버스 → 씬에서 놓인 캔버스 → 변환할 때 기록한 값. 모르면 valid = false
+        public static FlexibleCanvasRule FindCanvasRule(GameObject source, FlexibleProfileSettings settings)
+        {
+            if (source == null)
+                return default;
+            var own = source.GetComponent<FlexibleCanvasScaler>();
+            if (own != null)
+                return own.Rule;
+
+            string path;
+            PrefabStage stage = PrefabStageUtility.GetPrefabStage(source);
+            if (stage != null)
+                path = stage.assetPath;
+            else if (EditorUtility.IsPersistent(source))
+                path = AssetDatabase.GetAssetPath(source);
+            else
+            {
+                Canvas[] canvases = source.GetComponentsInParent<Canvas>(true);
+                FlexibleCanvasScaler placed = canvases.Length > 0 ? canvases[canvases.Length - 1].GetComponent<FlexibleCanvasScaler>() : null;
+                if (placed != null)
+                    return placed.Rule;
+                path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(source);
+            }
+            if (string.IsNullOrEmpty(path))
+                return default;
+
+            sceneRules ??= BuildSceneRules();
+            if (sceneRules.TryGetValue(path, out FlexibleCanvasRule rule))
+                return rule;
+            return settings != null && settings.TryGetCanvasRule(AssetDatabase.AssetPathToGUID(path), out rule) ? rule : default;
+        }
+
+        // 프리팹이 열린 씬의 어떤 캔버스에 놓였는지 기록한다 (그 씬을 닫아도 미리보기·검수가 같은 단위를 쓰게)
+        public static void RecordCanvasRule(string path)
+        {
+            sceneRules = null;
+            foreach (FlexibleCanvasScaler scaler in SceneRootScalers())
+            {
+                foreach (Transform t in scaler.GetComponentsInChildren<Transform>(true))
+                {
+                    if (!PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject) || PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(t.gameObject) != path)
+                        continue;
+                    FlexibleProfileSettings settings = GetOrCreateDefault();
+                    settings.SetCanvasRule(AssetDatabase.AssetPathToGUID(path), scaler.Rule);
+                    EditorUtility.SetDirty(settings);
+                    AssetDatabase.SaveAssetIfDirty(settings);
+                    return;
+                }
+            }
+        }
+
+        private static Dictionary<string, FlexibleCanvasRule> BuildSceneRules()
+        {
+            var rules = new Dictionary<string, FlexibleCanvasRule>();
+            foreach (FlexibleCanvasScaler scaler in SceneRootScalers())
+            {
+                foreach (FlexibleLayout layout in scaler.GetComponentsInChildren<FlexibleLayout>(true))
+                {
+                    if (!PrefabUtility.IsAnyPrefabInstanceRoot(layout.gameObject))
+                        continue;
+                    string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(layout.gameObject);
+                    if (!string.IsNullOrEmpty(path) && !rules.ContainsKey(path))
+                        rules[path] = scaler.Rule;
+                }
+            }
+            return rules;
+        }
+
+        private static IEnumerable<FlexibleCanvasScaler> SceneRootScalers()
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded)
+                    continue;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                {
+                    foreach (FlexibleCanvasScaler scaler in root.GetComponentsInChildren<FlexibleCanvasScaler>(true))
+                    {
+                        if (scaler.GetComponentsInParent<Canvas>(true).Length == 1)
+                            yield return scaler;
+                    }
+                }
+            }
         }
 
         // 툴 파일이 있는 곳: "Assets/FlexibleUITool" 또는 "Packages/com.raccooncoder7.flexibleuitool"

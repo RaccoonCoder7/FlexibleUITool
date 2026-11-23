@@ -204,6 +204,13 @@ namespace FlexibleUITool.EditorTools
             foreach (Transform t in copy.GetComponentsInChildren<Transform>(true))
                 t.gameObject.hideFlags = HideFlags.HideAndDontSave;
             standIn.copy = copy;
+            // 맨 위가 화면 캔버스면 저장된 위치·배율은 쓸 수 없으니 틀에 꽉 채우고, 사본 안의 캔버스는 뗀다
+            Canvas ownCanvas = layout.GetComponent<Canvas>();
+            if (ownCanvas != null && ownCanvas.isRootCanvas)
+            {
+                FlexiblePreviewRenderer.FitCopy((RectTransform)copy.transform);
+                FlexiblePreviewRenderer.RemoveRootCanvas(copy);
+            }
 
             var copyLayout = copy.GetComponent<FlexibleLayout>();
             copyLayout.ApplyProfile(profileId);

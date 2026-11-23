@@ -112,14 +112,12 @@ namespace FlexibleUITool.EditorTools
             }
             Canvas.ForceUpdateCanvases();
 
-            float shortSide = Mathf.Min(currentResolution.x, currentResolution.y);
             foreach (FlexibleCanvasScaler scaler in UnityEngine.Object.FindObjectsByType<FlexibleCanvasScaler>(FindObjectsSortMode.None))
             {
                 var canvas = scaler.GetComponent<Canvas>();
-                float reference = Mathf.Min(scaler.referenceResolution.x, scaler.referenceResolution.y);
-                if (!scaler.isActiveAndEnabled || canvas == null || !canvas.isRootCanvas || canvas.renderMode == RenderMode.WorldSpace || reference <= 0f)
+                if (!scaler.isActiveAndEnabled || canvas == null || !canvas.isRootCanvas || canvas.renderMode == RenderMode.WorldSpace || Mathf.Min(scaler.referenceResolution.x, scaler.referenceResolution.y) <= 0f)
                     continue;
-                if (Mathf.Abs(canvas.scaleFactor - shortSide / reference) > 0.01f)
+                if (Mathf.Abs(canvas.scaleFactor - scaler.GetScaleFactor(currentResolution)) > 0.01f)
                     return $"canvas '{canvas.name}' scale {canvas.scaleFactor:0.###}";
             }
 

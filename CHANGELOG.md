@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+- A prefab whose root is a canvas is drawn in Preview, Check and the stopped Game view (it could be black or disappear).
+- The scene conversion button and its notice are hidden during Play Mode.
+- A canvas converted from a `Canvas Scaler` keeps that scaler's rule (Match, Expand, Shrink, Constant Pixel or Physical Size) on the portrait screen, so the portrait screen stays as it was. Square and landscape screens use the short side. Canvases that already use `Flexible Canvas Scaler` do not change.
+- Preview, Check and the CLI's `render` / `check` measure a prefab in the units of the canvas that shows it in the game (its own canvas, the canvas it sits under in the open scene, or the one recorded when it was converted), so an object that really leaves the screen on a 720-unit canvas is reported. Prefabs whose canvas is unknown use the project size as before.
+- The Edit tab, the grid, `Shrink to fit the cells`, `describe`, specs and the AI use the same units as the game, so a value set while editing lands in the same place at runtime on canvases whose reference is not 1080.
+- An empty group whose frame leaves the screen is no longer reported when every picture inside it stays on the screen.
+
 ## [1.0.9]
 
 - `FlexibleSafeArea.AdjustSafeArea`: the app can correct the safe area (for example, an Android status bar drawn over the game, which Unity leaves out of `Screen.safeArea`). It gets `Screen.safeArea` and returns the rect to use; every `Flexible Safe Area` follows the corrected value and applies it again when it changes. `FlexibleSafeArea.CurrentSafeArea` returns the corrected value. Without it nothing changes.

@@ -1121,6 +1121,7 @@ namespace FlexibleUITool.EditorTools
                 if (canvas != null && contents.GetComponent<CanvasScaler>() != null)
                     FlexibleLayoutInspector.UseFlexibleScaler(canvas, false);
                 PrefabUtility.SaveAsPrefabAsset(contents, path);
+                FlexibleSettingsUtility.RecordCanvasRule(path);
                 return true;
             }
             finally
@@ -1162,7 +1163,9 @@ namespace FlexibleUITool.EditorTools
             if (FlexibleTutorial.Active || FlexibleAiRun.Current == FlexibleAiRun.State.Running)
                 return;
 
-            DrawSceneCanvasCheck();
+            // 실행 중인 씬은 변환 대상이 아니다 (프리팹 연결도 달라 보여 틀린 안내가 된다)
+            if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                DrawSceneCanvasCheck();
             if (!string.IsNullOrEmpty(sceneSetupResult) && sceneSetupScene == EditorSceneManager.GetActiveScene().path)
                 EditorGUILayout.HelpBox(sceneSetupResult, MessageType.Info);
 
@@ -1849,6 +1852,8 @@ namespace FlexibleUITool.EditorTools
                     FlexibleLayoutInspector.UseFlexibleScaler(canvas);
                 EditorUtility.SetDirty(layout);
                 FlexibleScreenSession.Save(stage);
+                FlexibleSettingsUtility.RecordCanvasRule(stage.assetPath);
+                FlexibleScreenSession.EnsureEnvironmentScaler(stage);
 
                 // 안쪽에 전체 화면 프리팹이 있으면 같이 만들지 한 번에 묻는다
                 List<string> inner = FindNestedPrefabs(stage).Where(n => !n.flexible && n.fullScreen).Select(n => n.path).ToList();
@@ -1965,7 +1970,7 @@ namespace FlexibleUITool.EditorTools
                 return baseOutside;
             FlexibleProfileSettings settings = layout.Settings;
             FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
-            Vector2 size = FlexiblePreviewRenderer.GetLogicalSize(baseProfile.workResolution.x / Mathf.Max(1f, baseProfile.workResolution.y), settings.ReferenceShortSide);
+            Vector2 size = FlexibleSpecService.GetWorkSize(asset, baseProfile, settings);
             using (var renderer = new FlexiblePreviewRenderer())
             {
                 renderer.Prepare(asset, baseProfile.id, size, new Rect(0f, 0f, 1f, 1f), null, FlexibleScreenSession.GetViewByPath(stage));
@@ -2183,7 +2188,7 @@ namespace FlexibleUITool.EditorTools
                 return baseExtra;
             FlexibleProfileSettings settings = layout.Settings;
             FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
-            Vector2 size = FlexiblePreviewRenderer.GetLogicalSize(baseProfile.workResolution.x / Mathf.Max(1f, baseProfile.workResolution.y), settings.ReferenceShortSide);
+            Vector2 size = FlexibleSpecService.GetWorkSize(asset, baseProfile, settings);
             using (var renderer = new FlexiblePreviewRenderer())
             {
                 renderer.Prepare(asset, baseProfile.id, size, new Rect(0f, 0f, 1f, 1f));

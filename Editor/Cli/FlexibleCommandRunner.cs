@@ -256,7 +256,7 @@ namespace FlexibleUITool.EditorTools
             {
                 foreach (FlexibleProfile profile in SelectProfiles(settings, command.profile))
                 {
-                    Vector2 size = FlexibleSpecService.GetWorkSize(profile, settings);
+                    Vector2 size = FlexibleSpecService.GetWorkSize(asset, profile, settings);
                     renderer.Prepare(asset, profile.id, size, new Rect(0f, 0f, 1f, 1f), null, GetView(prefabPath));
                     var root = (RectTransform)renderer.Instance.transform;
                     int index = settings.IndexOf(profile.id);
@@ -301,7 +301,7 @@ namespace FlexibleUITool.EditorTools
                 return frames;
             using (var renderer = new FlexiblePreviewRenderer())
             {
-                renderer.Prepare(asset, baseProfile.id, FlexibleSpecService.GetWorkSize(baseProfile, settings), new Rect(0f, 0f, 1f, 1f), null, GetView(prefabPath));
+                renderer.Prepare(asset, baseProfile.id, FlexibleSpecService.GetWorkSize(asset, baseProfile, settings), new Rect(0f, 0f, 1f, 1f), null, GetView(prefabPath));
                 var root = (RectTransform)renderer.Instance.transform;
                 List<RectTransform> blocks = SelectBlocks(root, all).Where(b => b.gameObject.activeInHierarchy).ToList();
                 foreach (RectTransform block in blocks)
@@ -401,7 +401,7 @@ namespace FlexibleUITool.EditorTools
                 foreach (ScreenTarget target in ResolveTargets(settings, command))
                 {
                     int profileIndex = target.ProfileIndex(settings);
-                    Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(target.aspect, settings.ReferenceShortSide);
+                    Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(asset, settings, settings.Profiles[profileIndex].id, target.aspect);
                     float scale = 1280f / Mathf.Max(logical.x, logical.y);
                     var pixel = new Vector2Int(Mathf.RoundToInt(logical.x * scale), Mathf.RoundToInt(logical.y * scale));
                     renderer.Render(asset, settings.Profiles[profileIndex].id, logical, pixel, target.safeArea, null, GetView(prefabPath));
@@ -435,7 +435,7 @@ namespace FlexibleUITool.EditorTools
                     foreach (ScreenTarget target in ResolveTargets(settings, command, defaultToPresets: true))
                     {
                         string profileId = settings.Profiles[target.ProfileIndex(settings)].id;
-                        renderer.Prepare(asset, profileId, FlexiblePreviewRenderer.GetLogicalSize(target.aspect, settings.ReferenceShortSide), target.safeArea, null, GetView(prefabPath));
+                        renderer.Prepare(asset, profileId, FlexiblePreviewRenderer.GetLogicalSize(asset, settings, profileId, target.aspect), target.safeArea, null, GetView(prefabPath));
                         List<FlexibleIssue> issues = renderer.CollectIssueList(target.safeArea);
                         total += issues.Count;
                         json.BeginObject().Value("prefab", prefabPath).Value("target", target.name).Value("profile", profileId);

@@ -65,7 +65,7 @@ That is all. Good to know:
 
 ## 2. Setup (programmers)
 
-1. Replace the `Canvas Scaler` of every top-level canvas with `Flexible Canvas Scaler`. It always scales by the short side (1080), so UI has the same real size in portrait and landscape, and every canvas follows the same rule. With no prefab open, the Edit tab shows what in the open scene is not ready yet; press `Make the scene's UI Flexible UI`. It replaces the Canvas Scaler of every top-level canvas and, if you choose `Do all`, makes every full-screen UI prefab in the scene (nested ones too) Flexible UI. UI placed straight under a canvas without being a prefab (for example a title logo and a start button) cannot have its own screen layouts, because Flexible UI is edited per prefab: `Do all` saves each checked group as a new prefab in the folder shown above the button (`Assets/FlexibleUITool/Prefabs/` by default; `Change...` picks another), makes it Flexible UI and puts it back in the scene looking the same. The file name starts with the canvas name (for example `HUDCanvas_Background`), so groups with the same name on different canvases stay apart. `Show the list` lists these groups with check boxes. In the list of the scene's UI, `✔ 1/2` means the prefab is Flexible UI and has its own layout on 1 of the 2 other screens (hover it for the number of changed objects per screen). Canvases and prefabs are changed in the prefab files, and the scene is saved if it had no other unsaved changes.
+1. Replace the `Canvas Scaler` of every top-level canvas with `Flexible Canvas Scaler`. On square and landscape screens it scales by the short side of the reference resolution, so UI keeps its real size when the device rotates. A canvas converted from a `Canvas Scaler` keeps that scaler's rule (Match, Expand, Shrink, Constant Pixel or Physical Size) on the portrait screen, so the portrait screen stays as it was. With no prefab open, the Edit tab shows what in the open scene is not ready yet; press `Make the scene's UI Flexible UI`. It replaces the Canvas Scaler of every top-level canvas and, if you choose `Do all`, makes every full-screen UI prefab in the scene (nested ones too) Flexible UI. UI placed straight under a canvas without being a prefab (for example a title logo and a start button) cannot have its own screen layouts, because Flexible UI is edited per prefab: `Do all` saves each checked group as a new prefab in the folder shown above the button (`Assets/FlexibleUITool/Prefabs/` by default; `Change...` picks another), makes it Flexible UI and puts it back in the scene looking the same. The file name starts with the canvas name (for example `HUDCanvas_Background`), so groups with the same name on different canvases stay apart. `Show the list` lists these groups with check boxes. In the list of the scene's UI, `✔ 1/2` means the prefab is Flexible UI and has its own layout on 1 of the 2 other screens (hover it for the number of changed objects per screen). Canvases and prefabs are changed in the prefab files, and the scene is saved if it had no other unsaved changes.
 2. Make a full-screen UI prefab's root **full-stretch** (anchors 0..1, offsets 0), or make the prefab's root the canvas itself. (`Set up this prefab` in the window does this.)
    - Dropping a prefab into a scene can put the Scene-view position into the root's offsets and Pos Z. Use `Fit to parent (offsets 0, Z 0)` in the Flexible Layout inspector.
 3. Put elements that must avoid notches and home indicators under a full-stretch container with `Flexible Safe Area`.
@@ -86,7 +86,7 @@ That is all. Good to know:
 You do not need new prefabs. The existing prefab becomes the portrait (base) layout.
 
 1. Fastest: open the scene, open `Tools > FlexibleUITool > Flexible UI Window`, and press `Make the scene's UI Flexible UI` in the Edit tab (no prefab open). Or open one prefab and press `Set up this prefab`; it also offers to set up the full-screen prefabs inside it.
-   - A prefab whose root is a canvas: it already fills the screen; its `Canvas Scaler` is replaced with `Flexible Canvas Scaler` (same reference resolution).
+   - A prefab whose root is a canvas: it already fills the screen; its `Canvas Scaler` is replaced with `Flexible Canvas Scaler` (same reference resolution; the portrait screen keeps the old scaling rule).
    - A prefab that does not fill the screen: you are asked whether it is full screen (stretched) or a panel (kept as it is).
 2. Make the landscape and square layouts with the screen buttons or `Auto-layout with AI`.
 3. **Nested prefabs** (a prefab inside another prefab):
@@ -210,7 +210,7 @@ The full command reference (options, spec format, errors) is in `AGENTS.md`.
 | **Grid / cells** | Each screen's columns × rows with margin and gutter. `(0, 0)` is the top-left cell. |
 | **Adjustment** | Position / size / scale changed by hand after grid placement. Saved with templates. |
 
-Canvas units: the **short side of the screen is always 1080**. Landscape 16:9 is 1920 × 1080.
+Canvas units: the real units of the canvas that shows the prefab in the game. With a 1080 reference, landscape 16:9 is 1920 × 1080; with a 720 reference it is 1280 × 720. `describe` reports the size for each screen as `canvas`.
 
 ### How saving works
 
@@ -225,7 +225,7 @@ Canvas units: the **short side of the screen is always 1080**. Landscape 16:9 is
 
 ### Checks
 
-Preview, Check, and the CLI report the same issues. In the Check tab, `Show the problem` under a thumbnail opens the prefab on that screen and selects the objects with the issue. The window switches to the Edit tab, which shows the problem under the screen buttons (`Select them` selects the objects again, `×` closes it). Fix it with the usual tools (drag, `Place on a grid`, `Pin to`), then run the check again; a new check or closing the prefab clears the problem. On the portrait screen a fix changes every portrait device:
+Preview, Check, and the CLI report the same issues. They measure a prefab in the units of the canvas that shows it in the game (its own canvas, the canvas it sits under in the open scene, or the one recorded when it was converted); if that is unknown, they use the project's work size. In the Check tab, `Show the problem` under a thumbnail opens the prefab on that screen and selects the objects with the issue. The window switches to the Edit tab, which shows the problem under the screen buttons (`Select them` selects the objects again, `×` closes it). Fix it with the usual tools (drag, `Place on a grid`, `Pin to`), then run the check again; a new check or closing the prefab clears the problem. On the portrait screen a fix changes every portrait device:
 
 | Issue | CLI code | Meaning |
 |---|---|---|

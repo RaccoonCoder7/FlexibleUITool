@@ -587,7 +587,7 @@ Portrait image (`render -Preset portrait`); open its `path` once to see the desi
 - `follow: ""<path>""` keeps the portrait relation to a sibling block; use it for titles, lists and buttons that sit on a card background (`inside` in `describe`).
 - Blocks inside a container keep the container's portrait margins. When those margins no longer fit (the container got shorter), place the inner blocks on cells too; any path works, at any depth.
 - `visible`: `hide` or `show`. `reset: true` removes the override (the block follows portrait).
-- Canvas units: the short screen side is always 1080 (landscape 16:9 = 1920 x 1080).
+- Canvas units: use the `canvas` size that `describe` reports for each screen. It is the real size of the canvas in the game (for example 1280 x 720 on a 720-unit canvas), so never assume 1920 x 1080.
 
 ## Design rules
 

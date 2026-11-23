@@ -92,6 +92,8 @@ namespace FlexibleUITool.EditorTools
 
             Vector2 reference = old != null && old.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize ? old.referenceResolution : new Vector2(1080f, 1920f);
             float pixelsPerUnit = old != null ? old.referencePixelsPerUnit : 100f;
+            // 기준(세로) 화면이 지금과 똑같이 보이도록 원래 규칙을 넘겨준다 (없애기 전에 읽는다)
+            System.Action<FlexibleCanvasScaler> keepRule = old != null ? FlexibleCanvasScaler.CaptureBaseRule(old, FlexibleSettingsUtility.GetOrCreateDefault()) : null;
             if (old != null)
             {
                 if (undo)
@@ -102,6 +104,7 @@ namespace FlexibleUITool.EditorTools
             var scaler = undo ? Undo.AddComponent<FlexibleCanvasScaler>(canvas.gameObject) : canvas.gameObject.AddComponent<FlexibleCanvasScaler>();
             scaler.referenceResolution = reference;
             scaler.referencePixelsPerUnit = pixelsPerUnit;
+            keepRule?.Invoke(scaler);
             EditorUtility.SetDirty(scaler);
             return true;
         }

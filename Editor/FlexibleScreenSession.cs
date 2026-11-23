@@ -1081,17 +1081,31 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             Transform environment = root.transform.parent;
-            if (environment == null || environment.GetComponent<Canvas>() == null || environment.GetComponent<CanvasScaler>() != null)
+            if (environment == null || environment.GetComponent<Canvas>() == null)
+                return;
+            CanvasScaler existing = environment.GetComponent<CanvasScaler>();
+            // 이 툴이 붙인 스케일러만 다시 맞춘다 (사용자의 편집 환경에 있던 스케일러는 그대로)
+            var own = existing as FlexibleCanvasScaler;
+            if (existing != null && (own == null || (own.hideFlags & HideFlags.DontSave) == 0))
                 return;
 
             FlexibleProfileSettings settings = FlexibleSettingsUtility.GetOrCreateDefault();
             FlexibleProfile baseProfile = settings.Find(settings.BaseProfileId);
             Vector2 reference = baseProfile != null ? baseProfile.workResolution : new Vector2(1080, 1920);
 
-            var scaler = environment.gameObject.AddComponent<FlexibleCanvasScaler>();
-            scaler.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = reference;
+            FlexibleCanvasScaler scaler = own;
+            if (scaler == null)
+            {
+                scaler = environment.gameObject.AddComponent<FlexibleCanvasScaler>();
+                scaler.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            }
+            // 이 프리팹을 실제로 그리는 캔버스와 같은 단위로 편집한다 (모르면 프로젝트 기준)
+            FlexibleCanvasRule rule = FlexibleSettingsUtility.FindCanvasRule(root, settings);
+            if (rule.valid)
+                scaler.UseRule(rule, settings);
+            else
+                scaler.referenceResolution = reference;
         }
     }
 }

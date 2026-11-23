@@ -115,7 +115,7 @@ namespace FlexibleUITool.EditorTools
 
             if (Event.current.type == EventType.Repaint)
             {
-                Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(aspect, settings.ReferenceShortSide);
+                Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(source, settings, profile.id, aspect);
                 float scale = EditorGUIUtility.pixelsPerPoint;
                 PrefabStage open = PrefabStageUtility.GetCurrentPrefabStage();
                 Dictionary<string, bool> view = open != null && open.assetPath == targetPath ? FlexibleScreenSession.GetViewByPath(open) : null;
@@ -280,7 +280,7 @@ namespace FlexibleUITool.EditorTools
         private void DrawInfo(Rect rect, FlexibleProfileSettings settings, float aspect, FlexibleProfile profile)
         {
             EditorGUI.DrawRect(rect, new Color(0.18f, 0.18f, 0.18f));
-            Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(aspect, settings.ReferenceShortSide);
+            Vector2 logical = renderer != null && renderer.LogicalSize.x > 0f ? renderer.LogicalSize : FlexiblePreviewRenderer.GetLogicalSize(aspect, settings.ReferenceShortSide);
             var style = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = new Color(0.9f, 0.9f, 0.9f) } };
             GUI.Label(new Rect(rect.x + 6f, rect.y + 2f, rect.width - 12f, 18f),
                 F("Now showing: {0}   ratio {1:0.00}   size {2:0}x{3:0}   {4} issues", FlexibleEditPanel.Name(profile), aspect, logical.x, logical.y, issues.Count), style);

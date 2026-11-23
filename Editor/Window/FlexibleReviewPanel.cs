@@ -379,7 +379,7 @@ namespace FlexibleUITool.EditorTools
                     foreach (var screen in screens)
                     {
                         FlexibleProfile profile = settings.Profiles[screen.profileIndex];
-                        Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(screen.aspect, settings.ReferenceShortSide);
+                        Vector2 logical = FlexiblePreviewRenderer.GetLogicalSize(asset, settings, profile.id, screen.aspect);
                         // GPU 메모리를 아끼려고 지금 보이는 크기로만 그린다 (문제 판정은 논리 크기 기준이라 영향 없음)
                         int height = Mathf.RoundToInt(thumbnailHeight * scale);
                         var pixel = new Vector2Int(Mathf.RoundToInt(height * screen.aspect), height);
