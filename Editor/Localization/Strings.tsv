@@ -394,7 +394,7 @@ Select an object, then drag over the blue cells in the Scene view, or type the c
 Grid settings ({0} x {1}, this prefab only)	그리드 설정 ({0} x {1}, 이 프리팹 전용)	グリッド設定（{0} x {1}、このプレハブ専用）
 Grid settings ({0} x {1}, project)	그리드 설정 ({0} x {1}, 프로젝트 공용)	グリッド設定（{0} x {1}、プロジェクト共通）
 Save where each role (Header, Main, ...) sits on the grid of a screen, and reuse it on other prefabs.	역할(Header, Main 등)이 화면 그리드의 어디에 있는지 저장해 다른 프리팹에 다시 써요.	各役割（Header、Main など）が画面のグリッドのどこにあるかを保存し、ほかのプレハブで使い回します。
-The new prefabs are inside the canvas and selected in the Hierarchy (the canvas itself stays as it is). Press Open below to make their square and landscape layouts.	새 프리팹은 캔버스 안에 있고, Hierarchy에서 선택해 두었어요 (캔버스 자체는 그대로예요). 아래 열기 버튼을 눌러 정사각·가로 배치를 만드세요.	新しいプレハブはキャンバスの中にあり、Hierarchy で選択してあります（キャンバス自体はそのままです）。下の開くボタンを押して正方形・横の配置を作ってね。
+The new prefabs are selected in the Hierarchy. Press Open below to make their square and landscape layouts.	새 프리팹을 Hierarchy에서 선택해 두었어요. 아래의 열기를 눌러 정사각·가로 배치를 만드세요.	新しいプレハブを Hierarchy で選択しました。下の「開く」を押して正方形・横の配置を作ってね。
 Saved ✓	저장됨 ✓	保存済み ✓
 There are unsaved changes. Switching screens also saves them.	저장하지 않은 변경이 있어요. 화면을 바꿔도 저장됩니다.	未保存の変更があります。画面を切り替えても保存されます。
 Everything is saved.	모두 저장됐어요.	すべて保存されています。
@@ -441,3 +441,11 @@ Not placed on the grid (now covers {0})	그리드 배치 안 함 (지금 덮고 
 This scene has no UI prefabs yet. Build the UI under a Canvas in the scene, or double-click a UI prefab in the Project window.	이 씬에는 아직 UI 프리팹이 없어요. 씬의 Canvas 아래에 UI를 만들거나, Project 창에서 UI 프리팹을 더블클릭하세요.	このシーンにはまだ UI プレハブがありません。シーンの Canvas の下に UI を作るか、Project ウィンドウで UI プレハブをダブルクリックしてね。
 Click to show them.	누르면 보여 줘요.	クリックすると表示します。
 The portrait screen keeps the scaling rule of the original Canvas Scaler. Square and landscape screens scale so that the short side is {0:0} units.	세로 화면은 원래 Canvas Scaler의 규칙을 그대로 씁니다. 정사각·가로 화면은 짧은 변이 {0:0} 단위가 되도록 스케일합니다.	縦画面は元の Canvas Scaler のルールをそのまま使います。正方形・横画面は短辺が {0:0} 単位になるようにスケールします。
+One prefab	프리팹 하나로	1つのプレハブに
+One per child	자식마다 하나씩	子ごとに1つ
+{0} (whole canvas)	{0} (캔버스 전체)	{0}（キャンバス全体）
+The root of this prefab is placed by whatever holds it, so moving it on this screen was not saved.	이 프리팹의 루트 위치는 그것을 담은 쪽이 정해서, 이 화면에서 옮긴 값은 저장하지 않았어요.	このプレハブのルートの位置は入れ物側が決めるので、この画面で動かした値は保存していません。
+Cannot be pressed: {0} covers {1}	누를 수 없음: {0}이(가) {1}을(를) 덮음	押せない: {0} が {1} を覆っている
+Button covered	가려진 버튼	覆われたボタン
+The tool's own check found {0} problems on these screens ({1}). See the Check tab.	툴이 직접 검수한 결과 이 화면들에 문제가 {0}건 있어요 ({1}). 검수 탭에서 확인하세요.	ツールが直接チェックした結果、この画面に問題が {0} 件あります（{1}）。チェックタブで確認してね。
+The tool's own check found no problems on these screens.	툴이 직접 검수한 결과 이 화면들에 문제가 없어요.	ツールが直接チェックした結果、この画面に問題はありません。

@@ -250,6 +250,7 @@ Without `-All`, the list has the root's direct children, plus the blocks inside 
 |---|---|
 | `OUT_OF_SCREEN` | The block leaves the screen. |
 | `OVERLAP` | Two blocks overlap. A block fully inside another is ignored only if it is also inside it in the portrait (base) layout, because that is intentional layering. |
+| `BLOCKED_INPUT` | Another graphic with Raycast Target is drawn over the center of an interactable Selectable, so the press does not reach it. A full-screen backdrop above the button is not counted. Move the covering block (the first path). |
 | `OUTSIDE_SAFE_AREA` | A button or other Selectable is under a notch or home indicator. A backdrop button covering the whole screen is ignored. |
 | `TEXT_OUTSIDE_SAFE_AREA` | Weak warning: text (not in a button) is under a notch or home indicator. It may be decoration; fix it if it must be readable. |
 | `HIDDEN_OUT_OF_SCREEN` | Something inside a hidden panel (Canvas off, or a large object saved turned off) leaves the screen once the game shows it. Place that block or its panel. |

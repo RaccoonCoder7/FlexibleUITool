@@ -285,6 +285,8 @@ namespace FlexibleUITool.EditorTools
                         GUILayout.Label(FlexibleAiRun.Summary, FlexibleGui.WrapLabel);
                         if (!string.IsNullOrEmpty(FlexibleAiRun.Usage))
                             GUILayout.Label(FlexibleAiRun.Usage, EditorStyles.wordWrappedMiniLabel);
+                        if (state == FlexibleAiRun.State.Succeeded && !string.IsNullOrEmpty(FlexibleAiRun.CheckResult))
+                            EditorGUILayout.HelpBox(FlexibleAiRun.CheckResult, FlexibleAiRun.RemainingIssues > 0 ? MessageType.Warning : MessageType.Info);
                         if (state == FlexibleAiRun.State.Succeeded)
                             GUILayout.Label(T("Check each screen with the screen buttons. Fix anything by hand and save, or undo everything the AI did."), EditorStyles.wordWrappedMiniLabel);
                         using (new EditorGUILayout.HorizontalScope())

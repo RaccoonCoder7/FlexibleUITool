@@ -185,6 +185,14 @@ namespace FlexibleUITool
             return Mathf.Pow(2f, Mathf.Lerp(Mathf.Log(width, 2f), Mathf.Log(height, 2f), match));
         }
 
+        public bool SameAs(in FlexibleCanvasRule other)
+        {
+            if (reference != other.reference || keepsBaseRule != other.keepsBaseRule)
+                return false;
+            return !keepsBaseRule || (baseMode == other.baseMode && matchMode == other.matchMode && unit == other.unit
+                && Mathf.Approximately(scaleFactor, other.scaleFactor) && Mathf.Approximately(match, other.match) && Mathf.Approximately(fallbackDpi, other.fallbackDpi));
+        }
+
         public Vector2 GetLogicalSize(Vector2 screen, bool baseScreen)
         {
             float scale = GetScale(screen, baseScreen);

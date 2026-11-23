@@ -334,7 +334,7 @@ namespace FlexibleUITool.EditorTools
             if (row == null)
                 return cell.issues;
             var onBase = new HashSet<string>(row.cells.Where(c => c.profile.id == baseId).SelectMany(c => c.issues).Select(Key));
-            return cell.issues.Where(i => !onBase.Contains(Key(i))).ToList();
+            return cell.issues.Where(i => FlexibleIssue.AlwaysShown(i.code) || !onBase.Contains(Key(i))).ToList();
         }
 
         private static string Key(FlexibleIssue issue) => issue.code + "|" + string.Join("|", issue.blocks);

@@ -25,6 +25,7 @@ namespace FlexibleUITool.EditorTools
                 {
                     case "OUT_OF_SCREEN": return F("Out of screen: {0}", Name(0));
                     case "OVERLAP": return F("Overlap: {0} ↔ {1}", Name(0), Name(1));
+                    case "BLOCKED_INPUT": return F("Cannot be pressed: {0} covers {1}", Name(0), Name(1));
                     case "OUTSIDE_SAFE_AREA": return F("Control outside SafeArea: {0}", Name(0));
                     case "TEXT_OUTSIDE_SAFE_AREA": return F("Text outside SafeArea (check it can be read): {0}", Name(0));
                     case "HIDDEN_OUT_OF_SCREEN": return F("Out of screen when shown: {0}", Name(0));
@@ -44,6 +45,7 @@ namespace FlexibleUITool.EditorTools
             {
                 case "OUT_OF_SCREEN": return T("Out of screen");
                 case "OVERLAP": return T("Overlap");
+                case "BLOCKED_INPUT": return T("Button covered");
                 case "OUTSIDE_SAFE_AREA": return T("Control outside SafeArea");
                 case "TEXT_OUTSIDE_SAFE_AREA": return T("Text outside SafeArea");
                 case "HIDDEN_OUT_OF_SCREEN": return T("Out of screen when shown");
@@ -61,10 +63,16 @@ namespace FlexibleUITool.EditorTools
             return code == "TEXT_OUTSIDE_SAFE_AREA";
         }
 
+        // 세로 화면에도 같은 문제가 있어도 그 화면에서 숨기지 않는 것 (누를 수 없는 버튼은 게임을 막는다)
+        public static bool AlwaysShown(string code)
+        {
+            return code == "BLOCKED_INPUT";
+        }
+
         // 화면에 보이는 블록만 보는 기존 검사가 놓치던 것 (숨긴 패널·뒤집힌 크기·목록 잘림·다른 프리팹 자리)
         public static bool IsExtra(string code)
         {
-            return code != "OUT_OF_SCREEN" && code != "OVERLAP" && code != "OUTSIDE_SAFE_AREA" && code != "TEXT_OUTSIDE_SAFE_AREA";
+            return code != "OUT_OF_SCREEN" && code != "OVERLAP" && code != "BLOCKED_INPUT" && code != "OUTSIDE_SAFE_AREA" && code != "TEXT_OUTSIDE_SAFE_AREA";
         }
 
         // 관련 블록 이름 (겹침이면 「A ↔ B」)
@@ -353,9 +361,99 @@ namespace FlexibleUITool.EditorTools
                     issues.Add(Issue("TEXT_OUTSIDE_SAFE_AREA", root, rt));
             }
 
+            CollectBlockedInput(root, rootRect, issues);
             CollectReserved(root, blocks, issues);
             CollectHiddenAndCollapsed(root, issues);
             return FilterIssues(root, issues);
+        }
+
+        // 버튼 가운데를 그 위의 다른 그림이 덮어 눌리지 않는 경우.
+        // 화면 전체로 늘어난 층(막·팝업·안내 오버레이)이 버튼 위에 있으면 일부러 막은 것이라 보지 않는다
+        private void CollectBlockedInput(RectTransform root, Rect screen, List<FlexibleIssue> issues)
+        {
+            Dictionary<Transform, long> drawKeys = DrawKeys(root);
+            var hits = new List<(Graphic graphic, Rect rect, long key)>();
+            foreach (Graphic graphic in instance.GetComponentsInChildren<Graphic>(false))
+            {
+                if (graphic.enabled && graphic.raycastTarget)
+                    hits.Add((graphic, GetRectInRoot(root, graphic.rectTransform), drawKeys[graphic.transform]));
+            }
+
+            foreach (Selectable selectable in instance.GetComponentsInChildren<Selectable>(false))
+            {
+                if (!selectable.enabled || !selectable.interactable)
+                    continue;
+                Transform button = selectable.transform;
+                Vector2 point = GetRectInRoot(root, (RectTransform)button).center;
+                if (!screen.Contains(point))
+                    continue;
+
+                Graphic top = null;
+                long topKey = long.MinValue, ownKey = long.MinValue;
+                var atPoint = new List<(Graphic graphic, long key)>();
+                foreach ((Graphic graphic, Rect rect, long key) hit in hits)
+                {
+                    if (!hit.rect.Contains(point) || !ReceivesRaycast(hit.graphic, root, point))
+                        continue;
+                    atPoint.Add((hit.graphic, hit.key));
+                    if (hit.key > topKey)
+                    {
+                        top = hit.graphic;
+                        topKey = hit.key;
+                    }
+                    if (hit.graphic.transform.IsChildOf(button) && hit.key > ownKey)
+                        ownKey = hit.key;
+                }
+                // 자기 그림이 그 자리에 없으면(마스크로 잘림 등) 원래 누를 수 없는 자리다
+                if (ownKey == long.MinValue || top.transform.IsChildOf(button) || button.IsChildOf(top.transform))
+                    continue;
+                if (atPoint.Exists(h => h.key > ownKey && IsFullScreenLayer(h.graphic.transform, button, root, screen)))
+                    continue;
+                issues.Add(Issue("BLOCKED_INPUT", root, top.rectTransform, (RectTransform)button));
+            }
+        }
+
+        // 그림에서 버튼과의 공통 부모 아래까지 올라가며 화면 전체로 늘어난 층이 있는지
+        private static bool IsFullScreenLayer(Transform covering, Transform button, RectTransform root, Rect screen)
+        {
+            for (Transform t = covering; t != null && !button.IsChildOf(t); t = t.parent)
+            {
+                if (t is RectTransform rt && IsFullStretch(rt) && Contains(GetRectInRoot(root, rt), screen))
+                    return true;
+            }
+            return false;
+        }
+
+        // CanvasGroup·마스크·꺼진 Canvas까지 따져 이 자리의 입력을 받는지
+        private static bool ReceivesRaycast(Graphic graphic, RectTransform root, Vector2 point)
+        {
+            bool groups = true;
+            for (Transform t = graphic.transform; t != null; t = t == root ? null : t.parent)
+            {
+                if (groups)
+                {
+                    foreach (CanvasGroup group in t.GetComponents<CanvasGroup>())
+                    {
+                        if (!group.enabled)
+                            continue;
+                        if (!group.blocksRaycasts)
+                            return false;
+                        if (group.ignoreParentGroups)
+                            groups = false;
+                    }
+                }
+                var canvas = t.GetComponent<Canvas>();
+                if (canvas != null && !canvas.enabled)
+                    return false;
+                if (t != graphic.transform && t is RectTransform rt)
+                {
+                    var mask = t.GetComponent<Mask>();
+                    var rectMask = t.GetComponent<RectMask2D>();
+                    if (((mask != null && mask.enabled) || (rectMask != null && rectMask.enabled)) && !GetRectInRoot(root, rt).Contains(point))
+                        return false;
+                }
+            }
+            return true;
         }
 
         // ───────── 잘못 잡히는 문제 거르기 ─────────

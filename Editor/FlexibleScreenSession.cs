@@ -742,7 +742,28 @@ namespace FlexibleUITool.EditorTools
                 if (saved != null)
                     ApplySaved(saved, link.target);
             }
+            RestoreRoot(stage);
             RestoreNested(stage);
+        }
+
+        // 프리팹 루트의 자리는 그것을 담은 쪽(씬·바깥 프리팹)이 정한다. 세로가 아닌 화면에서 옮긴 값이 세로 기준으로 저장되지 않게 되돌린다
+        private static void RestoreRoot(PrefabStage stage)
+        {
+            GameObject root = stage.prefabContentsRoot;
+            var rootRect = root.transform as RectTransform;
+            GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(stage.assetPath);
+            if (rootRect == null || asset == null || !(asset.transform is RectTransform savedRect) || root.GetComponent<Canvas>() != null)
+                return;
+
+            FlexibleRectState saved = FlexibleRectState.Capture(savedRect);
+            FlexibleRectState now = FlexibleRectState.Capture(rootRect);
+            // 내용에 맞춰 크기가 정해지는 루트는 크기 차이를 사용자의 변경으로 보지 않는다
+            if (root.GetComponent<ContentSizeFitter>() != null || root.GetComponent<LayoutGroup>() != null)
+                now.sizeDelta = saved.sizeDelta;
+            if (now.Approximately(saved, 0.01f))
+                return;
+            saved.ApplyTo(rootRect);
+            SceneView.lastActiveSceneView?.ShowNotification(new GUIContent(T("The root of this prefab is placed by whatever holds it, so moving it on this screen was not saved.")), 4.0);
         }
 
         private static void ApplySaved(RectTransform saved, RectTransform target)
@@ -1102,10 +1123,11 @@ namespace FlexibleUITool.EditorTools
             }
             // 이 프리팹을 실제로 그리는 캔버스와 같은 단위로 편집한다 (모르면 프로젝트 기준)
             FlexibleCanvasRule rule = FlexibleSettingsUtility.FindCanvasRule(root, settings);
-            if (rule.valid)
+            if (!rule.valid)
+                rule = new FlexibleCanvasRule { valid = true, reference = reference, scaleFactor = 1f, fallbackDpi = 96f };
+            // Scene 뷰가 그릴 때마다 불리므로 규칙이 달라졌을 때만 고친다
+            if (own == null || !scaler.Rule.SameAs(rule))
                 scaler.UseRule(rule, settings);
-            else
-                scaler.referenceResolution = reference;
         }
     }
 }

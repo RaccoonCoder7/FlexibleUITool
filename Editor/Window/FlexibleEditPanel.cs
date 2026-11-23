@@ -522,6 +522,59 @@ namespace FlexibleUITool.EditorTools
 
         private static bool IsGroup(List<RectTransform> targets) => moveTogether && targets.Count > 1;
 
+        // 묶음을 마지막으로 놓은 칸 (묶음은 칸 안에서 줄어들어 실제 영역만으로는 입력한 칸을 알 수 없다)
+        private static string groupCellKey;
+        private static FlexibleCell groupCell;
+
+        private static string GroupKey(FlexibleWorkspace session, List<RectTransform> targets)
+        {
+            return session.profileId + "|" + string.Join(",", targets.Select(t => t.GetInstanceID()).OrderBy(id => id));
+        }
+
+        private static void RememberGroupCell(FlexibleWorkspace session, List<RectTransform> targets, FlexibleCell cell)
+        {
+            groupCellKey = GroupKey(session, targets);
+            groupCell = cell;
+        }
+
+        private FlexibleCell GetGroupCell(FlexibleGridContext context, FlexibleWorkspace session, List<RectTransform> targets)
+        {
+            if (groupCellKey == GroupKey(session, targets))
+                return groupCell.Clamped(context.grid);
+            Rect union = UnionInRoot(context.root, targets);
+            Rect area = context.GetArea(insideSafeArea);
+            if (FlexibleGridMath.TryGetCell(area, context.grid, union.min + Vector2.one, out Vector2Int a)
+                && FlexibleGridMath.TryGetCell(area, context.grid, union.max - Vector2.one, out Vector2Int b))
+                return FlexibleCell.FromCorners(a, b);
+            return new FlexibleCell(0, 0, context.grid.columns, context.grid.rows);
+        }
+
+        // 묶음도 칸 번호로 놓을 수 있다
+        private void DrawGroupCells(FlexibleGridContext context, FlexibleWorkspace session, List<RectTransform> targets)
+        {
+            FlexibleCell cell = GetGroupCell(context, session, targets);
+            float labelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = FlexibleGui.FitLabels(T("Column"), T("Row"), T("Width (cells)"), T("Height (cells)"));
+            EditorGUI.BeginChangeCheck();
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                cell.column = EditorGUILayout.DelayedIntField(T("Column"), cell.column);
+                cell.row = EditorGUILayout.DelayedIntField(T("Row"), cell.row);
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                cell.width = EditorGUILayout.DelayedIntField(T("Width (cells)"), cell.width);
+                cell.height = EditorGUILayout.DelayedIntField(T("Height (cells)"), cell.height);
+            }
+            bool changed = EditorGUI.EndChangeCheck();
+            EditorGUIUtility.labelWidth = labelWidth;
+            if (!changed)
+                return;
+            cell = cell.Clamped(context.grid);
+            RememberGroupCell(session, targets, cell);
+            PlaceGroupInCells(context, session, targets, FlexibleGridMath.GetSlotRect(context.GetArea(insideSafeArea), context.grid, cell));
+        }
+
         // 칸 영역(root 좌표) 안에 묶음을 모양 그대로 가장 크게 (세로 화면 크기보다 크게는 하지 않는다)
         private static void PlaceGroupInCells(FlexibleGridContext context, FlexibleWorkspace session, List<RectTransform> targets, Rect cells)
         {
@@ -537,6 +590,7 @@ namespace FlexibleUITool.EditorTools
         private static void PinGroup(FlexibleGridContext context, FlexibleWorkspace session, List<RectTransform> targets, string pin)
         {
             FlexibleSpecService.TryParsePin(pin, out FlexibleAxisMode modeX, out FlexibleAxisMode modeY);
+            groupCellKey = null;
             Rect area = context.GetArea(true);
             PlaceGroup(context, session, targets, (union, screen) =>
             {
@@ -570,10 +624,17 @@ namespace FlexibleUITool.EditorTools
                 }
                 if (members.Count == 0)
                     return;
-                Rect union = members[0].rect;
+                // 버튼 아래 글자처럼 밖으로 나가 보이는 자식도 묶음 크기에 넣는다 (칸 밖으로 삐져나오지 않게)
+                Rect union = sizes.GetVisibleRect(members[0].path) ?? members[0].rect;
                 foreach (var m in members)
-                    union = Rect.MinMaxRect(Mathf.Min(union.xMin, m.rect.xMin), Mathf.Min(union.yMin, m.rect.yMin), Mathf.Max(union.xMax, m.rect.xMax), Mathf.Max(union.yMax, m.rect.yMax));
+                {
+                    Rect visible = sizes.GetVisibleRect(m.path) ?? m.rect;
+                    union = Rect.MinMaxRect(Mathf.Min(union.xMin, visible.xMin), Mathf.Min(union.yMin, visible.yMin), Mathf.Max(union.xMax, visible.xMax), Mathf.Max(union.yMax, visible.yMax));
+                }
                 Rect where = goal(union, sizes.Screen);
+                // 화면 크기가 아직 정해지지 않았으면(칸이 0 이하) 놓지 않는다 (배율이 뒤집힌다)
+                if (where.width <= 0f || where.height <= 0f)
+                    return;
                 float s = where.width / Mathf.Max(1f, union.width);
 
                 Undo.IncrementCurrentGroup();
@@ -1495,11 +1556,27 @@ namespace FlexibleUITool.EditorTools
                     if (sceneLoose.Count > 0)
                     {
                         GUILayout.Label(T("UI placed straight in the scene (not a prefab). Checked ones are saved as new prefabs and made Flexible UI; they look the same as now:"), EditorStyles.wordWrappedMiniLabel);
-                        foreach (RectTransform loose in sceneLoose)
+                        foreach (IGrouping<Transform, RectTransform> group in sceneLoose.GroupBy(r => IsTopCanvas(r) ? r : r.parent).ToList())
                         {
-                            int id = loose.GetInstanceID();
-                            bool on = !looseChoice.TryGetValue(id, out bool chosen) || chosen;
-                            looseChoice[id] = EditorGUILayout.ToggleLeft(loose.parent.name + "/" + loose.name, on);
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                GUILayout.Label(group.Key.name, EditorStyles.miniBoldLabel);
+                                GUILayout.FlexibleSpace();
+                                bool whole = UsesWholeCanvas(group.Key);
+                                int unit = EditorGUILayout.Popup(whole ? 0 : 1, new[] { T("One prefab"), T("One per child") }, GUILayout.Width(120f));
+                                if (unit != (whole ? 0 : 1))
+                                {
+                                    canvasUnit[group.Key.GetInstanceID()] = unit == 0;
+                                    sceneCanvases = null;
+                                    GUIUtility.ExitGUI();
+                                }
+                            }
+                            foreach (RectTransform loose in group)
+                            {
+                                int id = loose.GetInstanceID();
+                                bool on = !looseChoice.TryGetValue(id, out bool chosen) || chosen;
+                                looseChoice[id] = EditorGUILayout.ToggleLeft(IsTopCanvas(loose) ? F("{0} (whole canvas)", loose.name) : loose.parent.name + "/" + loose.name, on);
+                            }
                         }
                     }
                 }
@@ -1549,15 +1626,53 @@ namespace FlexibleUITool.EditorTools
                         if (canvas.renderMode == RenderMode.WorldSpace || (t.parent != null && t.parent.GetComponentInParent<Canvas>(true) != null)
                             || PrefabUtility.IsPartOfAnyPrefab(canvas.gameObject))
                             continue;
-                        foreach (Transform child in t)
-                        {
-                            if (child is RectTransform rt && IsLooseUi(rt))
-                                result.Add(rt);
-                        }
+                        List<RectTransform> children = t.Cast<Transform>().OfType<RectTransform>().Where(IsLooseUi).ToList();
+                        if (children.Count == 0)
+                            continue;
+                        // 한 화면의 조각들이면 캔버스 통째로, 화면들을 담은 캔버스면 화면마다 프리팹으로
+                        if (UsesWholeCanvas(t))
+                            result.Add((RectTransform)t);
+                        else
+                            result.AddRange(children);
                     }
                 }
             }
             return result;
+        }
+
+        // 캔버스마다 사용자가 고른 변환 단위 (true = 캔버스 통째로). 고르지 않았으면 구조를 보고 정한다
+        private static readonly Dictionary<int, bool> canvasUnit = new Dictionary<int, bool>();
+
+        public static bool UsesWholeCanvas(Transform canvas)
+        {
+            return canvasUnit.TryGetValue(canvas.GetInstanceID(), out bool whole) ? whole : IsOneScreenCanvas(canvas);
+        }
+
+        public static void SetWholeCanvas(Transform canvas, bool whole)
+        {
+            canvasUnit[canvas.GetInstanceID()] = whole;
+        }
+
+        // 직계 자식의 과반이 화면 일부만 차지하면(버튼·로고 등) 캔버스 하나가 한 화면이다.
+        // 화면을 채우는 자식과 크기 0인 묶음(자식을 모아 둔 화면)은 그 자체가 한 화면이다
+        public static bool IsOneScreenCanvas(Transform canvas)
+        {
+            int total = 0, partial = 0;
+            foreach (Transform child in canvas)
+            {
+                if (!(child is RectTransform rt) || rt.CompareTag("EditorOnly") || rt.gameObject.hideFlags != HideFlags.None)
+                    continue;
+                total++;
+                bool pointGroup = rt.anchorMin == rt.anchorMax && rt.sizeDelta.sqrMagnitude < 1f && rt.childCount > 0;
+                if (!pointGroup && !IsFullScreen(rt))
+                    partial++;
+            }
+            return partial * 2 > total;
+        }
+
+        private static bool IsTopCanvas(Transform t)
+        {
+            return t.GetComponent<Canvas>() != null && (t.parent == null || t.parent.GetComponentInParent<Canvas>(true) == null);
         }
 
         private static bool IsLooseUi(RectTransform rt)
@@ -1571,12 +1686,16 @@ namespace FlexibleUITool.EditorTools
         // 씬 UI를 프리팹 파일로 저장하고 씬 오브젝트를 그 프리팹으로 잇는다. 모습은 그대로 둔다
         public static string SaveAsPrefab(RectTransform rt, string folder)
         {
-            MakeScreenContainer(rt);
+            bool wholeCanvas = IsTopCanvas(rt);
+            if (!wholeCanvas)
+                MakeScreenContainer(rt);
             FlexibleSettingsUtility.EnsureFolder(folder);
             // 여러 캔버스에 같은 이름(Background 등)이 흔하므로 파일 이름 앞에 캔버스 이름을 붙여 구분한다
             string name = rt.name;
             Canvas canvas = rt.parent != null ? rt.parent.GetComponentInParent<Canvas>(true) : null;
-            if (canvas != null && !name.StartsWith(canvas.rootCanvas.name))
+            if (wholeCanvas)
+                name = rt.gameObject.scene.name + "_" + name;
+            else if (canvas != null && !name.StartsWith(canvas.rootCanvas.name))
                 name = canvas.rootCanvas.name + "_" + name;
             name = string.Join("_", name.Split(Path.GetInvalidFileNameChars())).Trim();
             string path = AssetDatabase.GenerateUniqueAssetPath(folder + "/" + (name.Length > 0 ? name : "UI") + ".prefab");
@@ -1796,8 +1915,8 @@ namespace FlexibleUITool.EditorTools
             }
             if (newInstances.Count > 0)
             {
-                // 새 프리팹은 캔버스 안에 있다. 골라 두었으니 바로 아래 열기 버튼이 나온다
-                done += "\n" + T("The new prefabs are inside the canvas and selected in the Hierarchy (the canvas itself stays as it is). Press Open below to make their square and landscape layouts.");
+                // 골라 두었으니 바로 아래 열기 버튼이 나온다
+                done += "\n" + T("The new prefabs are selected in the Hierarchy. Press Open below to make their square and landscape layouts.");
             }
             else if (made > 0)
                 done += "\n" + T("The prefabs that became Flexible UI are selected in the Hierarchy. Press Open below to make their square and landscape layouts.");
@@ -2677,7 +2796,9 @@ namespace FlexibleUITool.EditorTools
                     T("The selected objects move and shrink as one group and keep their places to each other, like pieces of one popup. Drag over the cells in the Scene view or use Pin to.")), moveTogether);
                 if (moveTogether)
                 {
-                    DrawGroupPins(context, session, inputs.Select(i => i.target).ToList());
+                    List<RectTransform> group = inputs.Select(i => i.target).ToList();
+                    DrawGroupCells(context, session, group);
+                    DrawGroupPins(context, session, group);
                     return;
                 }
             }
@@ -3171,6 +3292,7 @@ namespace FlexibleUITool.EditorTools
                         e.Use();
                         if (group != null)
                         {
+                            RememberGroupCell(session, group, dragCell.Clamped(grid));
                             PlaceGroupInCells(context, session, group, FlexibleGridMath.GetSlotRect(area, grid, dragCell.Clamped(grid)));
                             break;
                         }

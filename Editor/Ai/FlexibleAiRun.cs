@@ -91,6 +91,9 @@ namespace FlexibleUITool.EditorTools
         public static string Status { get; private set; } = "";
         public static string LastThought { get; private set; } = "";
         public static string Summary { get; private set; } = "";
+        // AI의 말과 별개로 툴이 결과를 직접 검수한 내용
+        public static string CheckResult { get; private set; } = "";
+        public static int RemainingIssues { get; private set; }
         public static int Steps { get; private set; }
         public static double LastActivityAt { get; private set; }
 
@@ -172,6 +175,8 @@ namespace FlexibleUITool.EditorTools
             resultIsError = false;
             canceling = false;
             Summary = "";
+            CheckResult = "";
+            RemainingIssues = 0;
             LastThought = "";
             Steps = 0;
             Status = T("Starting Claude Code...");
@@ -385,8 +390,74 @@ namespace FlexibleUITool.EditorTools
 
             WriteLog();
             AssetDatabase.Refresh();
+            if (Current == State.Succeeded)
+                CheckAfterRun();
             ReopenPrefab();
             Changed?.Invoke();
+        }
+
+        private static void CheckAfterRun()
+        {
+            try
+            {
+                (RemainingIssues, CheckResult) = CountRemaining(PrefabPath, targetProfiles, editingView);
+            }
+            catch (Exception e)
+            {
+                RemainingIssues = 0;
+                CheckResult = "";
+                Debug.LogWarning("[FlexibleUITool] Could not check the AI result: " + e.Message);
+            }
+        }
+
+        // 만든 화면들을 검수 탭과 같은 기기·경계 비율로 본다. 세로 화면에 이미 있던 문제와 약한 경고는 세지 않는다
+        internal static (int count, string text) CountRemaining(string prefabPath, List<string> profiles, Dictionary<string, bool> view)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            FlexibleLayout layout = asset != null ? asset.GetComponent<FlexibleLayout>() : null;
+            if (layout == null || layout.Settings == null)
+                return (0, "");
+
+            FlexibleProfileSettings settings = layout.Settings;
+            int total = 0;
+            var parts = new List<string>();
+            using (var renderer = new FlexiblePreviewRenderer())
+            {
+                renderer.Dirty = true;
+                HashSet<string> onBase = CollectIssueKeys(renderer, asset, settings, settings.BaseProfileId, view);
+                foreach (string id in profiles)
+                {
+                    HashSet<string> keys = CollectIssueKeys(renderer, asset, settings, id, view);
+                    keys.RemoveWhere(k => onBase.Contains(k) && !FlexibleIssue.AlwaysShown(k.Substring(0, k.IndexOf('|'))));
+                    if (keys.Count == 0)
+                        continue;
+                    total += keys.Count;
+                    parts.Add(FlexibleEditPanel.Name(settings.Find(id)) + " " + keys.Count);
+                }
+            }
+            return (total, total > 0
+                ? F("The tool's own check found {0} problems on these screens ({1}). See the Check tab.", total, string.Join(" · ", parts))
+                : T("The tool's own check found no problems on these screens."));
+        }
+
+        private static HashSet<string> CollectIssueKeys(FlexiblePreviewRenderer renderer, GameObject asset, FlexibleProfileSettings settings, string profileId, Dictionary<string, bool> view)
+        {
+            var keys = new HashSet<string>();
+            int index = settings.IndexOf(profileId);
+            if (index < 0)
+                return keys;
+            var screens = settings.PreviewPresets.Where(p => settings.SelectProfile(p.Aspect, -1) == index).Select(p => (aspect: p.Aspect, safe: p.NormalizedSafeArea)).ToList();
+            screens.AddRange(settings.GetEdgeAspects(index).Select(a => (aspect: a, safe: settings.GetSafeArea(index))));
+            foreach (var screen in screens)
+            {
+                renderer.Prepare(asset, profileId, FlexiblePreviewRenderer.GetLogicalSize(asset, settings, profileId, screen.aspect), screen.safe, null, view);
+                foreach (FlexibleIssue issue in renderer.CollectIssueList(screen.safe))
+                {
+                    if (!FlexibleIssue.IsWeak(issue.code))
+                        keys.Add(issue.code + "|" + string.Join("|", issue.blocks));
+                }
+            }
+            return keys;
         }
 
         // 실행마다 Claude Code의 결과 줄(토큰·비용·턴 수)을 남겨 사용량을 비교할 수 있게 한다
@@ -634,6 +705,7 @@ If you get `EDITOR_NOT_RUNNING`, `EDITOR_PLAYING` or `PREFAB_OPEN`, stop and say
 
 Your last message is shown to the user as it is. It must contain only the summary, written entirely in {language} (no other language, no status lines before it):
 one plain sentence per screen saying where the main blocks went, then any problem that is left.{(note == null ? "" : " Also say in one sentence how you followed the user's extra instructions.")}
+Say that no problem is left only if the last `check` reported none on the screens you made.
 No JSON, no file paths, no cell numbers, no mode names. At most 6 lines.
 ";
         }

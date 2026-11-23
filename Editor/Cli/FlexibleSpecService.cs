@@ -459,6 +459,19 @@ namespace FlexibleUITool.EditorTools
                 return new Rect(r.x - root.rect.xMin, r.y - root.rect.yMin, r.width, r.height);
             }
 
+            // 자신과 밖으로 나가 보이는 자식(버튼 아래 글자 등)까지 덮는 영역. 화면 왼쪽 아래가 (0,0)
+            public Rect? GetVisibleRect(string path)
+            {
+                var target = FlexiblePathUtility.FindByPath(root, path) as RectTransform;
+                if (target == null)
+                    return null;
+                Rect local = FlexibleProfileState.VisibleBounds(target);
+                Vector2 a = root.InverseTransformPoint(target.TransformPoint(local.min));
+                Vector2 b = root.InverseTransformPoint(target.TransformPoint(local.max));
+                return Rect.MinMaxRect(Mathf.Min(a.x, b.x) - root.rect.xMin, Mathf.Min(a.y, b.y) - root.rect.yMin,
+                    Mathf.Max(a.x, b.x) - root.rect.xMin, Mathf.Max(a.y, b.y) - root.rect.yMin);
+            }
+
             public void Dispose() => renderer.Dispose();
         }
 

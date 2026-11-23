@@ -193,6 +193,18 @@ namespace FlexibleUITool
             return new Vector2(2f * Mathf.Max(-min.x, max.x), 2f * Mathf.Max(-min.y, max.y));
         }
 
+        // 블록 자신과 그 밖으로 나가 보이는 자식까지 덮는 영역 (블록 좌표)
+        public static Rect VisibleBounds(RectTransform target)
+        {
+            Rect own = target.rect;
+            Vector2 min = own.min;
+            Vector2 max = own.max;
+            bool outside = false;
+            foreach (Transform child in target)
+                Grow(target, child as RectTransform, ref min, ref max, ref outside);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
         private static void Grow(RectTransform target, RectTransform rt, ref Vector2 min, ref Vector2 max, ref bool outside)
         {
             if (rt == null || !rt.gameObject.activeSelf)
