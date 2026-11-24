@@ -139,6 +139,8 @@ namespace FlexibleUITool.EditorTools
             {
                 var presetNames = new List<string> { T("Screen being edited"), T("Free (window size)") };
                 presetNames.AddRange(settings.PreviewPresets.Select(p => T(p.name)));
+                if (rotated && presetIndex >= 0 && presetIndex < settings.PreviewPresets.Count)
+                    presetNames[presetIndex + 2] = RotatedName(settings, settings.PreviewPresets[presetIndex]);
                 presetIndex = EditorGUILayout.Popup(presetIndex + 2, presetNames.ToArray(), EditorStyles.toolbarPopup, GUILayout.Width(150f)) - 2;
                 using (new EditorGUI.DisabledScope(presetIndex < 0))
                     rotated = GUILayout.Toggle(rotated, T("Rotate"), EditorStyles.toolbarButton, GUILayout.Width(52f));
@@ -158,6 +160,13 @@ namespace FlexibleUITool.EditorTools
                 if (GUILayout.Button(T("Refresh"), EditorStyles.toolbarButton, GUILayout.Width(60f)))
                     MarkDirty();
             }
+        }
+
+        // 돌린 모양과 같은 기기가 목록에 있으면 그 이름으로 보여 준다
+        private static string RotatedName(FlexibleProfileSettings settings, FlexiblePreviewPreset preset)
+        {
+            FlexiblePreviewPreset same = settings.PreviewPresets.FirstOrDefault(p => Mathf.Abs(p.Aspect - 1f / preset.Aspect) < 0.01f);
+            return same != null ? T(same.name) : F("{0} (rotated)", T(preset.name));
         }
 
         // 프리팹 모드에서 보고 있는 화면은 편집 중인 내용 그대로, 다른 화면은 기준 화면 편집 중이면 내용에 그 화면 기록을 적용해서,

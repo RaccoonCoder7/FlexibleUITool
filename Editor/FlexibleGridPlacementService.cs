@@ -123,7 +123,6 @@ namespace FlexibleUITool.EditorTools
                 fitAnchorMax = area.anchorMax,
                 fitMaxScale = maxScale,
             });
-            EditorUtility.SetDirty(workspace);
             return true;
         }
 
@@ -226,7 +225,6 @@ namespace FlexibleUITool.EditorTools
                 placement.result = expected;
                 RecordPrefabInstance(placement.target);
             }
-            EditorUtility.SetDirty(workspace);
         }
 
         // 역할이 있고 그리드로 배치한 블록이 슬롯이 된다 (손으로 고친 만큼은 보정으로 저장, 역할당 하나). 빠진 블록은 이유를 남긴다

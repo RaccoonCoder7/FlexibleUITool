@@ -158,7 +158,6 @@ namespace FlexibleUITool.EditorTools
 
             string model = DrawChoice(T("Model"), ModelKey, ModelValues, ModelLabels, "sonnet");
             string effort = DrawChoice(T("Effort"), EffortKey, EffortValues, EffortLabels, "medium");
-            GUILayout.Label(T("Smarter models and higher effort give better layouts but take longer and use more of your Claude usage."), EditorStyles.wordWrappedMiniLabel);
             string note = DrawNote(stage);
 
             using (new EditorGUI.DisabledScope(profiles.Count == 0))
@@ -229,7 +228,7 @@ namespace FlexibleUITool.EditorTools
             noteScroll = EditorGUILayout.BeginScrollView(noteScroll, GUILayout.Height(54f));
             note = EditorGUILayout.TextArea(note, FlexibleGui.WrapTextArea, GUILayout.ExpandHeight(true));
             EditorGUILayout.EndScrollView();
-            GUILayout.Label(T("Leave it empty and the AI decides by itself. Example: \"In landscape, put the menu buttons on the right. Hide the banner on the square screen.\""), EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Label(T("Example: in landscape, put the menu buttons on the right."), EditorStyles.wordWrappedMiniLabel);
             EditorPrefs.SetString(key, note);
             return note;
         }
@@ -287,8 +286,6 @@ namespace FlexibleUITool.EditorTools
                             GUILayout.Label(FlexibleAiRun.Usage, EditorStyles.wordWrappedMiniLabel);
                         if (state == FlexibleAiRun.State.Succeeded && !string.IsNullOrEmpty(FlexibleAiRun.CheckResult))
                             EditorGUILayout.HelpBox(FlexibleAiRun.CheckResult, FlexibleAiRun.RemainingIssues > 0 ? MessageType.Warning : MessageType.Info);
-                        if (state == FlexibleAiRun.State.Succeeded)
-                            GUILayout.Label(T("Check each screen with the screen buttons. Fix anything by hand and save, or undo everything the AI did."), EditorStyles.wordWrappedMiniLabel);
                         using (new EditorGUILayout.HorizontalScope())
                         {
                             if (FlexibleAiRun.CanRevert && GUILayout.Button(T("Undo AI changes"), GUILayout.Height(24f))

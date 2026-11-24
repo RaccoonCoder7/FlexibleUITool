@@ -178,14 +178,6 @@ namespace FlexibleUITool.EditorTools
             DrawFrame(rect);
         }
 
-        public static void MarkRect(string id, Rect rect)
-        {
-            if (Highlight == id && Event.current.type == EventType.Repaint)
-                DrawFrame(rect);
-        }
-
-        public static bool IsMarked(string id) => Highlight == id;
-
         private static void DrawFrame(Rect rect)
         {
             float pulse = 0.55f + 0.45f * Mathf.Sin((float)EditorApplication.timeSinceStartup * 6f);

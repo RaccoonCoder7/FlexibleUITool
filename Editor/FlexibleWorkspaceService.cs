@@ -48,27 +48,6 @@ namespace FlexibleUITool.EditorTools
             return AssetDatabase.LoadAssetAtPath<GameObject>(path) != null;
         }
 
-        // 이미 있으면 그대로 열고, 없으면 최신 원본을 복사해 프로필 데이터를 적용한 뒤 연다
-        public static void OpenOrCreate(string sourcePath, string profileId)
-        {
-            string guid = AssetDatabase.AssetPathToGUID(sourcePath);
-            string workspacePath = GetWorkspacePath(guid, profileId);
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(workspacePath) == null)
-                Create(sourcePath, guid, profileId, workspacePath);
-
-            PrefabStageUtility.OpenPrefab(workspacePath);
-        }
-
-        public static bool IsSourceModified(string workspacePath)
-        {
-            FlexibleWorkspace workspace = LoadWorkspaceComponent(workspacePath);
-            if (workspace == null)
-                return false;
-
-            string sourcePath = AssetDatabase.GUIDToAssetPath(workspace.sourceGuid);
-            return !string.IsNullOrEmpty(sourcePath) && ComputeHash(sourcePath) != workspace.sourceHash;
-        }
-
         public static FlexibleWorkspace LoadWorkspaceComponent(string workspacePath)
         {
             GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(workspacePath);

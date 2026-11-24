@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.12]
+
+- An object only hidden with `View while editing` no longer counts as having its own layout on the screen.
+- After undoing a grid placement, the save button goes back to `Saved` when nothing is left to save.
+- With `Move them together` off, `Column` and `Row` move the selected objects by the same amount instead of piling them on one cell.
+- `Pin to` scales a single object down when it does not fit, like a group.
+- Preview: a rotated device shows the matching device name.
+- Check: `Only issues` is on by default, and thumbnails wrap to the window width instead of scrolling sideways.
+- The scene's UI prefab list shows repeated prefabs as one row with a count (`Score ×10`).
+- `View while editing` scrolls after 8 rows, and the problem boxes on a screen fold into one line with a count.
+- Shorter window text: removed explanations that repeat a label or the screen, and shortened long messages and tooltips. `SafeArea` is the one word used for it.
+- Removed unused code.
+
 ## [1.0.11]
 
 - `Move them together`: one Undo brings back every object. An object whose size did not change could keep its new position, and switching screens then saved it.

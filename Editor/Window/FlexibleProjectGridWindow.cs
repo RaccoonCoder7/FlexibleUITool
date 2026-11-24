@@ -38,7 +38,7 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
-            GUILayout.Label(T("Each screen has its own grid. Every prefab that does not use its own grid uses these, so a change here applies to all of them. Objects already placed do not move until you re-place them."), FlexibleGui.WrapLabel);
+            GUILayout.Label(T("Applies to every prefab without its own grid. Objects already placed stay until you re-place them."), FlexibleGui.WrapLabel);
             EditorGUILayout.Space(4f);
 
             for (int i = 0; i < settings.Profiles.Count; i++)

@@ -185,7 +185,16 @@ namespace FlexibleUITool.EditorTools
             RectTransform saved = FindSaved(stage, target);
             if (saved == null)
                 return FlexibleBlockStatus.NotSavedYet;
-            return FlexibleWorkspaceService.TryBuildState(target, saved, null, out _, out _) ? FlexibleBlockStatus.Own : FlexibleBlockStatus.SameAsBase;
+            if (!FlexibleWorkspaceService.TryBuildState(target, saved, null, out FlexibleProfileState state, out _))
+                return FlexibleBlockStatus.SameAsBase;
+            return IsViewOnly(GetSession(stage), target, saved, state) ? FlexibleBlockStatus.SameAsBase : FlexibleBlockStatus.Own;
+        }
+
+        // 편집용 보기로 켜고 끄기만 한 것 (저장되지 않으므로 이 화면의 배치로 치지 않는다)
+        private static bool IsViewOnly(FlexibleWorkspace session, RectTransform target, RectTransform saved, FlexibleProfileState state)
+        {
+            return session != null && session.FindView(target.gameObject) != null && state.controlActive && !state.controlLayoutGroup && !state.controlSizeFitter
+                && state.rect.Approximately(FlexibleRectState.Capture(saved), 0.01f);
         }
 
         // ───────── 화면 전환·저장 ─────────
@@ -469,9 +478,7 @@ namespace FlexibleUITool.EditorTools
                     continue;
                 if (FlexibleWorkspaceService.TryBuildState(link.target, saved, null, out FlexibleProfileState state, out _))
                 {
-                    bool viewOnly = session.FindView(link.target.gameObject) != null && state.controlActive && !state.controlLayoutGroup && !state.controlSizeFitter
-                        && state.rect.Approximately(FlexibleRectState.Capture(saved), 0.01f);
-                    if (!viewOnly)
+                    if (!IsViewOnly(session, link.target, saved, state))
                         result.Add(link.target);
                 }
                 else if (session.FindPlacement(link.target) != null)

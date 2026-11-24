@@ -70,12 +70,6 @@ namespace FlexibleUITool.EditorTools
         }
 
         // 칸 영역을 대상의 부모 좌표계로 옮겨 축별 모드대로 앵커·피벗·크기를 정한다
-        public static void ApplySlot(RectTransform target, RectTransform root, Rect slotInRoot, FlexibleAxisMode modeX, FlexibleAxisMode modeY)
-        {
-            if (TryComputeSlotState(target, root, slotInRoot, modeX, modeY, out FlexibleRectState state))
-                state.ApplyTo(target);
-        }
-
         public static bool TryComputeSlotState(RectTransform target, RectTransform root, Rect slotInRoot, FlexibleAxisMode modeX, FlexibleAxisMode modeY,
             out FlexibleRectState state)
         {

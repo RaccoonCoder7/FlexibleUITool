@@ -151,7 +151,7 @@ The manual is written in English for everyone; you explain it in the user's lang
 The user reviews in Unity, where the thumbnails are easier to read than images in chat.
 
 1. Run `review` (`-Prefab` if they named one, `-Folder` for a folder, nothing for every prefab). It opens the **Check** tab of the Flexible UI window and runs the check: one row per prefab, one thumbnail per device and per screen edge ratio, a red bar on thumbnails with problems.
-   - Tell the user to switch to Unity and look at the Check tab. Mention the `Only issues` toggle (in their UI language) to hide clean thumbnails.
+   - Tell the user to switch to Unity and look at the Check tab. It shows only screens with issues; turning off `Only issues` (in their UI language) shows every screen.
 2. Summarize the `review` result in plain words, grouped by prefab and device (it lists only screens with problems). Do not render images in chat unless the user asks.
 3. Turn their requests into a minimal spec patch and apply it right away. Run `review` again so the window refreshes, then report what changed in plain words.
 

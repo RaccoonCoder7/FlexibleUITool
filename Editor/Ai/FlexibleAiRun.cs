@@ -301,11 +301,9 @@ namespace FlexibleUITool.EditorTools
             {
                 resultLine = line;
                 // 구독으로 로그인했으면 금액은 API 요금으로 친 값일 뿐 따로 청구되지 않는다
-                Usage = data.usage == null ? "" : F("Tokens: new input {0:N0} · cache write {1:N0} · cache read {2:N0} · output {3:N0} · {4} turns",
-                    data.usage.input_tokens, data.usage.cache_creation_input_tokens, data.usage.cache_read_input_tokens, data.usage.output_tokens, data.num_turns)
-                    + "\n" + (FlexibleClaudeCode.UsesSubscription
-                        ? F("Counted in your Claude subscription usage, no separate charge (about ${0:0.00} at API prices)", data.total_cost_usd)
-                        : F("API price about ${0:0.00}", data.total_cost_usd));
+                Usage = data.usage == null ? "" : FlexibleClaudeCode.UsesSubscription
+                    ? F("Counted in your Claude subscription usage, no separate charge (about ${0:0.00} at API prices)", data.total_cost_usd)
+                    : F("API price about ${0:0.00}", data.total_cost_usd);
                 resultText = data.result;
                 resultIsError = data.is_error || (data.subtype != null && data.subtype != "success");
                 return;

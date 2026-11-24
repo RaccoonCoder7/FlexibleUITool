@@ -35,7 +35,9 @@ namespace FlexibleUITool.EditorTools
 
         [SerializeField] private DefaultAsset folder;
         [SerializeField] private float thumbnailHeight = 200f;
-        [SerializeField] private bool onlyIssues;
+        // 기본은 문제 있는 화면만 보여 준다 (튜토리얼은 모든 화면을 보여 준다)
+        [SerializeField] private bool showAllScreens;
+        private bool OnlyIssues => !showAllScreens && !FlexibleTutorial.Active;
         // 기준(세로) 화면의 문제는 원래 디자인 문제라 기본으로 숨긴다 (새로 만든 화면의 문제에 집중)
         [SerializeField] private bool hideBaseIssues = true;
         [SerializeField] private bool includeEdges = true;
@@ -76,7 +78,6 @@ namespace FlexibleUITool.EditorTools
         {
             folder = string.IsNullOrEmpty(folderPath) ? null : AssetDatabase.LoadAssetAtPath<DefaultAsset>(folderPath);
             targetPrefab = string.IsNullOrEmpty(prefabPath) ? null : prefabPath;
-            onlyIssues = false;
             Scope previous = scope;
             scope = Scope.Folder;
             Run(FlexibleSettingsUtility.GetOrCreateDefault());
@@ -124,7 +125,7 @@ namespace FlexibleUITool.EditorTools
                         folder = (DefaultAsset)EditorGUILayout.ObjectField(folder, typeof(DefaultAsset), false, GUILayout.Width(160f));
                 }
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent(T("Run check"), T("Shows your prefabs on many phones and tablets at once, and finds objects that stick out of the screen, overlap, or sit under the notch. Panels the game opens later, lists, and places other prefabs take (such as a menu bar) are checked too.")), GUILayout.Width(100f), GUILayout.Height(22f)))
+                if (GUILayout.Button(new GUIContent(T("Run check"), T("Finds problems on many device screens.")), GUILayout.Width(100f), GUILayout.Height(22f)))
                 {
                     if (scope == Scope.OpenPrefab && open != null && string.IsNullOrEmpty(targetPrefab))
                     {
@@ -168,7 +169,7 @@ namespace FlexibleUITool.EditorTools
             using (new EditorGUILayout.HorizontalScope())
             {
                 includeEdges = Toggle(includeEdges, new GUIContent(T("Screen edge ratios"), T("Also checks the narrowest and widest ratio where each screen can appear. Fixed-size objects overflow there first.")), EditorStyles.miniButton);
-                onlyIssues = Toggle(onlyIssues, new GUIContent(T("Only issues")), EditorStyles.miniButton);
+                showAllScreens = !Toggle(!showAllScreens, new GUIContent(T("Only issues")), EditorStyles.miniButton);
                 hideBaseIssues = Toggle(hideBaseIssues, new GUIContent(T("Hide base screen issues"), T("Issues on the base (portrait) screen come from the original design. Hide them to focus on the screens you made.")), EditorStyles.miniButton);
                 GUILayout.Label(T("Thumbnail"), GUILayout.ExpandWidth(false));
                 thumbnailHeight = GUILayout.HorizontalSlider(thumbnailHeight, 100f, 400f, GUILayout.Width(100f));
@@ -194,7 +195,8 @@ namespace FlexibleUITool.EditorTools
             scroll = EditorGUILayout.BeginScrollView(scroll);
             foreach (Row row in rows)
             {
-                if (onlyIssues && row.cells.All(c => Visible(c).Count == 0))
+                // 문제가 하나도 없으면 프리팹 줄은 남겨 「문제 없음」이 보이게 한다
+                if (OnlyIssues && total > 0 && row.cells.All(c => Visible(c).Count == 0))
                     continue;
                 DrawRow(row);
             }
@@ -224,8 +226,8 @@ namespace FlexibleUITool.EditorTools
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.LabelField(Path.GetFileNameWithoutExtension(row.path), EditorStyles.boldLabel, GUILayout.Width(220f));
-                    EditorGUILayout.LabelField(Summarize(row, FlexibleSettingsUtility.GetOrCreateDefault()), EditorStyles.miniLabel);
+                    GUILayout.Label(Path.GetFileNameWithoutExtension(row.path), EditorStyles.boldLabel);
+                    GUILayout.FlexibleSpace();
                     if (GUILayout.Button(T("Open"), GUILayout.Width(60f)))
                     {
                         if (FlexibleScreenSession.PrepareToOpen(row.path))
@@ -233,26 +235,48 @@ namespace FlexibleUITool.EditorTools
                         GUIUtility.ExitGUI();
                     }
                 }
+                GUILayout.Label(Summarize(row, FlexibleSettingsUtility.GetOrCreateDefault()), EditorStyles.wordWrappedMiniLabel);
 
-                using (new EditorGUILayout.HorizontalScope())
+                // 창 폭에 맞춰 줄을 바꾼다 (옆으로 스크롤하지 않게)
+                List<Cell> cells = row.cells.Where(c => !OnlyIssues || Visible(c).Count > 0).ToList();
+                float available = Mathf.Max(120f, EditorGUIUtility.currentViewWidth - 44f);
+                int index = 0;
+                while (index < cells.Count)
                 {
-                    foreach (Cell cell in row.cells)
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        if (!onlyIssues || Visible(cell).Count > 0)
-                            DrawCell(row, cell);
+                        float used = 0f;
+                        do
+                        {
+                            float column = CellWidth(cells[index], available);
+                            if (used > 0f && used + column + CellGap > available)
+                                break;
+                            DrawCell(row, cells[index], column);
+                            used += column + CellGap;
+                            index++;
+                        } while (index < cells.Count);
+                        GUILayout.FlexibleSpace();
                     }
-                    GUILayout.FlexibleSpace();
                 }
             }
         }
 
-        private void DrawCell(Row row, Cell cell)
+        private const float CellGap = 6f;
+
+        private float CellWidth(Cell cell, float available)
         {
             float width = thumbnailHeight * cell.texture.width / cell.texture.height;
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(Mathf.Max(width, 120f))))
+            return Mathf.Min(Mathf.Max(width, 120f), available);
+        }
+
+        private void DrawCell(Row row, Cell cell, float columnWidth)
+        {
+            float width = Mathf.Min(thumbnailHeight * cell.texture.width / cell.texture.height, columnWidth);
+            float height = width * cell.texture.height / cell.texture.width;
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(columnWidth)))
             {
                 GUILayout.Label($"{cell.ScreenName}\n→ {FlexibleEditPanel.Name(cell.profile)}", EditorStyles.miniLabel);
-                Rect rect = GUILayoutUtility.GetRect(width, thumbnailHeight, GUILayout.Width(width), GUILayout.Height(thumbnailHeight));
+                Rect rect = GUILayoutUtility.GetRect(width, height, GUILayout.Width(width), GUILayout.Height(height));
                 GUI.DrawTexture(rect, cell.texture, ScaleMode.StretchToFill, false);
                 List<FlexibleIssue> visible = Visible(cell);
                 // 약한 경고(노치 밑 글자)만 있으면 노란색으로
@@ -270,15 +294,15 @@ namespace FlexibleUITool.EditorTools
                 }).ToList();
                 if (visible.Count == 0 && cell.issues.Count > 0)
                 {
-                    if (GUILayout.Button(new GUIContent(F("Base screen issues hidden ({0})", cell.issues.Count), T("Click to show them.")), EditorStyles.linkLabel, GUILayout.Width(Mathf.Max(width, 120f))))
+                    if (GUILayout.Button(new GUIContent(F("Base screen issues hidden ({0})", cell.issues.Count), T("Click to show them.")), EditorStyles.linkLabel, GUILayout.Width(columnWidth)))
                         hideBaseIssues = false;
                 }
                 else
                 {
                     string text = visible.Count > 0 ? string.Join("\n", lines) : T("No issues");
-                    GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(Mathf.Max(width, 120f)));
+                    GUILayout.Label(new GUIContent(text, string.Join("\n", visible.Select(i => i.Message))), style, GUILayout.Width(columnWidth));
                 }
-                if (visible.Count > 0 && GUILayout.Button(new GUIContent(T("Show the problem"), T("Opens the prefab on this screen in the Edit tab and selects the objects with the problem.")), EditorStyles.miniButton, GUILayout.Width(Mathf.Max(width, 120f))))
+                if (visible.Count > 0 && GUILayout.Button(new GUIContent(T("Show the problem"), T("Opens the prefab on this screen in the Edit tab and selects the objects with the problem.")), EditorStyles.miniButton, GUILayout.Width(columnWidth)))
                 {
                     if (ShowProblem(row.path, cell.profile.id, visible))
                     {
