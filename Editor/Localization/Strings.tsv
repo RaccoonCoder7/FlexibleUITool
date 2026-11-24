@@ -438,6 +438,7 @@ Prefabs placed in the open scene (nested ones too).	열린 씬에 놓인 프리�
 Counted in your Claude subscription usage, no separate charge (about ${0:0.00} at API prices)	Claude 구독 사용량에서 차감되며 따로 청구되지 않아요 (API 요금으로 치면 약 ${0:0.00})	Claude のサブスクリプションの使用量に含まれ、別途請求はありません（API 料金なら約 ${0:0.00}）
 API price about ${0:0.00}	API 요금 약 ${0:0.00}	API 料金 約 ${0:0.00}
 Not placed on the grid (now covers {0})	그리드 배치 안 함 (지금 덮고 있는 칸 {0})	グリッド配置なし（今かかっているマス {0}）
+The list of this scene's UI prefabs comes back when Play Mode stops. You can still double-click a UI prefab in the Project window.	이 씬의 UI 프리팹 목록은 플레이 모드를 멈추면 다시 보여요. Project 창에서 UI 프리팹을 더블클릭해 열 수는 있어요.	このシーンの UI プレハブ一覧はプレイモードを止めると戻ります。Project ウィンドウで UI プレハブをダブルクリックすれば開けます。
 This scene has no UI prefabs yet. Build the UI under a Canvas in the scene, or double-click a UI prefab in the Project window.	이 씬에는 아직 UI 프리팹이 없어요. 씬의 Canvas 아래에 UI를 만들거나, Project 창에서 UI 프리팹을 더블클릭하세요.	このシーンにはまだ UI プレハブがありません。シーンの Canvas の下に UI を作るか、Project ウィンドウで UI プレハブをダブルクリックしてね。
 Click to show them.	누르면 보여 줘요.	クリックすると表示します。
 The portrait screen keeps the scaling rule of the original Canvas Scaler. Square and landscape screens scale so that the short side is {0:0} units.	세로 화면은 원래 Canvas Scaler의 규칙을 그대로 씁니다. 정사각·가로 화면은 짧은 변이 {0:0} 단위가 되도록 스케일합니다.	縦画面は元の Canvas Scaler のルールをそのまま使います。正方形・横画面は短辺が {0:0} 単位になるようにスケールします。

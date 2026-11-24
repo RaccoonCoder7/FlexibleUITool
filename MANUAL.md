@@ -29,7 +29,7 @@ You build the portrait screen as usual, then press **Landscape** (or **Square**)
 
 The tool is a Unity package (`com.raccooncoder7.flexibleuitool`). Tested on Unity 6.3. It needs `com.unity.ugui`, which Package Manager installs with it.
 
-1. Open `Window > Package Management > Package Manager`, press `+`, choose `Install package from git URL...`, and paste the URL from the [README](README.md) (`https://github.com/RaccoonCoder7/FlexibleUITool.git` with the latest version tag such as `#v1.0.10` at the end; without a tag you get the newest commit). Older Unity versions call these `Window > Package Manager` and `Add package from git URL...`.
+1. Open `Window > Package Management > Package Manager`, press `+`, choose `Install package from git URL...`, and paste the URL from the [README](README.md) (`https://github.com/RaccoonCoder7/FlexibleUITool.git` with the latest version tag such as `#v1.0.11` at the end; without a tag you get the newest commit). Older Unity versions call these `Window > Package Manager` and `Add package from git URL...`.
 2. Or add it to `Packages/manifest.json`:
 
    ```json

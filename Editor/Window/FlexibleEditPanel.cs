@@ -524,6 +524,7 @@ namespace FlexibleUITool.EditorTools
 
         // 묶음을 마지막으로 놓은 칸 (묶음은 칸 안에서 줄어들어 실제 영역만으로는 입력한 칸을 알 수 없다)
         private static string groupCellKey;
+        private static string groupCellPlace;
         private static FlexibleCell groupCell;
 
         private static string GroupKey(FlexibleWorkspace session, List<RectTransform> targets)
@@ -534,12 +535,19 @@ namespace FlexibleUITool.EditorTools
         private static void RememberGroupCell(FlexibleWorkspace session, List<RectTransform> targets, FlexibleCell cell)
         {
             groupCellKey = GroupKey(session, targets);
+            groupCellPlace = GroupPlace(targets);
             groupCell = cell;
+        }
+
+        private static string GroupPlace(List<RectTransform> targets)
+        {
+            return string.Join("|", targets.OrderBy(t => t.GetInstanceID()).Select(t =>
+                $"{Mathf.RoundToInt(t.anchoredPosition.x * 10f)},{Mathf.RoundToInt(t.anchoredPosition.y * 10f)},{Mathf.RoundToInt(t.sizeDelta.x * 10f)},{Mathf.RoundToInt(t.sizeDelta.y * 10f)},{Mathf.RoundToInt(t.localScale.x * 1000f)}"));
         }
 
         private FlexibleCell GetGroupCell(FlexibleGridContext context, FlexibleWorkspace session, List<RectTransform> targets)
         {
-            if (groupCellKey == GroupKey(session, targets))
+            if (groupCellKey == GroupKey(session, targets) && groupCellPlace == GroupPlace(targets))
                 return groupCell.Clamped(context.grid);
             Rect union = UnionInRoot(context.root, targets);
             Rect area = context.GetArea(insideSafeArea);
@@ -571,8 +579,8 @@ namespace FlexibleUITool.EditorTools
             if (!changed)
                 return;
             cell = cell.Clamped(context.grid);
-            RememberGroupCell(session, targets, cell);
             PlaceGroupInCells(context, session, targets, FlexibleGridMath.GetSlotRect(context.GetArea(insideSafeArea), context.grid, cell));
+            RememberGroupCell(session, targets, cell);
         }
 
         // 칸 영역(root 좌표) 안에 묶음을 모양 그대로 가장 크게 (세로 화면 크기보다 크게는 하지 않는다)
@@ -639,10 +647,10 @@ namespace FlexibleUITool.EditorTools
 
                 Undo.IncrementCurrentGroup();
                 int group = Undo.GetCurrentGroup();
-                Undo.RecordObject(session, "Place together");
+                // 변경분 기록(RecordObject)은 크기가 그대로인 오브젝트의 위치를 Undo에서 놓칠 때가 있어 전체를 기록한다
+                Undo.RegisterCompleteObjectUndo(members.Select(m => (Object)m.target).Append(session).ToArray(), "Place together");
                 foreach (var m in members)
                 {
-                    Undo.RecordObject(m.target, "Place together");
                     // 칸 배치 기록은 지운다 (묶음 안 자리는 칸이 아니라 서로의 위치로 정해진다)
                     session.placements.RemoveAll(p => p.target == m.target);
                     Vector3 baseScale = FlexibleGridPlacementService.GetBaseScale(session, m.target);
@@ -1225,7 +1233,8 @@ namespace FlexibleUITool.EditorTools
                 return;
 
             // 실행 중인 씬은 변환 대상이 아니다 (프리팹 연결도 달라 보여 틀린 안내가 된다)
-            if (!EditorApplication.isPlayingOrWillChangePlaymode)
+            bool playing = EditorApplication.isPlayingOrWillChangePlaymode;
+            if (!playing)
                 DrawSceneCanvasCheck();
             if (!string.IsNullOrEmpty(sceneSetupResult) && sceneSetupScene == EditorSceneManager.GetActiveScene().path)
                 EditorGUILayout.HelpBox(sceneSetupResult, MessageType.Info);
@@ -1233,9 +1242,11 @@ namespace FlexibleUITool.EditorTools
             EditorGUILayout.Space(4f);
             GUILayout.Label(T("Open a UI prefab"), FlexibleGui.Title);
             List<string> paths = GetSelectedPrefabPaths();
-            GUILayout.Label(EnsureSceneUiRows().Count > 0 || paths.Count > 0
-                ? T("Open one from the list of this scene's UI prefabs below, or double-click a UI prefab in the Project window.")
-                : T("This scene has no UI prefabs yet. Build the UI under a Canvas in the scene, or double-click a UI prefab in the Project window."), FlexibleGui.WrapLabel);
+            GUILayout.Label(playing
+                ? T("The list of this scene's UI prefabs comes back when Play Mode stops. You can still double-click a UI prefab in the Project window.")
+                : EnsureSceneUiRows().Count > 0 || paths.Count > 0
+                    ? T("Open one from the list of this scene's UI prefabs below, or double-click a UI prefab in the Project window.")
+                    : T("This scene has no UI prefabs yet. Build the UI under a Canvas in the scene, or double-click a UI prefab in the Project window."), FlexibleGui.WrapLabel);
 
             for (int i = 0; i < paths.Count; i++)
             {
@@ -1248,7 +1259,8 @@ namespace FlexibleUITool.EditorTools
                     GUIUtility.ExitGUI();
                 }
             }
-            DrawSceneUiList();
+            if (!playing)
+                DrawSceneUiList();
         }
 
         // ───────── 씬에 있는 UI 프리팹 목록 (하이라키에서 고르지 않고 바로 연다) ─────────
@@ -3292,8 +3304,8 @@ namespace FlexibleUITool.EditorTools
                         e.Use();
                         if (group != null)
                         {
-                            RememberGroupCell(session, group, dragCell.Clamped(grid));
                             PlaceGroupInCells(context, session, group, FlexibleGridMath.GetSlotRect(area, grid, dragCell.Clamped(grid)));
+                            RememberGroupCell(session, group, dragCell.Clamped(grid));
                             break;
                         }
                         // 드래그로 칸을 새로 정하면 손으로 바꾼 위치·크기·스케일은 버린다 (모드·SafeArea는 유지).

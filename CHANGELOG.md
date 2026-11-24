@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.11]
+
+- `Move them together`: one Undo brings back every object. An object whose size did not change could keep its new position, and switching screens then saved it.
+- After an Undo or `Back to portrait`, the group's cell fields show where the group really is instead of the last typed cells.
+- During Play Mode the Edit tab no longer says the scene has no UI prefabs; it says the list comes back when Play Mode stops.
+
 ## [1.0.10]
 
 - A prefab whose root is a canvas is drawn in Preview, Check and the stopped Game view (it could be black or disappear).
